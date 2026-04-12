@@ -17,7 +17,7 @@ import {
 } from '@mantine/core';
 import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import {
-  IconPlus,
+  IconSend,
   IconHistory,
   IconCalendar,
   IconUser,
@@ -25,6 +25,7 @@ import {
   IconCheck,
   IconMenu2,
   IconLayoutSidebarLeftCollapse,
+  IconBooks,
 } from '@tabler/icons-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
@@ -49,8 +50,9 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
 }
 
 const NAV_ITEMS = [
-  { label: 'Request', icon: IconPlus, path: '/' },
+  { label: 'Request', icon: IconSend, path: '/' },
   { label: 'History', icon: IconHistory, path: '/history' },
+  { label: 'Programs', icon: IconBooks, path: '/programs' },
   { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
   { label: 'Profile', icon: IconUser, path: '/profile' },
 ] as const;

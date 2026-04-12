@@ -1,4 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_employee_volunteer,access_hr_employee_volunteer,hr.model_hr_employee,group_sahyog_volunteer,1,0,0,0
 access_volunteer_type_admin,access_volunteer_type_admin,model_sahyog_volunteer_type,group_sahyog_admin,1,1,1,1
 access_volunteer_type_volunteer,access_volunteer_type_volunteer,model_sahyog_volunteer_type,group_sahyog_volunteer,1,0,0,0
 access_sadhana_practice_admin,access_sadhana_practice_admin,model_sahyog_sadhana_practice,group_sahyog_admin,1,1,1,1
