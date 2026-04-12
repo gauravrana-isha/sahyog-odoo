@@ -11,7 +11,14 @@ import {
   Group,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconAlertCircle, IconMoodEmpty, IconMapPin, IconCalendarEvent } from '@tabler/icons-react';
+import {
+  IconAlertCircle,
+  IconMoodEmpty,
+  IconMapPin,
+  IconCalendarEvent,
+  IconClock,
+  IconRepeat,
+} from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet } from '../api';
 
@@ -22,8 +29,12 @@ interface UpcomingSchedule {
   program_type: string;
   start_date: string;
   end_date: string;
+  start_time: string;
+  end_time: string;
+  is_recurring: boolean;
   location: string;
   capacity: number;
+  fee: string;
   schedule_status: string;
   notes: string;
 }
@@ -96,28 +107,62 @@ export function ProgramsPage() {
               shadow="xs"
               style={{ borderLeft: '4px solid #5CB85C' }}
             >
-              <Group justify="space-between" mb={4}>
+              {/* Header: program name + type badge + recurring badge */}
+              <Group justify="space-between" mb={4} wrap="wrap">
                 <Text size="sm" fw={600}>{s.program_name}</Text>
-                <Badge size="xs" variant="light" color={TYPE_COLORS[s.program_type] || 'gray'}>
-                  {s.program_type}
-                </Badge>
+                <Group gap={4}>
+                  {s.is_recurring && (
+                    <Badge size="xs" variant="light" color="violet" leftSection={<IconRepeat size={10} />}>
+                      Recurring
+                    </Badge>
+                  )}
+                  <Badge size="xs" variant="light" color={TYPE_COLORS[s.program_type] || 'gray'}>
+                    {s.program_type}
+                  </Badge>
+                </Group>
               </Group>
+
+              {/* Dates */}
               <Group gap="xs">
                 <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
                 <Text size="xs" c="dimmed">
                   {fmtDate(s.start_date)} → {fmtDate(s.end_date)}
                 </Text>
               </Group>
+
+              {/* Time window — shown for recurring or when times are set */}
+              {s.start_time && s.end_time && (
+                <Group gap="xs" mt={2}>
+                  <IconClock size={14} color="var(--mantine-color-gray-5)" />
+                  <Text size="xs" c="dimmed">
+                    {s.start_time} – {s.end_time}
+                  </Text>
+                </Group>
+              )}
+
+              {/* Location */}
               {s.location && (
                 <Group gap="xs" mt={2}>
                   <IconMapPin size={14} color="var(--mantine-color-gray-5)" />
                   <Text size="xs" c="dimmed">{s.location}</Text>
                 </Group>
               )}
-              {s.capacity > 0 && (
-                <Text size="xs" c="dimmed" mt={2}>
-                  Capacity: {s.capacity}
-                </Text>
+
+              {/* Capacity + Fee row */}
+              {(s.capacity > 0 || s.fee) && (
+                <Group gap="md" mt={4}>
+                  {s.capacity > 0 && (
+                    <Text size="xs" c="dimmed">Capacity: {s.capacity}</Text>
+                  )}
+                  {s.fee && (
+                    <Text size="xs" c="dimmed">Fee: {s.fee}</Text>
+                  )}
+                </Group>
+              )}
+
+              {/* Notes */}
+              {s.notes && (
+                <Text size="xs" c="dimmed" mt={4}>{s.notes}</Text>
               )}
             </Card>
           ))}

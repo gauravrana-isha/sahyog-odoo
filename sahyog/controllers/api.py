@@ -442,8 +442,12 @@ class SahyogAPI(http.Controller):
                 'program_type': s.program_id.program_type or '',
                 'start_date': str(s.start_date),
                 'end_date': str(s.end_date),
+                'start_time': s.start_time or '',
+                'end_time': s.end_time or '',
+                'is_recurring': s.is_recurring,
                 'location': s.location or '',
                 'capacity': s.capacity or 0,
+                'fee': s.fee or '',
                 'schedule_status': s.schedule_status or '',
                 'notes': s.notes or '',
             } for s in schedules])
