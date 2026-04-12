@@ -31,7 +31,12 @@ class Meeting(models.Model):
 
     @api.constrains('start_time', 'end_time')
     def _check_times(self):
+        import re
+        time_re = re.compile(r'^\d{2}:\d{2}$')
         for rec in self:
+            for t in (rec.start_time, rec.end_time):
+                if t and not time_re.match(t):
+                    raise ValidationError(_('Time must be in HH:MM format.'))
             if rec.start_time and rec.end_time and rec.start_time >= rec.end_time:
                 raise ValidationError(_('Start time must be before end time.'))
 

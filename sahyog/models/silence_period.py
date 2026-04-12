@@ -60,6 +60,31 @@ class SilencePeriod(models.Model):
             if rec.end_date < rec.start_date:
                 raise ValidationError(_('End date must be >= start date.'))
 
+    @api.constrains('is_recurring', 'start_time', 'end_time')
+    def _check_recurring_times(self):
+        import re
+        time_re = re.compile(r'^\d{2}:\d{2}$')
+        for rec in self:
+            if rec.is_recurring:
+                if not rec.start_time or not rec.end_time:
+                    raise ValidationError(_('Start time and end time are required for recurring silence.'))
+            for t in (rec.start_time, rec.end_time):
+                if t and not time_re.match(t):
+                    raise ValidationError(_('Time must be in HH:MM format.'))
+
+    @api.constrains('silence_type', 'program_id')
+    def _check_program_silence(self):
+        for rec in self:
+            if rec.silence_type == 'program' and not rec.program_id:
+                raise ValidationError(_('Program is required for program silence type.'))
+
+    @api.onchange('silence_type')
+    def _onchange_silence_type(self):
+        if self.silence_type == '9pm_9am':
+            self.is_recurring = True
+            self.start_time = '21:00'
+            self.end_time = '09:00'
+
     @api.constrains('start_date', 'end_date', 'volunteer_id')
     def _check_no_overlap(self):
         NON_CANCELLED = ('requested', 'approved', 'on_going', 'pending_admin', 'pending_volunteer')

@@ -1,4 +1,6 @@
-from odoo import fields, models
+from odoo import api, fields, models
+from odoo.exceptions import ValidationError
+from odoo.tools.translate import _
 
 
 class ProgramSchedule(models.Model):
@@ -21,3 +23,18 @@ class ProgramSchedule(models.Model):
         ('completed', 'Completed'),
     ], required=True, default='planning')
     notes = fields.Text()
+
+    @api.constrains('start_date', 'end_date')
+    def _check_dates(self):
+        for rec in self:
+            if rec.end_date < rec.start_date:
+                raise ValidationError(_('End date must be >= start date.'))
+
+    @api.constrains('start_time', 'end_time')
+    def _check_times(self):
+        import re
+        time_re = re.compile(r'^\d{2}:\d{2}$')
+        for rec in self:
+            for t in (rec.start_time, rec.end_time):
+                if t and not time_re.match(t):
+                    raise ValidationError(_('Time must be in HH:MM format.'))
