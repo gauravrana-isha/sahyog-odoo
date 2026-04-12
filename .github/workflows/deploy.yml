@@ -1,0 +1,46 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build SPA
+        run: |
+          cd sahyog/static/src/volunteer_app
+          npm ci
+          npm run build
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GCP_SSH_KEY }}
+
+      - name: Deploy to server
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          # Add server to known hosts
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Sync files (exclude node_modules, .git)
+          rsync -avz --delete \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='__pycache__' \
+            --exclude='.DS_Store' \
+            ./ $SERVER_USER@$SERVER_IP:~/sahyog-odoo/
+
+          # Restart Odoo on the server
+          ssh $SERVER_USER@$SERVER_IP "cd ~/sahyog-odoo && sudo docker compose restart odoo"
