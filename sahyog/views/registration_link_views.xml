@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_registration_link_tree" model="ir.ui.view">
+        <field name="name">sahyog.registration.link.list</field>
+        <field name="model">sahyog.registration.link</field>
+        <field name="arch" type="xml">
+            <list decoration-success="status == 'active'"
+                  decoration-muted="status in ('used','expired')">
+                <field name="token" string="Token / Link"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'active'"
+                       decoration-info="status == 'used'"
+                       decoration-muted="status == 'expired'"/>
+                <field name="expires_at"/>
+                <field name="created_by"/>
+                <field name="used_by_volunteer_id" optional="show"/>
+                <field name="create_date" string="Created"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_registration_link_form" model="ir.ui.view">
+        <field name="name">sahyog.registration.link.form</field>
+        <field name="model">sahyog.registration.link</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title mb-3">
+                        <label for="token" string="Registration Token"/>
+                        <h2>
+                            <field name="token" readonly="1" class="text-monospace"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group string="Link Details">
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'active'"
+                                   decoration-info="status == 'used'"
+                                   decoration-muted="status == 'expired'"/>
+                            <field name="expires_at"/>
+                        </group>
+                        <group string="Usage">
+                            <field name="created_by" readonly="1"/>
+                            <field name="used_by_volunteer_id" readonly="1"/>
+                            <field name="create_date" string="Created On" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_registration_link_search" model="ir.ui.view">
+        <field name="name">sahyog.registration.link.search</field>
+        <field name="model">sahyog.registration.link</field>
+        <field name="arch" type="xml">
+            <search string="Search Registration Links">
+                <field name="token"/>
+                <field name="created_by"/>
+                <separator/>
+                <filter string="Active" name="filter_active" domain="[('status', '=', 'active')]"/>
+                <filter string="Used" name="filter_used" domain="[('status', '=', 'used')]"/>
+                <filter string="Expired" name="filter_expired" domain="[('status', '=', 'expired')]"/>
+                <separator/>
+                <filter string="Expires" name="filter_expires" date="expires_at"/>
+                <separator/>
+                <filter string="Status" name="groupby_status" domain="[]" context="{'group_by': 'status'}"/>
+                <filter string="Created By" name="groupby_created_by" domain="[]" context="{'group_by': 'created_by'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_registration_link" model="ir.actions.act_window">
+        <field name="name">Registration Links</field>
+        <field name="res_model">sahyog.registration.link</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_registration_link_search"/>
+    </record>
+
+</odoo>

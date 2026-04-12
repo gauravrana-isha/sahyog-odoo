@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- Volunteer Type -->
+    <!-- ============================================================ -->
+    <record id="view_volunteer_type_tree" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.type.tree</field>
+        <field name="model">sahyog.volunteer.type</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_volunteer_type_form" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.type.form</field>
+        <field name="model">sahyog.volunteer.type</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_volunteer_type" model="ir.actions.act_window">
+        <field name="name">Volunteer Types</field>
+        <field name="res_model">sahyog.volunteer.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Sadhana Practice -->
+    <!-- ============================================================ -->
+    <record id="view_sadhana_practice_tree" model="ir.ui.view">
+        <field name="name">sahyog.sadhana.practice.tree</field>
+        <field name="model">sahyog.sadhana.practice</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sadhana_practice_form" model="ir.ui.view">
+        <field name="name">sahyog.sadhana.practice.form</field>
+        <field name="model">sahyog.sadhana.practice</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sadhana_practice" model="ir.actions.act_window">
+        <field name="name">Sadhana Practices</field>
+        <field name="res_model">sahyog.sadhana.practice</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Language -->
+    <!-- ============================================================ -->
+    <record id="view_language_tree" model="ir.ui.view">
+        <field name="name">sahyog.language.tree</field>
+        <field name="model">sahyog.language</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_language_form" model="ir.ui.view">
+        <field name="name">sahyog.language.form</field>
+        <field name="model">sahyog.language</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_language" model="ir.actions.act_window">
+        <field name="name">Languages</field>
+        <field name="res_model">sahyog.language</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Main Programs -->
+        <record id="prog_ier_en" model="sahyog.program"><field name="name">Inner Engineering Retreat (English)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_ier_hi" model="sahyog.program"><field name="name">Inner Engineering Retreat (Hindi)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_ier_ta" model="sahyog.program"><field name="name">Inner Engineering Retreat (Tamil)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_g_en" model="sahyog.program"><field name="name">Bhava Spandana Gents (English)</field><field name="typical_duration_days">4</field><field name="gender">male</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_g_hi" model="sahyog.program"><field name="name">Bhava Spandana Gents (Hindi)</field><field name="typical_duration_days">4</field><field name="gender">male</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_g_ta" model="sahyog.program"><field name="name">Bhava Spandana Gents (Tamil)</field><field name="typical_duration_days">4</field><field name="gender">male</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_l_en" model="sahyog.program"><field name="name">Bhava Spandana Ladies (English)</field><field name="typical_duration_days">4</field><field name="gender">female</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_l_hi" model="sahyog.program"><field name="name">Bhava Spandana Ladies (Hindi)</field><field name="typical_duration_days">4</field><field name="gender">female</field><field name="program_type">main</field></record>
+        <record id="prog_bsp_l_ta" model="sahyog.program"><field name="name">Bhava Spandana Ladies (Tamil)</field><field name="typical_duration_days">4</field><field name="gender">female</field><field name="program_type">main</field></record>
+        <record id="prog_shoonya_en" model="sahyog.program"><field name="name">Shoonya Intensive (English)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_shoonya_hi" model="sahyog.program"><field name="name">Shoonya Intensive (Hindi)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_shoonya_ta" model="sahyog.program"><field name="name">Shoonya Intensive (Tamil)</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_guru_pooja" model="sahyog.program"><field name="name">Guru Pooja</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_samyama" model="sahyog.program"><field name="name">Samyama</field><field name="typical_duration_days">8</field><field name="program_type">main</field></record>
+        <record id="prog_samyama_sadhana" model="sahyog.program"><field name="name">Samyama Sadhana (English)</field><field name="typical_duration_days">5</field><field name="program_type">main</field></record>
+        <record id="prog_ie" model="sahyog.program"><field name="name">Inner Engineering</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_sakthi" model="sahyog.program"><field name="name">Sakthi Sangamam</field><field name="typical_duration_days">15</field><field name="program_type">main</field></record>
+        <record id="prog_ie_leadership" model="sahyog.program"><field name="name">IE Leadership Retreat</field><field name="typical_duration_days">5</field><field name="program_type">main</field></record>
+        <record id="prog_content_creators" model="sahyog.program"><field name="name">Content Creators Retreat</field><field name="typical_duration_days">3</field><field name="program_type">main</field></record>
+        <record id="prog_brand_insight" model="sahyog.program"><field name="name">Brand INSIGHT</field><field name="typical_duration_days">3</field><field name="program_type">main</field></record>
+        <record id="prog_summer" model="sahyog.program"><field name="name">Summer Program</field><field name="typical_duration_days">4</field><field name="program_type">main</field></record>
+        <record id="prog_deeksha" model="sahyog.program"><field name="name">Deeksha Program</field><field name="typical_duration_days">1</field><field name="program_type">main</field></record>
+        <record id="prog_yantra" model="sahyog.program"><field name="name">Yantra Ceremony</field><field name="typical_duration_days">3</field><field name="program_type">main</field></record>
+        <record id="prog_guru_mahima" model="sahyog.program"><field name="name">Guru Mahima Program</field><field name="typical_duration_days">3</field><field name="program_type">main</field></record>
+        <record id="prog_sahabhagi" model="sahyog.program"><field name="name">Sadhguru Sahabhagi Training</field><field name="typical_duration_days">11</field><field name="program_type">main</field></record>
+
+        <!-- Silence Programs -->
+        <record id="prog_ishanga_silence" model="sahyog.program"><field name="name">Ishanga's Guided Silence</field><field name="typical_duration_days">7</field><field name="program_type">silence</field></record>
+        <record id="prog_shoonya_initiator" model="sahyog.program"><field name="name">Shoonya Initiator's Silence Program</field><field name="typical_duration_days">12</field><field name="program_type">silence</field></record>
+
+        <!-- Other Programs -->
+        <record id="prog_apg_tn" model="sahyog.program"><field name="name">APG Volunteers Meet (TN)</field><field name="typical_duration_days">2</field><field name="program_type">other</field></record>
+        <record id="prog_apg_otn" model="sahyog.program"><field name="name">APG Volunteers Meet (OTN)</field><field name="typical_duration_days">2</field><field name="program_type">other</field></record>
+        <record id="prog_yogasanas_beg" model="sahyog.program"><field name="name">Yogasanas Beginner</field><field name="typical_duration_days">2</field><field name="program_type">other</field></record>
+        <record id="prog_yogasanas_adv" model="sahyog.program"><field name="name">Yogasanas Advanced</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_yogasanas_rev" model="sahyog.program"><field name="name">Yogasanas Review</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_surya_kriya" model="sahyog.program"><field name="name">Surya Kriya</field><field name="typical_duration_days">2</field><field name="program_type">other</field></record>
+        <record id="prog_surya_kriya_rev" model="sahyog.program"><field name="name">Surya Kriya Review</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_surya_shakti" model="sahyog.program"><field name="name">Surya Shakti</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_angamardana" model="sahyog.program"><field name="name">Angamardana</field><field name="typical_duration_days">2</field><field name="program_type">other</field></record>
+        <record id="prog_angamardana_rev" model="sahyog.program"><field name="name">Angamardana Review</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_bhuta_shuddhi" model="sahyog.program"><field name="name">Bhuta Shuddhi</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_shanmukhi" model="sahyog.program"><field name="name">Shanmukhi</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_jala_neti" model="sahyog.program"><field name="name">Jala Neti</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_bhastrika" model="sahyog.program"><field name="name">Bhastrika Kriya</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_eye_care" model="sahyog.program"><field name="name">Eye Care</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+        <record id="prog_thoppukarnam" model="sahyog.program"><field name="name">Thoppukarnam</field><field name="typical_duration_days">1</field><field name="program_type">other</field></record>
+
+        <!-- Prerequisites (update existing records using same XML IDs) -->
+        <record id="prog_bsp_g_en" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_en'))]"/></record>
+        <record id="prog_bsp_g_hi" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_hi'))]"/></record>
+        <record id="prog_bsp_g_ta" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_ta'))]"/></record>
+        <record id="prog_bsp_l_en" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_en'))]"/></record>
+        <record id="prog_bsp_l_hi" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_hi'))]"/></record>
+        <record id="prog_bsp_l_ta" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_ier_ta'))]"/></record>
+        <record id="prog_shoonya_en" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_bsp_g_en'))]"/></record>
+        <record id="prog_shoonya_hi" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_bsp_g_hi'))]"/></record>
+        <record id="prog_shoonya_ta" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_bsp_g_ta'))]"/></record>
+        <record id="prog_guru_pooja" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_shoonya_en'))]"/></record>
+        <record id="prog_samyama" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_shoonya_en'))]"/></record>
+        <record id="prog_samyama_sadhana" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_shoonya_en'))]"/></record>
+        <record id="prog_yogasanas_adv" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_yogasanas_beg'))]"/></record>
+        <record id="prog_yogasanas_rev" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_yogasanas_beg'))]"/></record>
+        <record id="prog_surya_kriya_rev" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_surya_kriya'))]"/></record>
+        <record id="prog_angamardana_rev" model="sahyog.program"><field name="prerequisite_ids" eval="[(4, ref('prog_angamardana'))]"/></record>
+    </data>
+</odoo>

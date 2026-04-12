@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- Sahyog Volunteer Form View -->
+    <!-- ============================================================ -->
+    <record id="view_sahyog_volunteer_form" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.form</field>
+        <field name="model">hr.employee</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <form string="Volunteer">
+                <sheet>
+                    <!-- Avatar + Title area -->
+                    <div class="d-flex flex-column flex-sm-row align-items-center">
+                        <div class="o_employee_avatar ms-2 p-0">
+                            <field name="image_1920" widget="image" class="m-0"
+                                   options='{"size": [128,158], "zoom": true, "preview_image":"avatar_128"}'/>
+                        </div>
+                        <div class="oe_title ps-3 flex-grow-1">
+                            <h1>
+                                <field name="name" placeholder="Volunteer Name" required="1"/>
+                            </h1>
+                            <div class="d-flex gap-3 mb-2">
+                                <field name="computed_status" readonly="1"/>
+                                <span class="text-muted">|</span>
+                                <field name="base_status"/>
+                            </div>
+                            <field name="volunteer_type_ids" widget="many2many_tags"
+                                   placeholder="Volunteer Types (e.g. Poornanga, LTV...)"/>
+                        </div>
+                    </div>
+
+                    <!-- Quick info row -->
+                    <group>
+                        <group string="Contact">
+                            <field name="work_email" string="Email"/>
+                            <field name="work_phone" string="Phone"/>
+                            <field name="whatsapp_number"/>
+                        </group>
+                        <group string="Work">
+                            <field name="work_mode"/>
+                            <field name="sub_team_id"/>
+                            <field name="role_in_guest_care"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Tab 1: Personal Details -->
+                        <page string="Personal" name="personal">
+                            <group>
+                                <group string="Identity">
+                                    <field name="sex" string="Gender"/>
+                                    <field name="birthday"/>
+                                    <field name="x_nationality"/>
+                                    <field name="region_id"/>
+                                </group>
+                                <group string="Location">
+                                    <field name="x_city"/>
+                                    <field name="x_state"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group string="Languages &amp; Skills">
+                                    <field name="language_ids" widget="many2many_tags"/>
+                                    <field name="special_skills"/>
+                                </group>
+                                <group string="Spiritual">
+                                    <field name="sadhana_practice_ids" widget="many2many_tags"/>
+                                </group>
+                            </group>
+                            <group string="Health">
+                                <field name="health_conditions" nolabel="1"
+                                       placeholder="Any health conditions to note..."/>
+                            </group>
+                        </page>
+
+                        <!-- Tab 2: Volunteer Details -->
+                        <page string="Volunteer Info" name="volunteer_info">
+                            <group>
+                                <group string="Isha Journey">
+                                    <field name="date_of_joining_isha"/>
+                                    <field name="disha_samskriti_batch"/>
+                                    <field name="date_of_joining_guest_care"/>
+                                </group>
+                                <group string="Assignment">
+                                    <field name="current_assignment_area"/>
+                                    <field name="reporting_to_name"/>
+                                    <field name="added_by"/>
+                                </group>
+                            </group>
+                            <group string="Notes">
+                                <field name="notes" nolabel="1"
+                                       placeholder="Additional notes..."/>
+                            </group>
+                        </page>
+
+                        <!-- Tab 3: Silence / Break / Programs (popup forms, no inline editing) -->
+                        <page string="Entries" name="entries">
+                            <group string="Silence Periods">
+                                <field name="silence_period_ids" nolabel="1"/>
+                            </group>
+                            <group string="Break Periods">
+                                <field name="break_period_ids" nolabel="1"/>
+                            </group>
+                            <group string="Program Enrollments">
+                                <field name="volunteer_program_ids" nolabel="1"/>
+                            </group>
+                        </page>
+
+                        <!-- Tab 4: Emergency Contact -->
+                        <page string="Emergency" name="emergency">
+                            <group>
+                                <group>
+                                    <field name="emergency_contact_name"/>
+                                    <field name="emergency_contact_phone"/>
+                                    <field name="emergency_contact_relation"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Sahyog Volunteer List View -->
+    <!-- ============================================================ -->
+    <record id="view_sahyog_volunteer_list" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.list</field>
+        <field name="model">hr.employee</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <list decoration-success="base_status == 'available'"
+                  decoration-info="base_status == 'break'"
+                  decoration-muted="base_status in ('away','left')">
+                <field name="name"/>
+                <field name="work_email" string="Email"/>
+                <field name="computed_status" string="Status" widget="badge"/>
+                <field name="work_mode"/>
+                <field name="sub_team_id"/>
+                <field name="work_phone" string="Phone" optional="hide"/>
+                <field name="whatsapp_number" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Sahyog Volunteer Search View -->
+    <!-- ============================================================ -->
+    <record id="view_sahyog_volunteer_search" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.search</field>
+        <field name="model">hr.employee</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <search string="Search Volunteers">
+                <field name="name" string="Name"/>
+                <field name="work_email" string="Email"/>
+                <filter string="Office" name="filter_office" domain="[('work_mode', '=', 'office')]"/>
+                <filter string="Remote" name="filter_remote" domain="[('work_mode', '=', 'remote')]"/>
+                <filter string="Guest Care" name="filter_guest_care" domain="[('work_mode', '=', 'guest_care')]"/>
+                <separator/>
+                <filter string="Available" name="filter_available" domain="[('base_status', '=', 'available')]"/>
+                <filter string="On Break" name="filter_break" domain="[('base_status', '=', 'break')]"/>
+                <filter string="Away" name="filter_away" domain="[('base_status', '=', 'away')]"/>
+                <filter string="Left" name="filter_left" domain="[('base_status', '=', 'left')]"/>
+            </search>
+        </field>
+    </record>
+
+</odoo>

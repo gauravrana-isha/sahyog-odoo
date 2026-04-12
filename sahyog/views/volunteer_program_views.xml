@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_volunteer_program_tree" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.list</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <list decoration-info="completion_status == 'upcoming'"
+                  decoration-success="completion_status == 'done'"
+                  decoration-danger="completion_status in ('pending_admin','pending_volunteer')"
+                  decoration-muted="completion_status == 'dropped'">
+                <field name="volunteer_id"/>
+                <field name="program_id"/>
+                <field name="participation_type" widget="badge"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="location" optional="hide"/>
+                <field name="completion_status" widget="badge"
+                       decoration-info="completion_status == 'upcoming'"
+                       decoration-success="completion_status == 'done'"
+                       decoration-danger="completion_status in ('pending_admin','pending_volunteer')"
+                       decoration-muted="completion_status == 'dropped'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_volunteer_program_form" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.form</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="completion_status" widget="statusbar"
+                           statusbar_visible="upcoming,done"/>
+                    <button name="action_approve" string="Approve" type="object"
+                            class="btn-primary"
+                            invisible="completion_status not in ('pending_admin','pending_volunteer')"/>
+                    <button name="action_reject" string="Reject" type="object"
+                            class="btn-secondary"
+                            invisible="completion_status not in ('pending_admin','pending_volunteer')"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Enrollment">
+                            <field name="volunteer_id"/>
+                            <field name="program_id"/>
+                            <field name="schedule_id"/>
+                            <field name="participation_type"/>
+                        </group>
+                        <group string="Dates &amp; Location">
+                            <field name="start_date"/>
+                            <field name="end_date"/>
+                            <field name="location" placeholder="e.g. Isha Yoga Center"/>
+                            <field name="created_by" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Notes"/>
+                    <field name="notes" placeholder="Enrollment notes..."
+                           nolabel="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_volunteer_program_search" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.search</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <search string="Search Enrollments">
+                <field name="volunteer_id" string="Volunteer"/>
+                <field name="program_id" string="Program"/>
+                <separator/>
+                <filter string="Upcoming" name="filter_upcoming" domain="[('completion_status', '=', 'upcoming')]"/>
+                <filter string="Done" name="filter_done" domain="[('completion_status', '=', 'done')]"/>
+                <filter string="Dropped" name="filter_dropped" domain="[('completion_status', '=', 'dropped')]"/>
+                <filter string="Pending" name="filter_pending" domain="[('completion_status', 'in', ('pending_admin','pending_volunteer'))]"/>
+                <separator/>
+                <filter string="Participant" name="filter_participant" domain="[('participation_type', '=', 'participant')]"/>
+                <filter string="Volunteer" name="filter_volunteer" domain="[('participation_type', '=', 'volunteer')]"/>
+                <separator/>
+                <filter string="Start Date" name="filter_start_date" date="start_date"/>
+                <filter string="End Date" name="filter_end_date" date="end_date"/>
+                <separator/>
+                <filter string="Volunteer" name="groupby_volunteer" domain="[]" context="{'group_by': 'volunteer_id'}"/>
+                <filter string="Program" name="groupby_program" domain="[]" context="{'group_by': 'program_id'}"/>
+                <filter string="Status" name="groupby_status" domain="[]" context="{'group_by': 'completion_status'}"/>
+                <filter string="Participation" name="groupby_participation" domain="[]" context="{'group_by': 'participation_type'}"/>
+                <filter string="Month" name="groupby_month" domain="[]" context="{'group_by': 'start_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Calendar View -->
+    <record id="view_volunteer_program_calendar" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.calendar</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <calendar string="Program Enrollments" date_start="start_date" date_stop="end_date" color="completion_status" event_open_popup="true" quick_create="false">
+                <field name="volunteer_id"/>
+                <field name="program_id"/>
+                <field name="participation_type"/>
+                <field name="completion_status"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_volunteer_program_kanban" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.kanban</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="completion_status" class="o_kanban_small_column">
+                <field name="volunteer_id"/>
+                <field name="program_id"/>
+                <field name="participation_type"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="completion_status"/>
+                <templates>
+                    <t t-name="card">
+                        <field name="volunteer_id" widget="many2one_avatar"/>
+                        <div class="mb-1"><strong><field name="program_id"/></strong></div>
+                        <div class="text-muted"><field name="start_date"/> - <field name="end_date"/></div>
+                        <field name="participation_type" widget="badge"/>
+                        <field name="completion_status" widget="label_selection" options="{'classes': {'upcoming': 'info', 'done': 'success', 'pending_admin': 'warning', 'dropped': 'danger'}}"/>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="view_volunteer_program_pivot" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.pivot</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <pivot string="Enrollment Analysis">
+                <field name="program_id" type="row"/>
+                <field name="completion_status" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="view_volunteer_program_graph" model="ir.ui.view">
+        <field name="name">sahyog.volunteer.program.graph</field>
+        <field name="model">sahyog.volunteer.program</field>
+        <field name="arch" type="xml">
+            <graph string="Enrollment Analysis" type="bar">
+                <field name="program_id"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_volunteer_program" model="ir.actions.act_window">
+        <field name="name">Enrollments</field>
+        <field name="res_model">sahyog.volunteer.program</field>
+        <field name="view_mode">list,form,calendar,kanban,pivot,graph</field>
+        <field name="search_view_id" ref="view_volunteer_program_search"/>
+    </record>
+
+</odoo>

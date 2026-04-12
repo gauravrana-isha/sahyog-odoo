@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Registration Form
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="registration_form" name="Volunteer Registration Form">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6">
+                            <h3 class="text-center mb-4">Volunteer Registration</h3>
+                            <t t-if="error">
+                                <div class="alert alert-danger"><t t-esc="error"/></div>
+                            </t>
+                            <div class="card">
+                                <div class="card-body">
+                                    <form method="post" action="/sahyog/register/submit">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <input type="hidden" name="token" t-att-value="token"/>
+                                        <div class="mb-3">
+                                            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="name" class="form-control" required="required"
+                                                   placeholder="Enter your full name"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                                            <input type="email" name="email" class="form-control" required="required"
+                                                   placeholder="Enter your email"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Phone</label>
+                                            <input type="text" name="phone" class="form-control"
+                                                   placeholder="Phone number"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">WhatsApp Number</label>
+                                            <input type="text" name="whatsapp_number" class="form-control"
+                                                   placeholder="WhatsApp number"/>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Register</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Registration Error
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="registration_error" name="Registration Error">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6 text-center">
+                            <div class="card border-danger">
+                                <div class="card-body">
+                                    <h4 class="text-danger mb-3">Registration Unavailable</h4>
+                                    <p><t t-esc="error_message"/></p>
+                                    <p class="text-muted">Please contact an administrator for a new registration link.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Registration Success
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="registration_success" name="Registration Success">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6 text-center">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <h4 class="text-success mb-3">Registration Successful!</h4>
+                                    <p>Welcome, <strong><t t-esc="volunteer_name"/></strong>!</p>
+                                    <p>Your account has been created. You can now log in to the portal.</p>
+                                    <a href="/web/login" class="btn btn-primary mt-2">Go to Login</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

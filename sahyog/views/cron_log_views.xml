@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tree View (read-only log) -->
+    <record id="view_cron_log_tree" model="ir.ui.view">
+        <field name="name">sahyog.cron.log.tree</field>
+        <field name="model">sahyog.cron.log</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="executed_at"/>
+                <field name="entry_type"/>
+                <field name="entry_id"/>
+                <field name="volunteer_name"/>
+                <field name="old_status"/>
+                <field name="new_status"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_cron_log_search" model="ir.ui.view">
+        <field name="name">sahyog.cron.log.search</field>
+        <field name="model">sahyog.cron.log</field>
+        <field name="arch" type="xml">
+            <search string="Search Cron Logs">
+                <field name="volunteer_name" string="Volunteer"/>
+                <separator/>
+                <filter string="Silence" name="filter_silence" domain="[('entry_type', '=', 'silence')]"/>
+                <filter string="Break" name="filter_break" domain="[('entry_type', '=', 'break')]"/>
+                <filter string="Program" name="filter_program" domain="[('entry_type', '=', 'program')]"/>
+                <separator/>
+                <filter string="Executed" name="filter_executed" date="executed_at"/>
+                <separator/>
+                <filter string="Type" name="groupby_type" domain="[]" context="{'group_by': 'entry_type'}"/>
+                <filter string="New Status" name="groupby_new_status" domain="[]" context="{'group_by': 'new_status'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_cron_log" model="ir.actions.act_window">
+        <field name="name">Cron Logs</field>
+        <field name="res_model">sahyog.cron.log</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_cron_log_search"/>
+    </record>
+
+</odoo>

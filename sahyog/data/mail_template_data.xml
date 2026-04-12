@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════
+         Generic Notification Email Template
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_notification" model="mail.template">
+        <field name="name">Sahyog: Generic Notification</field>
+        <field name="model_id" ref="model_sahyog_notification"/>
+        <field name="subject">{{ object.title }}</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p><strong><t t-out="object.title or ''"/></strong></p>
+                <p><t t-out="object.message or ''"/></p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Silence Period — Approved
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_silence_approved" model="mail.template">
+        <field name="name">Sahyog: Silence Period Approved</field>
+        <field name="model_id" ref="model_sahyog_silence_period"/>
+        <field name="subject">Your Silence Period has been Approved</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p>Your silence period from <t t-out="object.start_date"/> to <t t-out="object.end_date"/> has been <strong>approved</strong>.</p>
+                <p>Type: <t t-out="object.silence_type or 'N/A'"/></p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Silence Period — Cancelled
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_silence_cancelled" model="mail.template">
+        <field name="name">Sahyog: Silence Period Cancelled</field>
+        <field name="model_id" ref="model_sahyog_silence_period"/>
+        <field name="subject">Silence Period Cancelled</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p>The silence period from <t t-out="object.start_date"/> to <t t-out="object.end_date"/> has been <strong>cancelled</strong>.</p>
+                <p>If you have questions, please contact your admin.</p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════
+         Break Period — Approved
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_break_approved" model="mail.template">
+        <field name="name">Sahyog: Break Period Approved</field>
+        <field name="model_id" ref="model_sahyog_break_period"/>
+        <field name="subject">Your Break Period has been Approved</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p>Your break period from <t t-out="object.start_date"/> to <t t-out="object.end_date"/> has been <strong>approved</strong>.</p>
+                <p>Type: <t t-out="object.break_type or 'N/A'"/></p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Break Period — Cancelled
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_break_cancelled" model="mail.template">
+        <field name="name">Sahyog: Break Period Cancelled</field>
+        <field name="model_id" ref="model_sahyog_break_period"/>
+        <field name="subject">Break Period Cancelled</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p>The break period from <t t-out="object.start_date"/> to <t t-out="object.end_date"/> has been <strong>cancelled</strong>.</p>
+                <p>If you have questions, please contact your admin.</p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Program Enrollment
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_program_enrolled" model="mail.template">
+        <field name="name">Sahyog: Program Enrollment</field>
+        <field name="model_id" ref="model_sahyog_volunteer_program"/>
+        <field name="subject">You have been enrolled in a Program</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear <t t-out="object.volunteer_id.name or 'Volunteer'"/>,</p>
+                <p>You have been enrolled in the program <strong><t t-out="object.program_id.name or ''"/></strong>.</p>
+                <p>Dates: <t t-out="object.start_date"/> to <t t-out="object.end_date"/></p>
+                <p>Participation: <t t-out="object.participation_type or ''"/></p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Request Pending Admin Approval
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_request_pending" model="mail.template">
+        <field name="name">Sahyog: Request Pending Admin Approval</field>
+        <field name="model_id" ref="model_sahyog_notification"/>
+        <field name="subject">{{ object.title }}</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear Admin,</p>
+                <p>A new request is pending your approval.</p>
+                <p><strong><t t-out="object.title or ''"/></strong></p>
+                <p><t t-out="object.message or ''"/></p>
+                <p>Please log in to review and approve or reject this request.</p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Meeting Scheduled
+         ══════════════════════════════════════════════ -->
+    <record id="mail_template_meeting_scheduled" model="mail.template">
+        <field name="name">Sahyog: Meeting Scheduled</field>
+        <field name="model_id" ref="model_sahyog_meeting"/>
+        <field name="subject">Meeting Scheduled: {{ object.title }}</field>
+        <field name="email_from">{{ (object.env.company.email or 'noreply@sahyog.local') }}</field>
+        <field name="email_to">{{ object.volunteer_id.work_email }}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0; padding: 0;">
+                <p>Dear Volunteer,</p>
+                <p>A meeting has been scheduled:</p>
+                <p><strong><t t-out="object.title or ''"/></strong></p>
+                <p>Date: <t t-out="object.date"/></p>
+                <p>Time: <t t-out="object.start_time or ''"/> - <t t-out="object.end_time or ''"/></p>
+                <p>Location: <t t-out="object.location or 'TBD'"/></p>
+                <p>Thank you,<br/>Sahyog Team</p>
+            </div>
+        </field>
+    </record>
+
+</odoo>

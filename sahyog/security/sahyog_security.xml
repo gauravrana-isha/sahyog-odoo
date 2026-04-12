@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════
+         Security Groups
+         ══════════════════════════════════════════════ -->
+
+    <!-- Volunteer group — base access for Sahyog module -->
+    <record id="group_sahyog_volunteer" model="res.groups">
+        <field name="name">Sahyog / Volunteer</field>
+    </record>
+
+    <!-- Admin group — implies volunteer, assigned to admin user -->
+    <record id="group_sahyog_admin" model="res.groups">
+        <field name="name">Sahyog / Admin</field>
+        <field name="implied_ids" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Record Rules — Volunteer self-access
+         ══════════════════════════════════════════════ -->
+
+    <!-- Silence Period: volunteer sees own -->
+    <record id="rule_silence_period_volunteer" model="ir.rule">
+        <field name="name">Silence Period: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_silence_period"/>
+        <field name="domain_force">[('volunteer_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Break Period: volunteer sees own -->
+    <record id="rule_break_period_volunteer" model="ir.rule">
+        <field name="name">Break Period: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_break_period"/>
+        <field name="domain_force">[('volunteer_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Volunteer Program: volunteer sees own -->
+    <record id="rule_volunteer_program_volunteer" model="ir.rule">
+        <field name="name">Volunteer Program: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_volunteer_program"/>
+        <field name="domain_force">[('volunteer_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Notification: volunteer sees own -->
+    <record id="rule_notification_volunteer" model="ir.rule">
+        <field name="name">Notification: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_notification"/>
+        <field name="domain_force">[('volunteer_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Unavailability Slot: volunteer sees own -->
+    <record id="rule_unavailability_slot_volunteer" model="ir.rule">
+        <field name="name">Unavailability Slot: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_unavailability_slot"/>
+        <field name="domain_force">[('volunteer_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- Meeting: volunteer sees own (either side) -->
+    <record id="rule_meeting_volunteer" model="ir.rule">
+        <field name="name">Meeting: volunteer own records</field>
+        <field name="model_id" ref="model_sahyog_meeting"/>
+        <field name="domain_force">['|', ('volunteer_id.user_id', '=', user.id), ('meeting_with_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ══════════════════════════════════════════════
+         Record Rules — Admin unrestricted (global)
+         ══════════════════════════════════════════════ -->
+
+    <record id="rule_silence_period_admin" model="ir.rule">
+        <field name="name">Silence Period: admin full access</field>
+        <field name="model_id" ref="model_sahyog_silence_period"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <record id="rule_break_period_admin" model="ir.rule">
+        <field name="name">Break Period: admin full access</field>
+        <field name="model_id" ref="model_sahyog_break_period"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <record id="rule_volunteer_program_admin" model="ir.rule">
+        <field name="name">Volunteer Program: admin full access</field>
+        <field name="model_id" ref="model_sahyog_volunteer_program"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <record id="rule_notification_admin" model="ir.rule">
+        <field name="name">Notification: admin full access</field>
+        <field name="model_id" ref="model_sahyog_notification"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <record id="rule_unavailability_slot_admin" model="ir.rule">
+        <field name="name">Unavailability Slot: admin full access</field>
+        <field name="model_id" ref="model_sahyog_unavailability_slot"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <record id="rule_meeting_admin" model="ir.rule">
+        <field name="name">Meeting: admin full access</field>
+        <field name="model_id" ref="model_sahyog_meeting"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+</odoo>

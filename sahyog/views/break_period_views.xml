@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_break_period_tree" model="ir.ui.view">
+        <field name="name">sahyog.break.period.list</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <list decoration-success="status == 'approved'"
+                  decoration-info="status == 'on_going'"
+                  decoration-danger="status in ('pending_admin','pending_volunteer')"
+                  decoration-muted="status in ('done','cancelled')">
+                <field name="volunteer_id"/>
+                <field name="break_type"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="start_time" optional="hide"/>
+                <field name="end_time" optional="hide"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'approved'"
+                       decoration-info="status == 'on_going'"
+                       decoration-danger="status in ('pending_admin','pending_volunteer')"
+                       decoration-muted="status in ('done','cancelled')"/>
+                <field name="reason" optional="hide"/>
+                <field name="is_recurring" optional="hide"/>
+                <field name="created_by" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_break_period_form" model="ir.ui.view">
+        <field name="name">sahyog.break.period.form</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="status" widget="statusbar"
+                           statusbar_visible="approved,on_going,done"/>
+                    <button name="action_approve" string="Approve" type="object"
+                            class="btn-primary"
+                            invisible="status not in ('requested','pending_admin','pending_volunteer')"/>
+                    <button name="action_cancel" string="Cancel" type="object"
+                            class="btn-secondary"
+                            invisible="status in ('done','cancelled')"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Volunteer &amp; Type">
+                            <field name="volunteer_id"/>
+                            <field name="break_type"/>
+                            <field name="reason" placeholder="Reason for break..."/>
+                        </group>
+                        <group string="Dates &amp; Times">
+                            <field name="start_date"/>
+                            <field name="end_date"/>
+                            <field name="start_time" placeholder="HH:MM"/>
+                            <field name="end_time" placeholder="HH:MM"/>
+                            <field name="is_recurring"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Program Link">
+                            <field name="program_id"/>
+                            <field name="schedule_id"/>
+                        </group>
+                        <group string="Administration">
+                            <field name="created_by" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Notes"/>
+                    <field name="notes" placeholder="Additional notes..."
+                           nolabel="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_break_period_search" model="ir.ui.view">
+        <field name="name">sahyog.break.period.search</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <search string="Search Break Periods">
+                <field name="volunteer_id" string="Volunteer"/>
+                <field name="program_id" string="Program"/>
+                <separator/>
+                <filter string="Approved" name="filter_approved" domain="[('status', '=', 'approved')]"/>
+                <filter string="On Going" name="filter_on_going" domain="[('status', '=', 'on_going')]"/>
+                <filter string="Done" name="filter_done" domain="[('status', '=', 'done')]"/>
+                <filter string="Pending" name="filter_pending" domain="[('status', 'in', ('requested','pending_admin','pending_volunteer'))]"/>
+                <filter string="Cancelled" name="filter_cancelled" domain="[('status', '=', 'cancelled')]"/>
+                <separator/>
+                <filter string="Personal" name="filter_personal" domain="[('break_type', '=', 'personal')]"/>
+                <filter string="Health" name="filter_health" domain="[('break_type', '=', 'health')]"/>
+                <filter string="Family Emergency" name="filter_family" domain="[('break_type', '=', 'family_emergency')]"/>
+                <separator/>
+                <filter string="Start Date" name="filter_start_date" date="start_date"/>
+                <filter string="End Date" name="filter_end_date" date="end_date"/>
+                <separator/>
+                <filter string="Volunteer" name="groupby_volunteer" domain="[]" context="{'group_by': 'volunteer_id'}"/>
+                <filter string="Type" name="groupby_type" domain="[]" context="{'group_by': 'break_type'}"/>
+                <filter string="Status" name="groupby_status" domain="[]" context="{'group_by': 'status'}"/>
+                <filter string="Month" name="groupby_month" domain="[]" context="{'group_by': 'start_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Calendar View -->
+    <record id="view_break_period_calendar" model="ir.ui.view">
+        <field name="name">sahyog.break.period.calendar</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <calendar string="Break Periods" date_start="start_date" date_stop="end_date" color="break_type" event_open_popup="true" quick_create="false">
+                <field name="volunteer_id"/>
+                <field name="break_type"/>
+                <field name="status"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_break_period_kanban" model="ir.ui.view">
+        <field name="name">sahyog.break.period.kanban</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="status" class="o_kanban_small_column">
+                <field name="volunteer_id"/>
+                <field name="break_type"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="status"/>
+                <templates>
+                    <t t-name="card">
+                        <field name="volunteer_id" widget="many2one_avatar"/>
+                        <div class="mb-1"><strong><field name="break_type"/></strong></div>
+                        <div class="text-muted"><field name="start_date"/> - <field name="end_date"/></div>
+                        <field name="status" widget="label_selection" options="{'classes': {'approved': 'success', 'on_going': 'info', 'pending_admin': 'warning', 'done': 'secondary', 'cancelled': 'danger'}}"/>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="view_break_period_pivot" model="ir.ui.view">
+        <field name="name">sahyog.break.period.pivot</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <pivot string="Break Analysis">
+                <field name="break_type" type="row"/>
+                <field name="status" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="view_break_period_graph" model="ir.ui.view">
+        <field name="name">sahyog.break.period.graph</field>
+        <field name="model">sahyog.break.period</field>
+        <field name="arch" type="xml">
+            <graph string="Break Analysis" type="bar">
+                <field name="break_type"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_break_period" model="ir.actions.act_window">
+        <field name="name">Break Periods</field>
+        <field name="res_model">sahyog.break.period</field>
+        <field name="view_mode">list,form,calendar,kanban,pivot,graph</field>
+        <field name="search_view_id" ref="view_break_period_search"/>
+    </record>
+
+</odoo>

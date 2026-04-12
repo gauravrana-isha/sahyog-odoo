@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="lang_english" model="sahyog.language"><field name="name">English</field></record>
+        <record id="lang_hindi" model="sahyog.language"><field name="name">Hindi</field></record>
+        <record id="lang_tamil" model="sahyog.language"><field name="name">Tamil</field></record>
+        <record id="lang_telugu" model="sahyog.language"><field name="name">Telugu</field></record>
+        <record id="lang_kannada" model="sahyog.language"><field name="name">Kannada</field></record>
+        <record id="lang_malayalam" model="sahyog.language"><field name="name">Malayalam</field></record>
+        <record id="lang_marathi" model="sahyog.language"><field name="name">Marathi</field></record>
+        <record id="lang_bengali" model="sahyog.language"><field name="name">Bengali</field></record>
+        <record id="lang_gujarati" model="sahyog.language"><field name="name">Gujarati</field></record>
+        <record id="lang_punjabi" model="sahyog.language"><field name="name">Punjabi</field></record>
+    </data>
+</odoo>

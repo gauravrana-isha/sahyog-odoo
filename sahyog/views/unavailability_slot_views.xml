@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_unavailability_slot_tree" model="ir.ui.view">
+        <field name="name">sahyog.unavailability.slot.list</field>
+        <field name="model">sahyog.unavailability.slot</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="volunteer_id"/>
+                <field name="date"/>
+                <field name="start_time"/>
+                <field name="end_time"/>
+                <field name="reason" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_unavailability_slot_form" model="ir.ui.view">
+        <field name="name">sahyog.unavailability.slot.form</field>
+        <field name="model">sahyog.unavailability.slot</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Volunteer &amp; Date">
+                            <field name="volunteer_id"/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Time Slot">
+                            <field name="start_time" placeholder="HH:MM"/>
+                            <field name="end_time" placeholder="HH:MM"/>
+                        </group>
+                    </group>
+                    <separator string="Reason"/>
+                    <field name="reason" placeholder="Reason for unavailability..."
+                           nolabel="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_unavailability_slot_search" model="ir.ui.view">
+        <field name="name">sahyog.unavailability.slot.search</field>
+        <field name="model">sahyog.unavailability.slot</field>
+        <field name="arch" type="xml">
+            <search string="Search Unavailability Slots">
+                <field name="volunteer_id"/>
+                <separator/>
+                <filter string="Date" name="filter_date" date="date"/>
+                <separator/>
+                <filter string="Volunteer" name="groupby_volunteer" domain="[]" context="{'group_by': 'volunteer_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_unavailability_slot" model="ir.actions.act_window">
+        <field name="name">Unavailability Slots</field>
+        <field name="res_model">sahyog.unavailability.slot</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_unavailability_slot_search"/>
+    </record>
+
+</odoo>

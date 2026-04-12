@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="vtype_poornanga" model="sahyog.volunteer.type"><field name="name">Poornanga</field></record>
+        <record id="vtype_ltv" model="sahyog.volunteer.type"><field name="name">LTV</field></record>
+        <record id="vtype_sadhanapada" model="sahyog.volunteer.type"><field name="name">Sadhanapada</field></record>
+        <record id="vtype_sadhana_intensive" model="sahyog.volunteer.type"><field name="name">Sadhana Intensive</field></record>
+        <record id="vtype_bramhachari" model="sahyog.volunteer.type"><field name="name">Bramhachari</field></record>
+        <record id="vtype_staff" model="sahyog.volunteer.type"><field name="name">Staff</field></record>
+        <record id="vtype_general" model="sahyog.volunteer.type"><field name="name">General Volunteer</field></record>
+        <record id="vtype_hatha_yoga" model="sahyog.volunteer.type"><field name="name">Hatha Yoga Teacher</field></record>
+        <record id="vtype_ishanga" model="sahyog.volunteer.type"><field name="name">Ishanga</field></record>
+        <record id="vtype_others" model="sahyog.volunteer.type"><field name="name">Others</field></record>
+    </data>
+</odoo>

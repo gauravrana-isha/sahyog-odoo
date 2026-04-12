@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sahyog.GanttTimeline">
+        <div class="o_action gantt-container">
+
+            <!-- ============ HEADER ============ -->
+            <div class="gantt-header">
+                <span class="gantt-header-period"><t t-esc="periodLabel"/></span>
+                <div class="gantt-header-nav">
+                    <button t-on-click="onPrevious" title="Previous">&#9664;</button>
+                    <button t-on-click="onToday" title="Today">Today</button>
+                    <button t-on-click="onNext" title="Next">&#9654;</button>
+                </div>
+                <div class="gantt-zoom-toggle">
+                    <button t-att-class="state.zoomLevel === 'month' ? 'active' : ''"
+                            t-on-click="() => this.onZoomChange('month')">Month</button>
+                    <button t-att-class="state.zoomLevel === 'week' ? 'active' : ''"
+                            t-on-click="() => this.onZoomChange('week')">Week</button>
+                </div>
+                <div class="gantt-view-switch">
+                    <button t-on-click="onSwitchToCalendar" title="Calendar View"><i class="fa fa-calendar"/> Calendar</button>
+                    <button t-on-click="onSwitchToList" title="List View"><i class="fa fa-list"/> List</button>
+                </div>
+                <div class="gantt-legend">
+                    <div class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#4A90D9;"/> Silence</div>
+                    <div class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#E8943A;"/> Break</div>
+                    <div class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#5CB85C;"/> Program</div>
+                </div>
+                <div class="gantt-filter" style="position:relative;">
+                    <button t-on-click="toggleEntryTypeDropdown"
+                            style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:0.82rem;background:#fff;cursor:pointer;white-space:nowrap;">
+                        <t t-if="state.selectedEntryTypes.length === 0">All Entry Types ▾</t>
+                        <t t-elif="state.selectedEntryTypes.length === 1"><t t-esc="state.selectedEntryTypes[0]"/> ▾</t>
+                        <t t-else=""><t t-esc="state.selectedEntryTypes.length"/> types ▾</t>
+                    </button>
+                    <t t-if="state.entryTypeDropdownOpen">
+                        <div style="position:absolute;top:100%;left:0;z-index:50;background:#fff;border:1px solid #ced4da;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:6px 0;min-width:160px;margin-top:4px;">
+                            <div style="padding:2px 10px;margin-bottom:4px;">
+                                <button t-on-click="clearEntryTypeFilter"
+                                        style="font-size:0.78rem;color:#4A90D9;background:none;border:none;cursor:pointer;padding:0;">Clear all</button>
+                            </div>
+                            <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:0.82rem;" t-on-click.stop="">
+                                <input type="checkbox" t-att-checked="state.selectedEntryTypes.includes('silence')" t-on-change="() => this.onEntryTypeToggle('silence')"/>
+                                <span class="gantt-legend-dot" style="background:#4A90D9;width:10px;height:10px;border-radius:2px;display:inline-block;"/> Silence
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:0.82rem;" t-on-click.stop="">
+                                <input type="checkbox" t-att-checked="state.selectedEntryTypes.includes('break')" t-on-change="() => this.onEntryTypeToggle('break')"/>
+                                <span class="gantt-legend-dot" style="background:#E8943A;width:10px;height:10px;border-radius:2px;display:inline-block;"/> Break
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:0.82rem;" t-on-click.stop="">
+                                <input type="checkbox" t-att-checked="state.selectedEntryTypes.includes('program')" t-on-change="() => this.onEntryTypeToggle('program')"/>
+                                <span class="gantt-legend-dot" style="background:#5CB85C;width:10px;height:10px;border-radius:2px;display:inline-block;"/> Program
+                            </label>
+                        </div>
+                    </t>
+                </div>
+                <div class="gantt-filter" style="position:relative;">
+                    <button t-on-click="toggleVolunteerTypeDropdown"
+                            style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:0.82rem;background:#fff;cursor:pointer;white-space:nowrap;">
+                        <t t-if="state.selectedVolunteerTypeIds.length === 0">All Volunteer Types ▾</t>
+                        <t t-else=""><t t-esc="state.selectedVolunteerTypeIds.length"/> type(s) selected ▾</t>
+                    </button>
+                    <t t-if="state.volunteerTypeDropdownOpen">
+                        <div style="position:absolute;top:100%;left:0;z-index:50;background:#fff;border:1px solid #ced4da;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:6px 0;min-width:180px;max-height:240px;overflow-y:auto;margin-top:4px;">
+                            <div style="padding:2px 10px;margin-bottom:4px;">
+                                <button t-on-click="clearVolunteerTypeFilter"
+                                        style="font-size:0.78rem;color:#4A90D9;background:none;border:none;cursor:pointer;padding:0;">Clear all</button>
+                            </div>
+                            <t t-foreach="state.volunteerTypes" t-as="vtype" t-key="vtype.id">
+                                <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:0.82rem;"
+                                       t-on-click.stop="">
+                                    <input type="checkbox"
+                                           t-att-checked="state.selectedVolunteerTypeIds.includes(vtype.id)"
+                                           t-on-change="() => this.onVolunteerTypeToggle(vtype.id)"/>
+                                    <t t-esc="vtype.name"/>
+                                </label>
+                            </t>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- ============ LOADING ============ -->
+            <t t-if="state.loading">
+                <div class="gantt-loading"><div class="gantt-loading-spinner"/>Loading…</div>
+            </t>
+
+            <!-- ============ EMPTY STATE ============ -->
+            <t t-elif="gridRows.length === 0 and !state.loading">
+                <div class="gantt-empty">No active volunteers found for this period.</div>
+            </t>
+
+            <!-- ============ GRID (table-like layout) ============ -->
+            <t t-else="">
+                <div class="gantt-grid-wrapper" t-ref="grid">
+                    <div class="gantt-table" t-att-style="'min-width:' + gridMinWidth + 'px'">
+
+                        <!-- Header row -->
+                        <div class="gantt-row gantt-row-header">
+                            <div class="gantt-name-col header">Volunteer</div>
+                            <div class="gantt-days-area">
+                                <t t-foreach="dateRange" t-as="date" t-key="date.toISODate()">
+                                    <div t-att-class="'gantt-day-header' + (isWeekend(date) ? ' weekend' : '') + (todayColumnIndex === date_index ? ' today' : '')"
+                                         style="flex:1;min-width:30px">
+                                        <t t-esc="formatDateLabel(date)"/>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Volunteer rows -->
+                        <t t-foreach="gridRows" t-as="row" t-key="row.volunteer.id">
+                            <div class="gantt-row">
+                                <div class="gantt-name-col" t-att-title="row.volunteer.name">
+                                    <t t-esc="row.volunteer.name"/>
+                                </div>
+                                <div class="gantt-days-area" t-att-style="'min-height:' + getRowMinHeight(row)">
+                                    <!-- Day cell backgrounds -->
+                                    <t t-foreach="dateRange" t-as="date" t-key="date.toISODate()">
+                                        <div t-att-class="'gantt-cell' + (isWeekend(date) ? ' weekend' : '') + (state.drag.active and state.drag.type === 'create' and state.drag.volunteerId === row.volunteer.id and date_index >= Math.min(state.drag.startCol, state.drag.currentCol) and date_index &lt;= Math.max(state.drag.startCol, state.drag.currentCol) ? ' drag-highlight' : '')"
+                                             t-att-style="'left:' + (date_index / dateRange.length * 100) + '%;width:' + (100 / dateRange.length) + '%'"
+                                             t-on-click="(ev) => this.onCellClick(row.volunteer.id, date, ev)"
+                                             t-on-mousedown="(ev) => this.onCellDragStart(row.volunteer.id, date, ev)"/>
+                                    </t>
+
+                                    <!-- Entry bars (absolutely positioned) -->
+                                    <t t-foreach="row.bars" t-as="bar" t-key="bar.entry.id">
+                                        <div t-att-class="'gantt-bar' + (state.drag.active and state.drag.entryId === bar.entry.id ? ' dragging' : '')"
+                                             t-att-style="getBarStyleAbs(bar)"
+                                             t-on-mouseenter="(ev) => this.onBarMouseEnter(bar.entry, ev)"
+                                             t-on-mouseleave="() => this.onBarMouseLeave()"
+                                             t-on-click.stop="(ev) => this.onBarClick(bar.entry, ev)"
+                                             t-on-mousedown="(ev) => this.onDragStart(bar.entry, 'body', ev)">
+                                            <span class="gantt-bar-label"><t t-esc="getEntryLabel(bar.entry)"/></span>
+                                            <div class="gantt-bar-resize-handle"
+                                                 t-on-mousedown.stop="(ev) => this.onDragStart(bar.entry, 'right', ev)"/>
+                                        </div>
+                                    </t>
+
+                                    <!-- Today line -->
+                                    <t t-if="todayColumnIndex >= 0">
+                                        <div class="gantt-today-line" t-att-style="'left:' + ((todayColumnIndex + 0.5) / dateRange.length * 100) + '%'"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+
+            <!-- ============ TOOLTIP ============ -->
+            <t t-if="state.tooltip.visible and state.tooltip.entry">
+                <div class="gantt-tooltip" t-att-style="'left:' + state.tooltip.x + 'px;top:' + state.tooltip.y + 'px'">
+                    <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Volunteer</span><span class="gantt-tooltip-value"><t t-esc="getVolunteerName(state.tooltip.entry)"/></span></div>
+                    <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Type</span><span class="gantt-tooltip-value"><t t-esc="state.tooltip.entry.entry_type"/></span></div>
+                    <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Description</span><span class="gantt-tooltip-value"><t t-esc="getEntryLabel(state.tooltip.entry)"/></span></div>
+                    <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Dates</span><span class="gantt-tooltip-value"><t t-esc="state.tooltip.entry.start_date"/> → <t t-esc="state.tooltip.entry.end_date"/></span></div>
+                    <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Status</span><span class="gantt-tooltip-value"><t t-esc="state.tooltip.entry.status"/></span></div>
+                </div>
+            </t>
+
+            <!-- ============ POPOVER ============ -->
+            <t t-if="state.popover.visible and state.popover.entry">
+                <div class="gantt-popover" t-att-style="'left:' + state.popover.x + 'px;top:' + (state.popover.y + 10) + 'px'">
+                    <div class="gantt-popover-field"><span class="gantt-popover-field-label">Volunteer</span><span><t t-esc="getVolunteerName(state.popover.entry)"/></span></div>
+                    <div class="gantt-popover-field"><span class="gantt-popover-field-label">Type</span><span><t t-esc="state.popover.entry.entry_type"/></span></div>
+                    <div class="gantt-popover-field"><span class="gantt-popover-field-label">Dates</span><span><t t-esc="state.popover.entry.start_date"/> → <t t-esc="state.popover.entry.end_date"/></span></div>
+                    <div class="gantt-popover-field"><span class="gantt-popover-field-label">Status</span><span><t t-esc="state.popover.entry.status"/></span></div>
+                    <div class="gantt-popover-actions">
+                        <button class="primary" t-on-click="onPopoverOpen">Open</button>
+                        <t t-if="isPendingStatus(state.popover.entry.status)"><button class="success" t-on-click="onPopoverApprove">Approve</button></t>
+                        <t t-if="!isTerminalStatus(state.popover.entry.status)"><button class="danger" t-on-click="onPopoverCancel">Cancel</button></t>
+                        <button t-on-click="onPopoverClose">Close</button>
+                    </div>
+                </div>
+            </t>
+
+            <!-- ============ DIALOG ============ -->
+            <t t-if="state.dialog.visible">
+                <div class="gantt-dialog-overlay" t-on-click="onDialogClose">
+                    <div class="gantt-dialog" t-on-click.stop="">
+                        <h4>Create Entry</h4>
+                        <p class="gantt-dialog-dates"><t t-esc="state.dialog.startDate"/><t t-if="state.dialog.endDate and state.dialog.endDate !== state.dialog.startDate"> → <t t-esc="state.dialog.endDate"/></t></p>
+                        <div class="gantt-dialog-buttons">
+                            <button t-on-click="() => this.onDialogSelect('silence')"><span class="gantt-legend-dot" style="background:#4A90D9;margin-right:8px;"/>Silence Period</button>
+                            <button t-on-click="() => this.onDialogSelect('break')"><span class="gantt-legend-dot" style="background:#E8943A;margin-right:8px;"/>Break Period</button>
+                            <button t-on-click="() => this.onDialogSelect('program')"><span class="gantt-legend-dot" style="background:#5CB85C;margin-right:8px;"/>Program Enrollment</button>
+                        </div>
+                        <div class="gantt-dialog-dismiss"><button t-on-click="onDialogClose">Cancel</button></div>
+                    </div>
+                </div>
+            </t>
+
+        </div>
+    </t>
+
+</templates>

@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- Top-level Sahyog menu -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_root"
+              name="Sahyog"
+              sequence="100"
+              web_icon="sahyog,static/description/icon.png"/>
+
+    <!-- ============================================================ -->
+    <!-- 1. Dashboard -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_dashboard"
+              name="Dashboard"
+              parent="menu_sahyog_root"
+              action="action_sahyog_dashboard"
+              sequence="5"/>
+
+    <!-- ============================================================ -->
+    <!-- 2. Volunteers -->
+    <!-- ============================================================ -->
+    <record id="action_sahyog_volunteers" model="ir.actions.act_window">
+        <field name="name">Volunteers</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_sahyog_volunteer_search"/>
+    </record>
+
+    <record id="action_sahyog_volunteers_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sahyog_volunteer_list"/>
+        <field name="act_window_id" ref="action_sahyog_volunteers"/>
+    </record>
+    <record id="action_sahyog_volunteers_view_form" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_sahyog_volunteer_form"/>
+        <field name="act_window_id" ref="action_sahyog_volunteers"/>
+    </record>
+
+    <menuitem id="menu_sahyog_volunteers"
+              name="Volunteers"
+              parent="menu_sahyog_root"
+              action="action_sahyog_volunteers"
+              sequence="10"/>
+
+    <!-- ============================================================ -->
+    <!-- 3. Leave Management (parent) -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_leave_parent"
+              name="Leave Management"
+              parent="menu_sahyog_root"
+              sequence="20"/>
+
+    <menuitem id="menu_sahyog_silence"
+              name="Silence Periods"
+              parent="menu_sahyog_leave_parent"
+              action="action_silence_period"
+              sequence="10"/>
+
+    <menuitem id="menu_sahyog_breaks"
+              name="Breaks"
+              parent="menu_sahyog_leave_parent"
+              action="action_break_period"
+              sequence="20"/>
+
+    <menuitem id="menu_sahyog_unavailability"
+              name="Unavailability"
+              parent="menu_sahyog_leave_parent"
+              action="action_unavailability_slot"
+              sequence="30"/>
+
+    <!-- ============================================================ -->
+    <!-- 4. Programs (parent) -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_programs_parent"
+              name="Programs"
+              parent="menu_sahyog_root"
+              sequence="30"/>
+
+    <menuitem id="menu_sahyog_programs"
+              name="Programs"
+              parent="menu_sahyog_programs_parent"
+              action="action_program"
+              sequence="10"/>
+
+    <menuitem id="menu_sahyog_schedules"
+              name="Schedules"
+              parent="menu_sahyog_programs_parent"
+              action="action_program_schedule"
+              sequence="20"/>
+
+    <menuitem id="menu_sahyog_enrollments"
+              name="Enrollments"
+              parent="menu_sahyog_programs_parent"
+              action="action_volunteer_program"
+              sequence="30"/>
+
+    <!-- ============================================================ -->
+    <!-- 5. Team Calendar -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_team_calendar"
+              name="Team Calendar"
+              parent="menu_sahyog_root"
+              action="action_sahyog_gantt_timeline"
+              sequence="40"/>
+
+    <!-- ============================================================ -->
+    <!-- 6. Operations (parent) -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_operations_parent"
+              name="Operations"
+              parent="menu_sahyog_root"
+              sequence="50"/>
+
+    <menuitem id="menu_sahyog_meetings"
+              name="Meetings"
+              parent="menu_sahyog_operations_parent"
+              action="action_meeting"
+              sequence="10"/>
+
+    <menuitem id="menu_sahyog_notifications"
+              name="Notifications"
+              parent="menu_sahyog_operations_parent"
+              action="action_notification"
+              sequence="20"/>
+
+    <menuitem id="menu_sahyog_registration_links"
+              name="Registration Links"
+              parent="menu_sahyog_operations_parent"
+              action="action_registration_link"
+              sequence="30"/>
+
+    <!-- ============================================================ -->
+    <!-- 7. Configuration (parent) -->
+    <!-- ============================================================ -->
+    <menuitem id="menu_sahyog_config"
+              name="Configuration"
+              parent="menu_sahyog_root"
+              sequence="100"/>
+
+    <menuitem id="menu_sahyog_config_sub_teams"
+              name="Sub Teams"
+              parent="menu_sahyog_config"
+              action="action_sub_team"
+              sequence="10"/>
+
+    <menuitem id="menu_sahyog_config_regions"
+              name="Regions"
+              parent="menu_sahyog_config"
+              action="action_region"
+              sequence="20"/>
+
+    <menuitem id="menu_sahyog_config_volunteer_types"
+              name="Volunteer Types"
+              parent="menu_sahyog_config"
+              action="action_volunteer_type"
+              sequence="30"/>
+
+    <menuitem id="menu_sahyog_config_languages"
+              name="Languages"
+              parent="menu_sahyog_config"
+              action="action_language"
+              sequence="40"/>
+
+    <menuitem id="menu_sahyog_config_sadhana"
+              name="Sadhana Practices"
+              parent="menu_sahyog_config"
+              action="action_sadhana_practice"
+              sequence="50"/>
+
+    <menuitem id="menu_sahyog_config_csv_import"
+              name="Import Schedules (CSV)"
+              parent="menu_sahyog_config"
+              action="action_csv_import_wizard"
+              sequence="60"/>
+
+    <menuitem id="menu_sahyog_config_cron_logs"
+              name="Cron Logs"
+              parent="menu_sahyog_config"
+              action="action_cron_log"
+              sequence="70"/>
+
+</odoo>

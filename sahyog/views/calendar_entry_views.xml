@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ACL for SQL view model (must be in XML, not CSV, for _auto=False models) -->
+    <record id="access_calendar_entry_admin" model="ir.model.access">
+        <field name="name">access_calendar_entry_admin</field>
+        <field name="model_id" ref="model_sahyog_calendar_entry"/>
+        <field name="group_id" ref="group_sahyog_admin"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_calendar_entry_volunteer" model="ir.model.access">
+        <field name="name">access_calendar_entry_volunteer</field>
+        <field name="model_id" ref="model_sahyog_calendar_entry"/>
+        <field name="group_id" ref="group_sahyog_volunteer"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Calendar View -->
+    <record id="view_calendar_entry_calendar" model="ir.ui.view">
+        <field name="name">sahyog.calendar.entry.calendar</field>
+        <field name="model">sahyog.calendar.entry</field>
+        <field name="arch" type="xml">
+            <calendar string="Team Calendar" date_start="start_date" date_stop="end_date" color="entry_type" event_open_popup="true" quick_create="false" mode="month">
+                <field name="name"/>
+                <field name="volunteer_id"/>
+                <field name="entry_type"/>
+                <field name="status"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- List View -->
+    <record id="view_calendar_entry_tree" model="ir.ui.view">
+        <field name="name">sahyog.calendar.entry.list</field>
+        <field name="model">sahyog.calendar.entry</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="volunteer_id"/>
+                <field name="entry_type" widget="badge"/>
+                <field name="name"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="status"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_calendar_entry_search" model="ir.ui.view">
+        <field name="name">sahyog.calendar.entry.search</field>
+        <field name="model">sahyog.calendar.entry</field>
+        <field name="arch" type="xml">
+            <search string="Search Team Calendar">
+                <field name="volunteer_id"/>
+                <field name="name"/>
+                <separator/>
+                <filter string="Silence" name="filter_silence" domain="[('entry_type', '=', 'silence')]"/>
+                <filter string="Break" name="filter_break" domain="[('entry_type', '=', 'break')]"/>
+                <filter string="Program" name="filter_program" domain="[('entry_type', '=', 'program')]"/>
+                <separator/>
+                <filter string="Approved" name="filter_approved" domain="[('status', '=', 'approved')]"/>
+                <filter string="On Going" name="filter_on_going" domain="[('status', '=', 'on_going')]"/>
+                <filter string="Upcoming" name="filter_upcoming" domain="[('status', '=', 'upcoming')]"/>
+                <filter string="Done" name="filter_done" domain="[('status', '=', 'done')]"/>
+                <separator/>
+                <filter string="Start Date" name="filter_start_date" date="start_date"/>
+                <separator/>
+                <filter string="Volunteer" name="groupby_volunteer" domain="[]" context="{'group_by': 'volunteer_id'}"/>
+                <filter string="Type" name="groupby_type" domain="[]" context="{'group_by': 'entry_type'}"/>
+                <filter string="Status" name="groupby_status" domain="[]" context="{'group_by': 'status'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_calendar_entry" model="ir.actions.act_window">
+        <field name="name">Team Calendar</field>
+        <field name="res_model">sahyog.calendar.entry</field>
+        <field name="view_mode">calendar,list</field>
+        <field name="search_view_id" ref="view_calendar_entry_search"/>
+    </record>
+
+</odoo>

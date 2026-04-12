@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="region_indian" model="sahyog.region">
+            <field name="name">Indian</field>
+            <field name="nationality">indian</field>
+            <field name="sort_order">1</field>
+        </record>
+        <record id="region_overseas" model="sahyog.region">
+            <field name="name">Overseas</field>
+            <field name="nationality">overseas</field>
+            <field name="sort_order">2</field>
+        </record>
+    </data>
+</odoo>

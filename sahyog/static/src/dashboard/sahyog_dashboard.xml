@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sahyog.SahyogDashboard">
+        <div class="o_action">
+            <div class="container-fluid py-4">
+                <h2 class="mb-4">Sahyog Dashboard</h2>
+
+                <!-- Summary Cards (6 cards matching production) -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">Active</h5>
+                                <p class="display-6 fw-bold text-primary">
+                                    <t t-esc="state.totalActive"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">Guest Care</h5>
+                                <p class="display-6 fw-bold text-secondary">
+                                    <t t-esc="state.guestCareAvailable"/>/<t t-esc="state.guestCare"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">On Silence</h5>
+                                <p class="display-6 fw-bold text-warning">
+                                    <t t-esc="state.onSilence"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">On Break</h5>
+                                <p class="display-6 fw-bold text-info">
+                                    <t t-esc="state.onBreak"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">On Program</h5>
+                                <p class="display-6 fw-bold text-success">
+                                    <t t-esc="state.onProgram"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">Away</h5>
+                                <p class="display-6 fw-bold text-danger">
+                                    <t t-esc="state.away"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Overview (clickable entries) -->
+                <h4 class="mb-3">Today's Active Entries</h4>
+                <div class="row g-3">
+                    <!-- Silence -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-warning bg-opacity-25 fw-bold">
+                                Silence (<t t-esc="state.todaySilences.length"/>)
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <t t-if="!state.todaySilences.length">
+                                    <li class="list-group-item text-muted">No active silence entries today.</li>
+                                </t>
+                                <t t-foreach="state.todaySilences" t-as="s" t-key="s.id">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                                        style="cursor: pointer;"
+                                        t-on-click="() => this.openSilenceRecord(s.id)">
+                                        <span><t t-esc="s.volunteer_id[1]"/></span>
+                                        <span class="badge bg-warning text-dark">
+                                            <t t-esc="s.silence_type || s.status"/>
+                                        </span>
+                                    </li>
+                                </t>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Breaks -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-info bg-opacity-25 fw-bold">
+                                Breaks (<t t-esc="state.todayBreaks.length"/>)
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <t t-if="!state.todayBreaks.length">
+                                    <li class="list-group-item text-muted">No active break entries today.</li>
+                                </t>
+                                <t t-foreach="state.todayBreaks" t-as="b" t-key="b.id">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                                        style="cursor: pointer;"
+                                        t-on-click="() => this.openBreakRecord(b.id)">
+                                        <span><t t-esc="b.volunteer_id[1]"/></span>
+                                        <span class="badge bg-info text-dark">
+                                            <t t-esc="b.break_type || b.status"/>
+                                        </span>
+                                    </li>
+                                </t>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Programs -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-success bg-opacity-25 fw-bold">
+                                Programs (<t t-esc="state.todayPrograms.length"/>)
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <t t-if="!state.todayPrograms.length">
+                                    <li class="list-group-item text-muted">No active program entries today.</li>
+                                </t>
+                                <t t-foreach="state.todayPrograms" t-as="p" t-key="p.id">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                                        style="cursor: pointer;"
+                                        t-on-click="() => this.openProgramRecord(p.id)">
+                                        <span><t t-esc="p.volunteer_id[1]"/></span>
+                                        <span class="badge bg-success">
+                                            <t t-esc="p.program_id[1]"/>
+                                        </span>
+                                    </li>
+                                </t>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <h4 class="mt-4 mb-3">Quick Links</h4>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card shadow-sm text-center" style="cursor: pointer;" t-on-click="onAddVolunteer">
+                            <div class="card-body">
+                                <i class="fa fa-user-plus fa-2x text-primary mb-2"/>
+                                <h5 class="card-title">Add Volunteer</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm text-center" style="cursor: pointer;" t-on-click="onTeamCalendar">
+                            <div class="card-body">
+                                <i class="fa fa-calendar fa-2x text-success mb-2"/>
+                                <h5 class="card-title">Team Calendar</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm text-center" style="cursor: pointer;" t-on-click="onManagePrograms">
+                            <div class="card-body">
+                                <i class="fa fa-list fa-2x text-info mb-2"/>
+                                <h5 class="card-title">Manage Programs</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </t>
+
+</templates>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Custom login page is served by controllers/spa.py at /sahyog/login -->
+    <!-- No Odoo template inheritance needed -->
+</odoo>
