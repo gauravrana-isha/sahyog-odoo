@@ -17,6 +17,7 @@
         'base',
         'mail',
         'auth_oauth',
+        'auth_signup',
     ],
     'data': [
         # Security

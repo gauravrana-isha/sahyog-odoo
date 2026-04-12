@@ -132,12 +132,15 @@ export function AppLayout({ children }: AppLayoutProps) {
           size="lg"
           aria-label="Notifications"
           onClick={() => setDrawerOpen(true)}
+          style={{ overflow: 'visible' }}
         >
           <Indicator
             disabled={unreadCount === 0}
-            label={unreadCount > 9 ? '9+' : String(unreadCount)}
-            size={16}
+            label={unreadCount > 99 ? '99+' : String(unreadCount)}
+            size={20}
             color="red"
+            offset={2}
+            styles={{ indicator: { padding: '0 4px', minWidth: 20, height: 20, fontSize: 11 } }}
           >
             <IconBell size={22} />
           </Indicator>
