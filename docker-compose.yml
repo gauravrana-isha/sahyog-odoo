@@ -16,6 +16,7 @@ services:
     image: odoo:19.0
     ports:
       - "8069:8069"
+    command: ["odoo", "--proxy-mode"]
     volumes:
       - odoo-filestore:/var/lib/odoo
       - ./odoo.conf:/etc/odoo/odoo.conf:ro
