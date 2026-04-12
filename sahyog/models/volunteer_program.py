@@ -51,9 +51,9 @@ class VolunteerProgram(models.Model):
                 self._notify_admins(
                     'program_request_pending',
                     'New Program Enrollment Request',
-                    'Volunteer %s has requested enrollment in %s from %s to %s.' % (
+                    'Volunteer %s has requested enrollment in %s from %s to %s. [[action:/history?filter=programs|program|%s]]' % (
                         rec.volunteer_id.name, rec.program_id.name,
-                        rec.start_date, rec.end_date,
+                        rec.start_date, rec.end_date, rec.id,
                     ),
                 )
             else:
@@ -62,8 +62,8 @@ class VolunteerProgram(models.Model):
                     'volunteer_id': rec.volunteer_id.id,
                     'type': 'program_enrolled',
                     'title': 'Enrolled in Program',
-                    'message': 'You have been enrolled in %s from %s to %s.' % (
-                        rec.program_id.name, rec.start_date, rec.end_date,
+                    'message': 'You have been enrolled in %s from %s to %s. [[action:/history?filter=programs|program|%s]]' % (
+                        rec.program_id.name, rec.start_date, rec.end_date, rec.id,
                     ),
                 })
         return records

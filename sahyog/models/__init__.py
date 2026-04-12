@@ -1,5 +1,6 @@
 from . import volunteer_type
 from . import sadhana_practice
+from . import silence_rules
 from . import language
 from . import sub_team
 from . import region

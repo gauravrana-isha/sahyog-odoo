@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
+  Checkbox,
   SegmentedControl,
   Select,
   TextInput,
@@ -16,9 +17,9 @@ import { notifications } from '@mantine/notifications';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { format } from 'date-fns';
-import { apiPost } from '../api';
+import { apiGet, apiPost } from '../api';
 import { useApi } from '../hooks/useApi';
-import type { AvailableProgram } from '../types';
+import type { AvailableProgram, ProgramSchedule } from '../types';
 
 type RequestType = 'program' | 'break' | 'silence' | 'unavailability';
 
@@ -50,6 +51,13 @@ export function RequestPage() {
   const [silenceNotes, setSilenceNotes] = useState('');
   const [silenceStart, setSilenceStart] = useState<Date | null>(null);
   const [silenceEnd, setSilenceEnd] = useState<Date | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [silenceStartTime, setSilenceStartTime] = useState('');
+  const [silenceEndTime, setSilenceEndTime] = useState('');
+
+  // Program schedule state
+  const [schedules, setSchedules] = useState<ProgramSchedule[]>([]);
+  const [scheduleId, setScheduleId] = useState<string | null>(null);
 
   // Unavailability form state
   const [unavailDate, setUnavailDate] = useState<Date | null>(null);
@@ -58,6 +66,33 @@ export function RequestPage() {
   const [unavailReason, setUnavailReason] = useState('');
 
   const fmtDate = (d: Date) => format(d, 'yyyy-MM-dd');
+
+  // Auto-set recurring fields when silence_type is 9pm_9am
+  useEffect(() => {
+    if (silenceType === '9pm_9am') {
+      setIsRecurring(true);
+      setSilenceStartTime('21:00');
+      setSilenceEndTime('09:00');
+    }
+  }, [silenceType]);
+
+  // Fetch schedules when a program is selected
+  useEffect(() => {
+    if (!programId) {
+      setSchedules([]);
+      setScheduleId(null);
+      return;
+    }
+    apiGet<ProgramSchedule[]>(`/programs/${programId}/schedules`)
+      .then((data) => {
+        setSchedules(data || []);
+        setScheduleId(null);
+      })
+      .catch(() => {
+        setSchedules([]);
+        setScheduleId(null);
+      });
+  }, [programId]);
 
   const resetAll = () => {
     setProgramId(null);
@@ -75,6 +110,11 @@ export function RequestPage() {
     setSilenceNotes('');
     setSilenceStart(null);
     setSilenceEnd(null);
+    setIsRecurring(false);
+    setSilenceStartTime('');
+    setSilenceEndTime('');
+    setSchedules([]);
+    setScheduleId(null);
     setUnavailDate(null);
     setUnavailStartTime('');
     setUnavailEndTime('');
@@ -99,6 +139,7 @@ export function RequestPage() {
           end_date: fmtDate(endDate),
           location,
           notes,
+          ...(scheduleId ? { schedule_id: Number(scheduleId) } : {}),
         });
         notifications.show({
           title: 'Request Submitted',
@@ -138,6 +179,9 @@ export function RequestPage() {
           start_date: fmtDate(silenceStart),
           end_date: fmtDate(silenceEnd),
           notes: silenceNotes,
+          is_recurring: isRecurring,
+          start_time: silenceStartTime,
+          end_time: silenceEndTime,
         });
         notifications.show({
           title: 'Request Submitted',
@@ -202,6 +246,27 @@ export function RequestPage() {
             ]}
             size="sm"
           />
+          {schedules.length > 0 && (
+            <Select
+              label="Schedule"
+              placeholder="Pick a schedule"
+              data={schedules.map((s) => ({
+                value: String(s.id),
+                label: `${s.start_date} → ${s.end_date} at ${s.location}`,
+              }))}
+              value={scheduleId}
+              onChange={(val) => {
+                setScheduleId(val);
+                const selected = schedules.find((s) => String(s.id) === val);
+                if (selected) {
+                  setStartDate(new Date(selected.start_date));
+                  setEndDate(new Date(selected.end_date));
+                  setLocation(selected.location);
+                }
+              }}
+              size="md"
+            />
+          )}
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
             <DateInput
               label="Start Date"
@@ -322,6 +387,29 @@ export function RequestPage() {
               size="md"
             />
           </SimpleGrid>
+          <Checkbox
+            label="Recurring"
+            checked={isRecurring}
+            onChange={(e) => setIsRecurring(e.currentTarget.checked)}
+          />
+          {isRecurring && (
+            <SimpleGrid cols={2} spacing="sm">
+              <TextInput
+                label="Start Time"
+                type="time"
+                value={silenceStartTime}
+                onChange={(e) => setSilenceStartTime(e.currentTarget.value)}
+                size="md"
+              />
+              <TextInput
+                label="End Time"
+                type="time"
+                value={silenceEndTime}
+                onChange={(e) => setSilenceEndTime(e.currentTarget.value)}
+                size="md"
+              />
+            </SimpleGrid>
+          )}
           <Textarea
             label="Notes"
             placeholder="Optional"

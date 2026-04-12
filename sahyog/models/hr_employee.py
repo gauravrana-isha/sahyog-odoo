@@ -1,3 +1,5 @@
+from datetime import datetime, time as dt_time
+
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 
@@ -15,7 +17,6 @@ class HrEmployee(models.Model):
 
     # ── Dates ──
     date_of_joining_isha = fields.Date('Date of Joining Isha')
-    disha_samskriti_batch = fields.Char('Disha/Samskriti Batch')
     date_of_joining_guest_care = fields.Date('Date of Joining Guest Care')
 
     # ── Role & assignment ──
@@ -58,19 +59,42 @@ class HrEmployee(models.Model):
     break_period_ids = fields.One2many('sahyog.break.period', 'volunteer_id')
     volunteer_program_ids = fields.One2many('sahyog.volunteer.program', 'volunteer_id')
 
+    def _is_in_time_window(self, entry, now_time):
+        """Check if *now_time* falls within entry's start_time..end_time.
+
+        Returns True when:
+        - entry has no start_time or end_time (always active)
+        - same-day window (start <= end): start <= now_time <= end
+        - cross-midnight window (start > end, e.g. 21:00→09:00): now_time >= start OR now_time <= end
+        """
+        if not entry.start_time or not entry.end_time:
+            return True
+        parts_s = entry.start_time.split(':')
+        parts_e = entry.end_time.split(':')
+        start = dt_time(int(parts_s[0]), int(parts_s[1]))
+        end = dt_time(int(parts_e[0]), int(parts_e[1]))
+        if start <= end:
+            return start <= now_time <= end
+        else:
+            # cross-midnight
+            return now_time >= start or now_time <= end
+
     @api.depends(
         'base_status',
         'silence_period_ids.status', 'silence_period_ids.start_date', 'silence_period_ids.end_date',
+        'silence_period_ids.is_recurring', 'silence_period_ids.start_time', 'silence_period_ids.end_time',
         'break_period_ids.status', 'break_period_ids.start_date', 'break_period_ids.end_date',
         'volunteer_program_ids.completion_status', 'volunteer_program_ids.start_date', 'volunteer_program_ids.end_date',
     )
     def _compute_status(self):
         """Availability engine: priority is Silence > Break > Program > base_status."""
         today = fields.Date.context_today(self)
+        now_time = datetime.now().time()
         for rec in self:
             if rec.silence_period_ids.filtered(
                 lambda s: s.status == 'on_going' or (
                     s.status == 'approved' and s.start_date <= today <= s.end_date
+                    and (not s.is_recurring or rec._is_in_time_window(s, now_time))
                 )
             ):
                 rec.computed_status = 'On Silence'

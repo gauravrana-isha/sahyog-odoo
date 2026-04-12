@@ -29,7 +29,6 @@ export interface VolunteerProfile {
   special_skills: string;
   health_conditions: string;
   date_of_joining_isha: string;
-  disha_samskriti_batch: string;
   date_of_joining_guest_care: string;
   added_by: string;
   emergency_contact_name: string;
@@ -44,6 +43,9 @@ export interface SilencePeriod {
   silence_type: 'personal' | '9pm_9am' | 'program';
   status: string;
   notes: string;
+  is_recurring: boolean;
+  start_time: string;
+  end_time: string;
 }
 
 export interface BreakPeriod {
@@ -54,6 +56,9 @@ export interface BreakPeriod {
   status: string;
   reason: string;
   notes: string;
+  is_recurring: boolean;
+  start_time: string;
+  end_time: string;
 }
 
 export interface ProgramEnrollment {
@@ -96,7 +101,7 @@ export interface UnavailabilitySlot {
 export interface CalendarEntry {
   id: number;
   volunteer_id: number;
-  entry_type: 'silence' | 'break' | 'program';
+  entry_type: 'silence' | 'break' | 'program' | 'unavailability';
   name: string;
   start_date: string;
   end_date: string;
@@ -119,4 +124,27 @@ export interface DashboardData {
   upcoming_silences: SilencePeriod[];
   upcoming_breaks: BreakPeriod[];
   upcoming_programs: ProgramEnrollment[];
+}
+
+export interface ProgramSchedule {
+  id: number;
+  program_id: number;
+  start_date: string;
+  end_date: string;
+  location: string;
+  capacity: number;
+  schedule_status: string;
+}
+
+export interface Meeting {
+  id: number;
+  title: string;
+  volunteer_id: { id: number; name: string };
+  meeting_with_id: { id: number; name: string };
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  notes: string;
+  status: string;
 }

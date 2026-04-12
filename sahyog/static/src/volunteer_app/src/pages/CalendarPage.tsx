@@ -128,6 +128,7 @@ export function CalendarPage() {
               { value: 'silence', label: 'Silence' },
               { value: 'break', label: 'Break' },
               { value: 'program', label: 'Program' },
+              { value: 'unavailability', label: 'Unavailability' },
             ]}
             value={entryTypeFilter}
             onChange={setEntryTypeFilter}
@@ -157,6 +158,7 @@ export function CalendarPage() {
             { value: 'silence', label: 'Silence' },
             { value: 'break', label: 'Break' },
             { value: 'program', label: 'Program' },
+            { value: 'unavailability', label: 'Unavailability' },
           ]}
           value={entryTypeFilter}
           onChange={setEntryTypeFilter}

@@ -24,7 +24,16 @@ class Program(models.Model):
     )
 
     @api.constrains('prerequisite_ids')
-    def _check_no_self_prerequisite(self):
+    def _check_no_circular_prerequisites(self):
         for rec in self:
-            if rec in rec.prerequisite_ids:
-                raise ValidationError(_('A program cannot be its own prerequisite.'))
+            visited = set()
+            queue = list(rec.prerequisite_ids.ids)
+            while queue:
+                current_id = queue.pop(0)
+                if current_id == rec.id:
+                    raise ValidationError(_('Circular prerequisite dependency detected.'))
+                if current_id in visited:
+                    continue
+                visited.add(current_id)
+                current_prog = self.browse(current_id)
+                queue.extend(current_prog.prerequisite_ids.ids)

@@ -19,6 +19,7 @@ export const ENTRY_COLORS: Record<string, string> = {
   silence: '#4A90D9',
   break: '#E8943A',
   program: '#5CB85C',
+  unavailability: '#868E96',
 };
 
 /** Generate an inclusive array of dates from start to end */

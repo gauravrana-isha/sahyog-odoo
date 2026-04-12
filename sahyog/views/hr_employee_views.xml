@@ -80,7 +80,6 @@
                             <group>
                                 <group string="Isha Journey">
                                     <field name="date_of_joining_isha"/>
-                                    <field name="disha_samskriti_batch"/>
                                     <field name="date_of_joining_guest_care"/>
                                 </group>
                                 <group string="Assignment">

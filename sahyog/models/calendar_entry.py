@@ -12,6 +12,7 @@ class CalendarEntry(models.Model):
         ('silence', 'Silence'),
         ('break', 'Break'),
         ('program', 'Program'),
+        ('unavailability', 'Unavailability'),
     ], string='Type', readonly=True)
     name = fields.Char(string='Description', readonly=True)
     start_date = fields.Date(readonly=True)
@@ -70,5 +71,16 @@ class CalendarEntry(models.Model):
                 LEFT JOIN hr_employee e ON e.id = vp.volunteer_id
                 LEFT JOIN sahyog_program p ON p.id = vp.program_id
                 WHERE vp.completion_status NOT IN ('dropped')
+                UNION ALL
+                SELECT
+                    us.id + 300000 AS id,
+                    us.volunteer_id,
+                    'unavailability' AS entry_type,
+                    COALESCE(e.name, 'Unknown') || ' — Unavailable' AS name,
+                    us.date AS start_date,
+                    us.date AS end_date,
+                    'unavailable' AS status
+                FROM sahyog_unavailability_slot us
+                LEFT JOIN hr_employee e ON e.id = us.volunteer_id
             )
         """ % self._table)

@@ -41,6 +41,7 @@
                                    decoration-info="status == 'used'"
                                    decoration-muted="status == 'expired'"/>
                             <field name="expires_at"/>
+                            <field name="registration_url" widget="CopyClipboardChar" readonly="1" string="Registration URL"/>
                         </group>
                         <group string="Usage">
                             <field name="created_by" readonly="1"/>

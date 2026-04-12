@@ -334,18 +334,29 @@ export function HistoryPage() {
             let entryNotes = '';
             const color = TYPE_COLORS[entry.type];
 
+            let isRecurring = false;
+            let timeWindow = '';
+
             if (entry.type === 'silence') {
               const s = entry.data as SilencePeriod;
               subtype = SILENCE_LABELS[s.silence_type] || s.silence_type;
               status = s.status;
               dateRange = `${fmtDate(s.start_date)} → ${fmtDate(s.end_date)}`;
               entryNotes = s.notes;
+              isRecurring = s.is_recurring;
+              if (s.is_recurring && s.start_time && s.end_time) {
+                timeWindow = `${s.start_time} – ${s.end_time}`;
+              }
             } else if (entry.type === 'break') {
               const b = entry.data as BreakPeriod;
               subtype = BREAK_LABELS[b.break_type] || b.break_type;
               status = b.status;
               dateRange = `${fmtDate(b.start_date)} → ${fmtDate(b.end_date)}`;
               entryNotes = b.notes;
+              isRecurring = b.is_recurring;
+              if (b.is_recurring && b.start_time && b.end_time) {
+                timeWindow = `${b.start_time} – ${b.end_time}`;
+              }
             } else {
               const p = entry.data as ProgramEnrollment;
               subtype = p.program_name;
@@ -383,6 +394,16 @@ export function HistoryPage() {
                 <Text size="xs" c="dimmed">
                   {dateRange}
                 </Text>
+                {isRecurring && (
+                  <Badge color="violet" size="sm" mt={4}>
+                    Recurring
+                  </Badge>
+                )}
+                {isRecurring && timeWindow && (
+                  <Text size="sm" c="dimmed">
+                    {timeWindow}
+                  </Text>
+                )}
                 {entryNotes ? (
                   <Spoiler
                     maxHeight={0}

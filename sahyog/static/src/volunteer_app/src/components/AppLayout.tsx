@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   Box,
   Text,
@@ -29,6 +29,24 @@ import {
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import type { Notification } from '../types';
+
+function parseActionTokens(message: string): Array<{ type: 'text'; content: string } | { type: 'action'; path: string; entryType: string; id: string }> {
+  const regex = /\[\[action:([^|]+)\|([^|]+)\|([^\]]+)\]\]/g;
+  const parts: Array<{ type: 'text'; content: string } | { type: 'action'; path: string; entryType: string; id: string }> = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(message)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: message.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'action', path: match[1], entryType: match[2], id: match[3] });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < message.length) {
+    parts.push({ type: 'text', content: message.slice(lastIndex) });
+  }
+  return parts;
+}
 
 const NAV_ITEMS = [
   { label: 'Request', icon: IconPlus, path: '/' },
@@ -294,7 +312,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {n.title}
                 </Text>
                 <Text size="xs" c="dimmed" mt={2}>
-                  {n.message}
+                  {parseActionTokens(n.message).map((part, i) =>
+                    part.type === 'text' ? (
+                      <span key={i}>{part.content}</span>
+                    ) : (
+                      <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}>
+                        View
+                      </Text>
+                    ),
+                  )}
                 </Text>
                 <Group justify="space-between" mt="xs">
                   <Text size="xs" c="dimmed">

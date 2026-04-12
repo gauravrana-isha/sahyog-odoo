@@ -322,7 +322,6 @@ export function ProfilePage() {
                   </Group>
                 </Box>
                 <Field label="Date of Joining Isha" value={profile.date_of_joining_isha} />
-                <Field label="Disha Samskriti Batch" value={profile.disha_samskriti_batch} />
                 <Field label="Date of Joining Guest Care" value={profile.date_of_joining_guest_care} />
                 <Field label="Added By" value={profile.added_by} />
               </Stack>

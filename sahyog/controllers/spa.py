@@ -61,10 +61,9 @@ class SahyogSPA(http.Controller):
     @http.route('/', type='http', auth='public', website=False)
     def root_redirect(self, **kw):
         """Root URL: logged in → role redirect, not logged in → login page."""
-        user = request.env.user
-        if user and not user._is_public():
-            return self.post_login_redirect(**kw)
-        return request.redirect('/sahyog/login')
+        if request.env.user._is_public():
+            return request.redirect('/sahyog/login')
+        return request.redirect('/sahyog/redirect')
 
     @http.route('/sahyog/login', type='http', auth='public', website=False)
     def custom_login(self, **kw):
@@ -107,9 +106,9 @@ class SahyogSPA(http.Controller):
     <title>Sahyog — Login</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        html, body {{ height: 100%; overflow: hidden; }}
+        html, body {{ min-height: 100vh; min-height: 100dvh; overflow: hidden; }}
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; align-items: center; justify-content: center; }}
-        .login-card {{ background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px 32px; max-width: 380px; width: 90%; text-align: center; }}
+        .login-card {{ background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px 32px; max-width: 380px; width: 90%; text-align: center; max-height: 90vh; max-height: 90dvh; overflow-y: auto; }}
         .logo {{ font-size: 28px; font-weight: 700; color: #228be6; margin-bottom: 6px; }}
         .subtitle {{ color: #868e96; font-size: 13px; margin-bottom: 28px; }}
         .google-btn {{ display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px 20px; border: 1px solid #dee2e6; border-radius: 8px; background: #fff; font-size: 15px; font-weight: 500; color: #333; cursor: pointer; text-decoration: none; transition: all 0.15s; }}

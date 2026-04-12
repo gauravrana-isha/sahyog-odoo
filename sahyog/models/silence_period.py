@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime, time
 
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools.translate import _
+from . import silence_rules
 
 _logger = logging.getLogger(__name__)
 
@@ -58,6 +60,37 @@ class SilencePeriod(models.Model):
             if rec.end_date < rec.start_date:
                 raise ValidationError(_('End date must be >= start date.'))
 
+    @api.constrains('start_date', 'end_date', 'volunteer_id')
+    def _check_no_overlap(self):
+        NON_CANCELLED = ('requested', 'approved', 'on_going', 'pending_admin', 'pending_volunteer')
+        for rec in self:
+            # Check against silence periods (exclude self)
+            overlapping_silence = self.env['sahyog.silence.period'].search([
+                ('volunteer_id', '=', rec.volunteer_id.id),
+                ('id', '!=', rec.id),
+                ('status', 'in', NON_CANCELLED),
+                ('start_date', '<=', rec.end_date),
+                ('end_date', '>=', rec.start_date),
+            ], limit=1)
+            if overlapping_silence:
+                raise ValidationError(
+                    _('Overlaps with existing silence period: %s → %s') %
+                    (overlapping_silence.start_date, overlapping_silence.end_date)
+                )
+            # Check against break periods (different model, use id != 0)
+            overlapping_break = self.env['sahyog.break.period'].search([
+                ('volunteer_id', '=', rec.volunteer_id.id),
+                ('id', '!=', 0),
+                ('status', 'in', NON_CANCELLED),
+                ('start_date', '<=', rec.end_date),
+                ('end_date', '>=', rec.start_date),
+            ], limit=1)
+            if overlapping_break:
+                raise ValidationError(
+                    _('Overlaps with existing break period: %s → %s') %
+                    (overlapping_break.start_date, overlapping_break.end_date)
+                )
+
     def write(self, vals):
         res = super().write(vals)
         if 'status' in vals:
@@ -69,8 +102,8 @@ class SilencePeriod(models.Model):
                         'volunteer_id': rec.volunteer_id.id,
                         'type': 'silence_approved',
                         'title': 'Silence Period Approved',
-                        'message': 'Your silence period from %s to %s has been approved.' % (
-                            rec.start_date, rec.end_date,
+                        'message': 'Your silence period from %s to %s has been approved. [[action:/history?filter=silence|silence|%s]]' % (
+                            rec.start_date, rec.end_date, rec.id,
                         ),
                     })
                 elif new_status == 'cancelled':
@@ -78,16 +111,16 @@ class SilencePeriod(models.Model):
                         'volunteer_id': rec.volunteer_id.id,
                         'type': 'silence_cancelled',
                         'title': 'Silence Period Cancelled',
-                        'message': 'The silence period from %s to %s has been cancelled.' % (
-                            rec.start_date, rec.end_date,
+                        'message': 'The silence period from %s to %s has been cancelled. [[action:/history?filter=silence|silence|%s]]' % (
+                            rec.start_date, rec.end_date, rec.id,
                         ),
                     })
                 elif new_status == 'pending_admin':
                     self._notify_admins(
                         'silence_request_pending',
                         'New Silence Period Request',
-                        'Volunteer %s has requested a silence period from %s to %s.' % (
-                            rec.volunteer_id.name, rec.start_date, rec.end_date,
+                        'Volunteer %s has requested a silence period from %s to %s. [[action:/history?filter=silence|silence|%s]]' % (
+                            rec.volunteer_id.name, rec.start_date, rec.end_date, rec.id,
                         ),
                     )
         return res
@@ -112,6 +145,26 @@ class SilencePeriod(models.Model):
                 'message': message,
             })
 
+    def _is_in_time_window(self, entry, now_time):
+        """Check if *now_time* falls within entry's start_time..end_time.
+
+        Returns True when:
+        - entry has no start_time or end_time (always active)
+        - same-day window (start <= end): start <= now_time <= end
+        - cross-midnight window (start > end, e.g. 21:00→09:00): now_time >= start OR now_time <= end
+        """
+        if not entry.start_time or not entry.end_time:
+            return True
+        parts_s = entry.start_time.split(':')
+        parts_e = entry.end_time.split(':')
+        start = time(int(parts_s[0]), int(parts_s[1]))
+        end = time(int(parts_e[0]), int(parts_e[1]))
+        if start <= end:
+            return start <= now_time <= end
+        else:
+            # cross-midnight
+            return now_time >= start or now_time <= end
+
     def _cron_daily_transitions(self):
         """Daily cron: transition statuses for silence, break, and program records.
 
@@ -125,12 +178,13 @@ class SilencePeriod(models.Model):
         CronLog = self.env['sahyog.cron.log']
         affected_volunteer_ids = set()
 
-        # ── 1. Silence periods ──
+        # ── 1. Silence periods (non-recurring only) ──
         # Approved → On Going (today between start_date and end_date)
         silence_to_ongoing = self.search([
             ('status', '=', 'approved'),
             ('start_date', '<=', today),
             ('end_date', '>=', today),
+            ('is_recurring', '=', False),
         ])
         for rec in silence_to_ongoing:
             try:
@@ -149,10 +203,11 @@ class SilencePeriod(models.Model):
                     "Cron: failed transitioning silence.period %s to on_going", rec.id
                 )
 
-        # On Going → Done (today > end_date)
+        # On Going → Done (today > end_date, non-recurring only)
         silence_to_done = self.search([
             ('status', '=', 'on_going'),
             ('end_date', '<', today),
+            ('is_recurring', '=', False),
         ])
         for rec in silence_to_done:
             try:
@@ -243,6 +298,218 @@ class SilencePeriod(models.Model):
                 _logger.exception(
                     "Cron: failed transitioning volunteer.program %s to done", rec.id
                 )
+
+        # ── 4. Recurring silence periods (time-window logic) ──
+        now_time = datetime.now().time()
+
+        # Recurring entries within date range that are approved → check if in window → on_going
+        recurring_approved = self.search([
+            ('is_recurring', '=', True),
+            ('status', '=', 'approved'),
+            ('start_date', '<=', today),
+            ('end_date', '>=', today),
+        ])
+        for rec in recurring_approved:
+            try:
+                if self._is_in_time_window(rec, now_time):
+                    rec.write({'status': 'on_going'})
+                    CronLog.create({
+                        'entry_type': 'silence',
+                        'entry_id': rec.id,
+                        'volunteer_name': rec.volunteer_id.name or '',
+                        'old_status': 'approved',
+                        'new_status': 'on_going',
+                    })
+                    affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed transitioning recurring silence.period %s to on_going", rec.id
+                )
+
+        # Recurring entries that are on_going but outside window → back to approved
+        recurring_ongoing = self.search([
+            ('is_recurring', '=', True),
+            ('status', '=', 'on_going'),
+            ('start_date', '<=', today),
+            ('end_date', '>=', today),
+        ])
+        for rec in recurring_ongoing:
+            try:
+                if not self._is_in_time_window(rec, now_time):
+                    rec.write({'status': 'approved'})
+                    CronLog.create({
+                        'entry_type': 'silence',
+                        'entry_id': rec.id,
+                        'volunteer_name': rec.volunteer_id.name or '',
+                        'old_status': 'on_going',
+                        'new_status': 'approved',
+                    })
+                    affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed transitioning recurring silence.period %s back to approved", rec.id
+                )
+
+        # Recurring entries whose end_date has passed → done regardless of time window
+        recurring_expired = self.search([
+            ('is_recurring', '=', True),
+            ('status', 'in', ('approved', 'on_going')),
+            ('end_date', '<', today),
+        ])
+        for rec in recurring_expired:
+            try:
+                old_status = rec.status
+                rec.write({'status': 'done'})
+                CronLog.create({
+                    'entry_type': 'silence',
+                    'entry_id': rec.id,
+                    'volunteer_name': rec.volunteer_id.name or '',
+                    'old_status': old_status,
+                    'new_status': 'done',
+                })
+                affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed transitioning recurring silence.period %s to done", rec.id
+                )
+
+        # ── 5. Expired pending auto-cancellation ──
+        Notification = self.env['sahyog.notification']
+        PENDING_STATUSES = ('pending_admin', 'pending_volunteer')
+
+        # Silence periods: pending + expired → cancelled
+        expired_silence = self.search([
+            ('status', 'in', PENDING_STATUSES),
+            ('end_date', '<', today),
+        ])
+        for rec in expired_silence:
+            try:
+                old_status = rec.status
+                rec.write({'status': 'cancelled'})
+                CronLog.create({
+                    'entry_type': 'silence',
+                    'entry_id': rec.id,
+                    'volunteer_name': rec.volunteer_id.name or '',
+                    'old_status': old_status,
+                    'new_status': 'cancelled',
+                })
+                Notification.create({
+                    'volunteer_id': rec.volunteer_id.id,
+                    'type': 'silence_expired',
+                    'title': 'Silence Request Expired',
+                    'message': 'Your silence period request from %s to %s expired without approval. [[action:/history?filter=silence|silence|%s]]' % (
+                        rec.start_date, rec.end_date, rec.id,
+                    ),
+                })
+                affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed auto-cancelling expired silence.period %s", rec.id
+                )
+
+        # Break periods: pending + expired → cancelled
+        expired_breaks = BreakPeriod.search([
+            ('status', 'in', PENDING_STATUSES),
+            ('end_date', '<', today),
+        ])
+        for rec in expired_breaks:
+            try:
+                old_status = rec.status
+                rec.write({'status': 'cancelled'})
+                CronLog.create({
+                    'entry_type': 'break',
+                    'entry_id': rec.id,
+                    'volunteer_name': rec.volunteer_id.name or '',
+                    'old_status': old_status,
+                    'new_status': 'cancelled',
+                })
+                Notification.create({
+                    'volunteer_id': rec.volunteer_id.id,
+                    'type': 'break_expired',
+                    'title': 'Break Request Expired',
+                    'message': 'Your break period request from %s to %s expired without approval. [[action:/history?filter=breaks|break|%s]]' % (
+                        rec.start_date, rec.end_date, rec.id,
+                    ),
+                })
+                affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed auto-cancelling expired break.period %s", rec.id
+                )
+
+        # Volunteer programs: pending + expired → dropped
+        expired_programs = VolunteerProgram.search([
+            ('completion_status', 'in', PENDING_STATUSES),
+            ('end_date', '<', today),
+        ])
+        for rec in expired_programs:
+            try:
+                old_status = rec.completion_status
+                rec.write({'completion_status': 'dropped'})
+                CronLog.create({
+                    'entry_type': 'program',
+                    'entry_id': rec.id,
+                    'volunteer_name': rec.volunteer_id.name or '',
+                    'old_status': old_status,
+                    'new_status': 'dropped',
+                })
+                Notification.create({
+                    'volunteer_id': rec.volunteer_id.id,
+                    'type': 'program_expired',
+                    'title': 'Program Enrollment Request Expired',
+                    'message': 'Your enrollment request for %s from %s to %s expired without approval. [[action:/history?filter=programs|program|%s]]' % (
+                        rec.program_id.name, rec.start_date, rec.end_date, rec.id,
+                    ),
+                })
+                affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed auto-dropping expired volunteer.program %s", rec.id
+                )
+
+        # ── 6. Cadence alert evaluation ──
+        try:
+            from dateutil.relativedelta import relativedelta
+            current_year = today.year
+            three_months_ago = today - relativedelta(months=3)
+
+            # Find all volunteers that have a type with min_days > 0
+            all_volunteers = self.env['hr.employee'].search([
+                ('volunteer_type_ids', '!=', False),
+            ])
+            for volunteer in all_volunteers:
+                min_days, _max_days = silence_rules.get_volunteer_limits(volunteer)
+                if min_days <= 0:
+                    # LTV or no minimum — skip
+                    continue
+
+                annual_total = silence_rules.calculate_annual_silence_days(
+                    self.env, volunteer.id, current_year,
+                )
+                if annual_total >= min_days:
+                    continue
+
+                # Check if last silence ended 3+ months ago (or never had one)
+                last_silence = self.search([
+                    ('volunteer_id', '=', volunteer.id),
+                    ('status', 'in', ('done', 'on_going', 'approved')),
+                ], order='end_date desc', limit=1)
+
+                if last_silence and last_silence.end_date > three_months_ago:
+                    # Last silence ended less than 3 months ago — skip
+                    continue
+
+                # Both conditions met: below minimum AND 3+ months since last silence
+                self._notify_admins(
+                    'cadence_alert',
+                    'Silence Cadence Alert',
+                    'Volunteer %s has only %d silence days this year (minimum %d) '
+                    'and has not taken silence in 3+ months.' % (
+                        volunteer.name, annual_total, min_days,
+                    ),
+                )
+        except Exception:
+            _logger.exception("Cron: failed evaluating cadence alerts")
 
         # ── Recompute computed_status on affected volunteers ──
         if affected_volunteer_ids:

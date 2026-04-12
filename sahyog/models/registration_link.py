@@ -1,6 +1,6 @@
 import uuid
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class RegistrationLink(models.Model):
@@ -18,6 +18,16 @@ class RegistrationLink(models.Model):
     expires_at = fields.Datetime(required=True)
     created_by = fields.Many2one('res.users', required=True, default=lambda self: self.env.uid)
     used_by_volunteer_id = fields.Many2one('hr.employee')
+    registration_url = fields.Char(
+        string='Registration URL', compute='_compute_registration_url',
+        store=False,
+    )
+
+    @api.depends('token')
+    def _compute_registration_url(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        for rec in self:
+            rec.registration_url = f"{base_url}/sahyog/register/{rec.token}" if rec.token else ''
 
     def _check_and_expire(self):
         """Called before use to auto-expire if past expiration."""

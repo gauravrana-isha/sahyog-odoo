@@ -45,18 +45,18 @@ class Meeting(models.Model):
                 'volunteer_id': rec.volunteer_id.id,
                 'type': 'meeting_scheduled',
                 'title': 'Meeting Scheduled: %s' % rec.title,
-                'message': 'A meeting has been scheduled on %s from %s to %s with %s.' % (
+                'message': 'A meeting has been scheduled on %s from %s to %s with %s. [[action:/history?filter=meetings|meeting|%s]]' % (
                     rec.date, rec.start_time, rec.end_time,
-                    rec.meeting_with_id.name,
+                    rec.meeting_with_id.name, rec.id,
                 ),
             })
             Notification.create({
                 'volunteer_id': rec.meeting_with_id.id,
                 'type': 'meeting_scheduled',
                 'title': 'Meeting Scheduled: %s' % rec.title,
-                'message': 'A meeting has been scheduled on %s from %s to %s with %s.' % (
+                'message': 'A meeting has been scheduled on %s from %s to %s with %s. [[action:/history?filter=meetings|meeting|%s]]' % (
                     rec.date, rec.start_time, rec.end_time,
-                    rec.volunteer_id.name,
+                    rec.volunteer_id.name, rec.id,
                 ),
             })
         return records
