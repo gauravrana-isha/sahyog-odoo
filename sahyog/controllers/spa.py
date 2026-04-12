@@ -39,35 +39,40 @@ class SahyogSPA(http.Controller):
 
     @http.route('/sahyog/redirect', type='http', auth='user', website=False)
     def post_login_redirect(self, **kw):
-        """Redirect users after login based on their role.
-        Admins → /web, Volunteers → /sahyog/app
-        """
+        """Redirect users after login based on their role."""
         user = request.env.user
         if not user or user._is_public():
-            return request.redirect('/web/login')
+            return request.redirect('/sahyog/login')
 
-        # Check if user is a Sahyog admin
+        # Admin users go to /web (check both sahyog admin group AND internal user without employee)
         admin_group = request.env.ref('sahyog.group_sahyog_admin', raise_if_not_found=False)
-        if admin_group and admin_group in user.group_ids:
+        is_admin = admin_group and admin_group in user.group_ids
+
+        # Check if user has a linked volunteer (hr.employee)
+        has_employee = bool(request.env['hr.employee'].sudo().search(
+            [('user_id', '=', user.id)], limit=1))
+
+        # Admin → backend, volunteer with employee → SPA, no employee → backend
+        if is_admin or not has_employee:
             return request.redirect('/web')
 
-        # Everyone else goes to the volunteer SPA
         return request.redirect('/sahyog/app')
 
-    @http.route('/', type='http', auth='user', website=False)
+    @http.route('/', type='http', auth='public', website=False)
     def root_redirect(self, **kw):
-        """Root URL redirect based on role."""
-        return self.post_login_redirect(**kw)
+        """Root URL: logged in → role redirect, not logged in → login page."""
+        user = request.env.user
+        if user and not user._is_public():
+            return self.post_login_redirect(**kw)
+        return request.redirect('/sahyog/login')
 
     @http.route('/sahyog/login', type='http', auth='public', website=False)
     def custom_login(self, **kw):
         """Custom login page with Google OAuth button + admin fallback."""
-        # If already logged in, redirect
         user = request.env.user
         if user and not user._is_public():
             return request.redirect('/sahyog/redirect')
 
-        # Build the Google OAuth URL
         google_url = ''
         try:
             providers = request.env['auth.oauth.provider'].sudo().search([
@@ -98,19 +103,20 @@ class SahyogSPA(http.Controller):
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
     <title>Sahyog — Login</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
-        .login-card {{ background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 48px 40px; max-width: 400px; width: 90%; text-align: center; }}
-        .logo {{ font-size: 32px; font-weight: 700; color: #228be6; margin-bottom: 8px; }}
-        .subtitle {{ color: #868e96; font-size: 14px; margin-bottom: 32px; }}
-        .google-btn {{ display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border: 1px solid #dee2e6; border-radius: 8px; background: #fff; font-size: 15px; font-weight: 500; color: #333; cursor: pointer; text-decoration: none; transition: all 0.15s; }}
+        html, body {{ height: 100%; overflow: hidden; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; align-items: center; justify-content: center; }}
+        .login-card {{ background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px 32px; max-width: 380px; width: 90%; text-align: center; }}
+        .logo {{ font-size: 28px; font-weight: 700; color: #228be6; margin-bottom: 6px; }}
+        .subtitle {{ color: #868e96; font-size: 13px; margin-bottom: 28px; }}
+        .google-btn {{ display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px 20px; border: 1px solid #dee2e6; border-radius: 8px; background: #fff; font-size: 15px; font-weight: 500; color: #333; cursor: pointer; text-decoration: none; transition: all 0.15s; }}
         .google-btn:hover {{ background: #f8f9fa; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
         .google-btn svg {{ width: 20px; height: 20px; }}
-        .divider {{ margin: 24px 0; color: #adb5bd; font-size: 12px; }}
-        .admin-link {{ color: #adb5bd; font-size: 13px; text-decoration: none; }}
+        .divider {{ margin: 20px 0; color: #adb5bd; font-size: 12px; }}
+        .admin-link {{ color: #adb5bd; font-size: 12px; text-decoration: none; }}
         .admin-link:hover {{ color: #868e96; text-decoration: underline; }}
     </style>
 </head>
