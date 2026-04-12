@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Box, Text } from '@mantine/core';
 import { isSameDay } from 'date-fns';
 import type { CalendarEntry } from '../types';
@@ -21,6 +21,18 @@ export function GanttTimeline({ volunteers, entries, dateArray, zoomLevel, isMob
   const today = new Date();
   const totalDays = dateArray.length;
   const todayIndex = dateArray.findIndex((d) => isSameDay(d, today));
+
+  // Auto-scroll to today's column on mount and when dateArray changes
+  useEffect(() => {
+    if (todayIndex < 0 || !scrollRef.current) return;
+    const container = scrollRef.current;
+    const scrollWidth = container.scrollWidth;
+    const clientWidth = container.clientWidth;
+    // Position today roughly in the center of the visible area
+    const todayPos = (todayIndex / totalDays) * scrollWidth;
+    const scrollTo = Math.max(0, todayPos - clientWidth / 2);
+    container.scrollLeft = scrollTo;
+  }, [todayIndex, totalDays, dateArray]);
 
   // Use compact labels on mobile week view
   const compactLabels = isMobile && zoomLevel === 'week';
