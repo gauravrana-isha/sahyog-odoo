@@ -131,6 +131,9 @@ export interface ProgramSchedule {
   program_id: number;
   start_date: string;
   end_date: string;
+  start_time: string;
+  end_time: string;
+  is_recurring: boolean;
   location: string;
   capacity: number;
   schedule_status: string;

@@ -62,6 +62,9 @@ export function RequestPage() {
   const [notes, setNotes] = useState('');
   const [schedules, setSchedules] = useState<ProgramSchedule[]>([]);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
+  const [progStartTime, setProgStartTime] = useState('');
+  const [progEndTime, setProgEndTime] = useState('');
+  const [progIsRecurring, setProgIsRecurring] = useState(false);
 
   // Break form
   const [breakType, setBreakType] = useState<string | null>(null);
@@ -127,6 +130,9 @@ export function RequestPage() {
             setStartDate(new Date(selected.start_date));
             setEndDate(new Date(selected.end_date));
             setLocation(selected.location);
+            setProgStartTime(selected.start_time || '');
+            setProgEndTime(selected.end_time || '');
+            setProgIsRecurring(selected.is_recurring || false);
           }
         }
       })
@@ -142,6 +148,7 @@ export function RequestPage() {
     setSilenceStart(null); setSilenceEnd(null);
     setIsRecurring(false); setSilenceStartTime(''); setSilenceEndTime('');
     setSchedules([]); setScheduleId(null);
+    setProgStartTime(''); setProgEndTime(''); setProgIsRecurring(false);
     setUnavailDate(null); setUnavailStartTime(''); setUnavailEndTime('');
     setUnavailReason(''); setError(null);
   };
@@ -236,20 +243,56 @@ export function RequestPage() {
           <SegmentedControl value={participationType} onChange={setParticipationType} data={[{ label: 'Participant', value: 'participant' }, { label: 'Volunteer', value: 'volunteer' }]} size="sm" />
           {schedules.length > 0 && (
             <Select label="Schedule" placeholder="Pick a schedule"
-              data={schedules.map((s) => ({ value: String(s.id), label: `${s.start_date} → ${s.end_date} at ${s.location}` }))}
+              data={schedules.map((s) => {
+                const timeStr = s.start_time && s.end_time ? ` (${s.start_time}–${s.end_time})` : '';
+                const recurStr = s.is_recurring ? ' [Recurring]' : '';
+                return { value: String(s.id), label: `${s.start_date} → ${s.end_date}${timeStr}${recurStr} at ${s.location}` };
+              })}
               value={scheduleId}
               onChange={(val) => {
                 setScheduleId(val);
                 const selected = schedules.find((s) => String(s.id) === val);
-                if (selected) { setStartDate(new Date(selected.start_date)); setEndDate(new Date(selected.end_date)); setLocation(selected.location); }
+                if (selected) {
+                  setStartDate(new Date(selected.start_date));
+                  setEndDate(new Date(selected.end_date));
+                  setLocation(selected.location);
+                  setProgStartTime(selected.start_time || '');
+                  setProgEndTime(selected.end_time || '');
+                  setProgIsRecurring(selected.is_recurring || false);
+                }
               }}
               size="md" />
           )}
-          <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
-            <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
-          </SimpleGrid>
-          <TextInput label="Location" placeholder="Optional" value={location} onChange={(e) => setLocation(e.currentTarget.value)} size="md" />
+          {/* Recurring: start date, end date, then start time, end time */}
+          {progIsRecurring ? (
+            <>
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
+                <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
+              </SimpleGrid>
+              <SimpleGrid cols={2} spacing="sm">
+                <TextInput label="Start Time" type="time" value={progStartTime} onChange={(e) => setProgStartTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
+                <TextInput label="End Time" type="time" value={progEndTime} onChange={(e) => setProgEndTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
+              </SimpleGrid>
+            </>
+          ) : (
+            <>
+              {/* Non-recurring: start date, start time, then end date, end time */}
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
+                {(progStartTime || !scheduleId) && (
+                  <TextInput label="Start Time" type="time" value={progStartTime} onChange={(e) => setProgStartTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
+                )}
+              </SimpleGrid>
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
+                {(progEndTime || !scheduleId) && (
+                  <TextInput label="End Time" type="time" value={progEndTime} onChange={(e) => setProgEndTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
+                )}
+              </SimpleGrid>
+            </>
+          )}
+          <TextInput label="Location" placeholder="Optional" value={location} onChange={(e) => setLocation(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
           <Textarea label="Notes" placeholder="Optional" value={notes} onChange={(e) => setNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
           <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Submit Request</Button>
         </Box>

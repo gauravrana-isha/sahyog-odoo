@@ -18,18 +18,18 @@ import {
   Modal,
   Image,
   CloseButton,
+  MultiSelect,
 } from '@mantine/core';
 import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCamera, IconEdit, IconX } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
-import type { VolunteerProfile } from '../types';
+import type { VolunteerProfile, VolunteerType } from '../types';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 }
 
-/** Simple label:value row for view mode */
 function Field({ label, value }: { label: string; value: string | undefined | null }) {
   return (
     <Box>
@@ -44,11 +44,14 @@ interface EditableFields {
   whatsapp_number: string;
   x_city: string;
   x_state: string;
+  x_nationality: string;
   special_skills: string;
   health_conditions: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
   emergency_contact_relation: string;
+  language_ids: string[];
+  volunteer_type_ids: string[];
 }
 
 export function ProfilePage() {
@@ -62,29 +65,43 @@ export function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoModalOpened, { open: openPhotoModal, close: closePhotoModal }] = useDisclosure(false);
 
+  // Dropdown options
+  const [allLanguages, setAllLanguages] = useState<{ id: number; name: string }[]>([]);
+  const [allVolunteerTypes, setAllVolunteerTypes] = useState<VolunteerType[]>([]);
+
   const [editable, setEditable] = useState<EditableFields>({
-    work_phone: '', whatsapp_number: '', x_city: '', x_state: '',
+    work_phone: '', whatsapp_number: '', x_city: '', x_state: '', x_nationality: '',
     special_skills: '', health_conditions: '',
     emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relation: '',
+    language_ids: [], volunteer_type_ids: [],
   });
   const [initial, setInitial] = useState<EditableFields>({ ...editable });
 
   const fetchProfile = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiGet<VolunteerProfile>('/profile')
-      .then((data) => {
+    Promise.all([
+      apiGet<VolunteerProfile>('/profile'),
+      apiGet<{ id: number; name: string }[]>('/languages'),
+      apiGet<VolunteerType[]>('/volunteer-types'),
+    ])
+      .then(([data, langs, vtypes]) => {
         setProfile(data);
+        setAllLanguages(langs);
+        setAllVolunteerTypes(vtypes);
         const f: EditableFields = {
           work_phone: data.work_phone || '',
           whatsapp_number: data.whatsapp_number || '',
           x_city: data.x_city || '',
           x_state: data.x_state || '',
+          x_nationality: data.x_nationality || '',
           special_skills: data.special_skills || '',
           health_conditions: data.health_conditions || '',
           emergency_contact_name: data.emergency_contact_name || '',
           emergency_contact_phone: data.emergency_contact_phone || '',
           emergency_contact_relation: data.emergency_contact_relation || '',
+          language_ids: data.language_ids.map((l) => String(l.id)),
+          volunteer_type_ids: data.volunteer_type_ids.map((v) => String(v.id)),
         };
         setEditable(f);
         setInitial(f);
@@ -95,19 +112,39 @@ export function ProfilePage() {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  const isDirty = useMemo(() =>
-    (Object.keys(initial) as (keyof EditableFields)[]).some((k) => editable[k] !== initial[k]),
-  [editable, initial]);
+  const isDirty = useMemo(() => {
+    const keys = Object.keys(initial) as (keyof EditableFields)[];
+    return keys.some((k) => {
+      const a = editable[k];
+      const b = initial[k];
+      if (Array.isArray(a) && Array.isArray(b)) return JSON.stringify(a) !== JSON.stringify(b);
+      return a !== b;
+    });
+  }, [editable, initial]);
 
-  const set = (field: keyof EditableFields, value: string) =>
+  const set = (field: keyof EditableFields, value: string | string[]) =>
     setEditable((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiPost('/profile/update', editable);
+      await apiPost('/profile/update', {
+        work_phone: editable.work_phone,
+        whatsapp_number: editable.whatsapp_number,
+        x_city: editable.x_city,
+        x_state: editable.x_state,
+        x_nationality: editable.x_nationality,
+        special_skills: editable.special_skills,
+        health_conditions: editable.health_conditions,
+        emergency_contact_name: editable.emergency_contact_name,
+        emergency_contact_phone: editable.emergency_contact_phone,
+        emergency_contact_relation: editable.emergency_contact_relation,
+        language_ids: editable.language_ids.map(Number),
+        volunteer_type_ids: editable.volunteer_type_ids.map(Number),
+      });
       setInitial({ ...editable });
       setEditing(false);
+      fetchProfile();
       notifications.show({ title: 'Saved', message: 'Profile updated.', color: 'green' });
     } catch (err) {
       notifications.show({ title: 'Error', message: err instanceof Error ? err.message : 'Failed', color: 'red' });
@@ -119,10 +156,7 @@ export function ProfilePage() {
     try {
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]);
-        };
+        reader.onload = () => { resolve((reader.result as string).split(',')[1]); };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
@@ -133,6 +167,9 @@ export function ProfilePage() {
       notifications.show({ title: 'Error', message: err instanceof Error ? err.message : 'Upload failed', color: 'red' });
     } finally { setUploading(false); }
   };
+
+  const langOptions = allLanguages.map((l) => ({ value: String(l.id), label: l.name }));
+  const vtypeOptions = allVolunteerTypes.map((v) => ({ value: String(v.id), label: v.name }));
 
   if (loading) {
     return (
@@ -160,76 +197,28 @@ export function ProfilePage() {
 
   return (
     <Box style={{ maxWidth: isWide ? 600 : undefined, margin: isWide ? '0 auto' : undefined, paddingBottom: editing && isDirty ? 80 : 0 }}>
-      {/* Hidden file input for photo upload */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handlePhotoUpload(file);
-          e.target.value = '';
-        }}
-      />
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(file); e.target.value = ''; }} />
 
-      {/* Fullscreen photo modal */}
-      <Modal
-        opened={photoModalOpened}
-        onClose={closePhotoModal}
-        fullScreen
-        withCloseButton={false}
-        padding={0}
-        styles={{ body: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)' } }}
-      >
-        <CloseButton
-          size="lg"
-          variant="transparent"
-          c="white"
-          style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}
-          onClick={closePhotoModal}
-          aria-label="Close"
-        />
-        {fullResUrl && (
-          <Image
-            src={fullResUrl}
-            alt={profile.name}
-            fit="contain"
-            style={{ maxHeight: '90vh', maxWidth: '90vw' }}
-          />
-        )}
+      <Modal opened={photoModalOpened} onClose={closePhotoModal} fullScreen withCloseButton={false} padding={0}
+        styles={{ body: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)' } }}>
+        <CloseButton size="lg" variant="transparent" c="white" style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onClick={closePhotoModal} aria-label="Close" />
+        {fullResUrl && <Image src={fullResUrl} alt={profile.name} fit="contain" style={{ maxHeight: '90vh', maxWidth: '90vw' }} />}
       </Modal>
 
-      {/* Avatar + Name + Status */}
       <Stack align="center" gap="xs" mb="lg">
         <Box style={{ position: 'relative' }}>
-          <Avatar
-            size={80}
-            radius="xl"
-            src={avatarUrl}
-            color="blue"
-            style={{ cursor: 'pointer', opacity: uploading ? 0.5 : 1 }}
-            onClick={openPhotoModal}
-          >
+          <Avatar size={80} radius="xl" src={avatarUrl} color="blue" style={{ cursor: 'pointer', opacity: uploading ? 0.5 : 1 }} onClick={openPhotoModal}>
             {getInitials(profile.name)}
           </Avatar>
-          <ActionIcon
-            size={28}
-            radius="xl"
-            variant="filled"
-            color="gray"
+          <ActionIcon size={28} radius="xl" variant="filled" color="gray"
             style={{ position: 'absolute', bottom: -2, right: -2, border: '2px solid #fff' }}
-            onClick={() => fileRef.current?.click()}
-            loading={uploading}
-            aria-label="Upload photo"
-          >
+            onClick={() => fileRef.current?.click()} loading={uploading} aria-label="Upload photo">
             <IconCamera size={14} />
           </ActionIcon>
         </Box>
         <Text size="xl" fw={600}>{profile.name}</Text>
-        {profile.computed_status && (
-          <Badge variant="light" size="lg" color={statusColor}>{profile.computed_status}</Badge>
-        )}
+        {profile.computed_status && <Badge variant="light" size="lg" color={statusColor}>{profile.computed_status}</Badge>}
       </Stack>
 
       {/* ── VIEW MODE ── */}
@@ -252,23 +241,10 @@ export function ProfilePage() {
               <Stack gap="xs">
                 <Field label="Gender" value={profile.sex} />
                 <Field label="Birthday" value={profile.birthday} />
-                <Field label="Nationality" value={profile.x_nationality} />
+                <Field label="Nationality" value={editable.x_nationality} />
                 <Field label="City" value={editable.x_city} />
                 <Field label="State" value={editable.x_state} />
                 <Field label="Region" value={profile.region_id?.name} />
-              </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          <Accordion.Item value="work">
-            <Accordion.Control>Work</Accordion.Control>
-            <Accordion.Panel>
-              <Stack gap="xs">
-                <Field label="Work Mode" value={profile.work_mode} />
-                <Field label="Sub Team" value={profile.sub_team_id?.name} />
-                <Field label="Role" value={profile.role_in_guest_care} />
-                <Field label="Assignment Area" value={profile.current_assignment_area} />
-                <Field label="Reporting To" value={profile.reporting_to_name} />
               </Stack>
             </Accordion.Panel>
           </Accordion.Item>
@@ -287,18 +263,6 @@ export function ProfilePage() {
                 </Box>
                 <Field label="Special Skills" value={editable.special_skills} />
               </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          <Accordion.Item value="spiritual">
-            <Accordion.Control>Spiritual</Accordion.Control>
-            <Accordion.Panel>
-              <Text size="xs" c="dimmed" mb={2}>Sadhana Practices</Text>
-              <Group gap="xs">
-                {profile.sadhana_practice_ids.length > 0
-                  ? profile.sadhana_practice_ids.map((s) => <Badge key={s.id} variant="light" size="sm">{s.name}</Badge>)
-                  : <Text size="sm" c="dimmed">—</Text>}
-              </Group>
             </Accordion.Panel>
           </Accordion.Item>
 
@@ -347,56 +311,49 @@ export function ProfilePage() {
           <Group justify="space-between">
             <Text fw={600}>Editing Profile</Text>
             <Button variant="subtle" color="gray" size="xs" leftSection={<IconX size={14} />}
-              onClick={() => { setEditing(false); setEditable({ ...initial }); }}>
-              Cancel
-            </Button>
+              onClick={() => { setEditing(false); setEditable({ ...initial }); }}>Cancel</Button>
           </Group>
 
           <Text size="sm" fw={500} c="dimmed">Contact</Text>
-          <TextInput label="Phone" value={editable.work_phone}
-            onChange={(e) => set('work_phone', e.currentTarget.value)} size="md" />
-          <TextInput label="WhatsApp" value={editable.whatsapp_number}
-            onChange={(e) => set('whatsapp_number', e.currentTarget.value)} size="md" />
+          <TextInput label="Phone" value={editable.work_phone} onChange={(e) => set('work_phone', e.currentTarget.value)} size="md" />
+          <TextInput label="WhatsApp" value={editable.whatsapp_number} onChange={(e) => set('whatsapp_number', e.currentTarget.value)} size="md" />
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Location</Text>
-          <TextInput label="City" value={editable.x_city}
-            onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
-          <TextInput label="State" value={editable.x_state}
-            onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
+          <Text size="sm" fw={500} c="dimmed" mt="sm">Personal</Text>
+          <TextInput label="Nationality" value={editable.x_nationality} onChange={(e) => set('x_nationality', e.currentTarget.value)} size="md" />
+          <TextInput label="City" value={editable.x_city} onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
+          <TextInput label="State" value={editable.x_state} onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Skills & Health</Text>
-          <Textarea label="Special Skills" value={editable.special_skills}
-            onChange={(e) => set('special_skills', e.currentTarget.value)} minRows={2} autosize size="md" />
-          <Textarea label="Health Conditions" value={editable.health_conditions}
-            onChange={(e) => set('health_conditions', e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Text size="sm" fw={500} c="dimmed" mt="sm">Languages & Skills</Text>
+          <MultiSelect label="Languages" placeholder="Select languages" data={langOptions} value={editable.language_ids}
+            onChange={(val) => set('language_ids', val)} searchable size="md" />
+          <Textarea label="Special Skills" value={editable.special_skills} onChange={(e) => set('special_skills', e.currentTarget.value)} minRows={2} autosize size="md" />
+
+          <Text size="sm" fw={500} c="dimmed" mt="sm">Health</Text>
+          <Textarea label="Health Conditions" value={editable.health_conditions} onChange={(e) => set('health_conditions', e.currentTarget.value)} minRows={2} autosize size="md" />
+
+          <Text size="sm" fw={500} c="dimmed" mt="sm">Volunteer Info</Text>
+          <MultiSelect label="Volunteer Types" placeholder="Select types" data={vtypeOptions} value={editable.volunteer_type_ids}
+            onChange={(val) => set('volunteer_type_ids', val)} searchable size="md" />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Emergency Contact</Text>
-          <TextInput label="Name" value={editable.emergency_contact_name}
-            onChange={(e) => set('emergency_contact_name', e.currentTarget.value)} size="md" />
-          <TextInput label="Phone" value={editable.emergency_contact_phone}
-            onChange={(e) => set('emergency_contact_phone', e.currentTarget.value)} size="md" />
-          <TextInput label="Relation" value={editable.emergency_contact_relation}
-            onChange={(e) => set('emergency_contact_relation', e.currentTarget.value)} size="md" />
+          <TextInput label="Name" value={editable.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.currentTarget.value)} size="md" />
+          <TextInput label="Phone" value={editable.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.currentTarget.value)} size="md" />
+          <TextInput label="Relation" value={editable.emergency_contact_relation} onChange={(e) => set('emergency_contact_relation', e.currentTarget.value)} size="md" />
         </Stack>
       )}
 
-      {/* Floating Edit button — only in view mode */}
       {!editing && (
         <Affix position={{ bottom: 80, right: 24 }}>
-          <ActionIcon size={56} radius="xl" variant="filled" color="blue"
-            onClick={() => setEditing(true)} aria-label="Edit profile">
+          <ActionIcon size={56} radius="xl" variant="filled" color="blue" onClick={() => setEditing(true)} aria-label="Edit profile">
             <IconEdit size={24} />
           </ActionIcon>
         </Affix>
       )}
 
-      {/* Sticky Save button — only in edit mode when dirty */}
       <Affix position={{ bottom: 20, left: 16, right: 16 }}>
         <Transition mounted={editing && isDirty} transition="slide-up">
           {(styles) => (
-            <Button fullWidth size="md" loading={saving} onClick={handleSave} style={styles}>
-              Save Changes
-            </Button>
+            <Button fullWidth size="md" loading={saving} onClick={handleSave} style={styles}>Save Changes</Button>
           )}
         </Transition>
       </Affix>

@@ -170,9 +170,14 @@ class SahyogAPI(http.Controller):
             editable_fields = (
                 'work_phone', 'whatsapp_number', 'special_skills', 'health_conditions',
                 'emergency_contact_name', 'emergency_contact_phone',
-                'emergency_contact_relation', 'x_city', 'x_state',
+                'emergency_contact_relation', 'x_city', 'x_state', 'x_nationality',
             )
             vals = {k: data[k] for k in editable_fields if k in data}
+            # Handle Many2many fields: language_ids, volunteer_type_ids
+            if 'language_ids' in data:
+                vals['language_ids'] = [(6, 0, [int(i) for i in data['language_ids']])]
+            if 'volunteer_type_ids' in data:
+                vals['volunteer_type_ids'] = [(6, 0, [int(i) for i in data['volunteer_type_ids']])]
             if vals:
                 volunteer.sudo().write(vals)
             return self._json_success({'success': True})
@@ -442,14 +447,28 @@ class SahyogAPI(http.Controller):
             ])
             eligible_program_ids = eligible_programs.ids
 
-            # Exclude programs the volunteer has already completed
+            # Exclude programs the volunteer has already completed (fuzzy: strip language suffix)
             completed_program_ids = set()
+            completed_base_names = set()
             if volunteer:
                 completed_enrollments = request.env['sahyog.volunteer.program'].sudo().search([
                     ('volunteer_id', '=', volunteer.id),
                     ('completion_status', '=', 'done'),
                 ])
                 completed_program_ids = set(completed_enrollments.mapped('program_id.id'))
+                # Also collect base names (strip parenthesized suffix) for fuzzy matching
+                import re
+                for enr in completed_enrollments:
+                    pname = enr.program_id.name or ''
+                    base = re.sub(r'\s*\([^)]*\)\s*$', '', pname).strip().lower()
+                    if base:
+                        completed_base_names.add(base)
+
+            # Also exclude prerequisites of completed programs
+            completed_prereq_ids = set()
+            if completed_program_ids:
+                for prog in request.env['sahyog.program'].sudo().browse(list(completed_program_ids)):
+                    completed_prereq_ids.update(prog.prerequisite_ids.ids)
 
             schedules = request.env['sahyog.program.schedule'].sudo().search([
                 ('schedule_status', '=', 'upcoming'),
@@ -458,7 +477,18 @@ class SahyogAPI(http.Controller):
 
             result = []
             for s in schedules:
-                if s.program_id.id in completed_program_ids:
+                pid = s.program_id.id
+                pname = s.program_id.name or ''
+                # Skip if exact program completed
+                if pid in completed_program_ids:
+                    continue
+                # Skip if base name matches a completed program (fuzzy)
+                import re as _re
+                base = _re.sub(r'\s*\([^)]*\)\s*$', '', pname).strip().lower()
+                if base in completed_base_names:
+                    continue
+                # Skip prerequisites of completed programs
+                if pid in completed_prereq_ids:
                     continue
                 result.append({
                     'id': s.id,
@@ -494,6 +524,9 @@ class SahyogAPI(http.Controller):
                 'program_id': s.program_id.id,
                 'start_date': str(s.start_date),
                 'end_date': str(s.end_date),
+                'start_time': s.start_time or '',
+                'end_time': s.end_time or '',
+                'is_recurring': s.is_recurring,
                 'location': s.location or '',
                 'capacity': s.capacity or 0,
                 'schedule_status': s.schedule_status or '',
@@ -679,6 +712,16 @@ class SahyogAPI(http.Controller):
             return self._json_success([{'id': t.id, 'name': t.name} for t in types])
         except Exception:
             _logger.exception('API error in get_volunteer_types')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/sahyog/api/languages', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def get_languages(self, **kw):
+        try:
+            langs = request.env['sahyog.language'].sudo().search([])
+            return self._json_success([{'id': l.id, 'name': l.name} for l in langs])
+        except Exception:
+            _logger.exception('API error in get_languages')
             return self._json_error('Internal server error', status=500)
 
     # ── Cancel Endpoints ────────────────────────────────────────────────
