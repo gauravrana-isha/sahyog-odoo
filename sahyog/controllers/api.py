@@ -428,6 +428,29 @@ class SahyogAPI(http.Controller):
             _logger.exception('API error in get_suggested_programs')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/sahyog/api/schedules/upcoming', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def get_all_upcoming_schedules(self, **kw):
+        try:
+            schedules = request.env['sahyog.program.schedule'].sudo().search([
+                ('schedule_status', '=', 'upcoming'),
+            ], order='start_date asc')
+            return self._json_success([{
+                'id': s.id,
+                'program_id': s.program_id.id,
+                'program_name': s.program_id.name or '',
+                'program_type': s.program_id.program_type or '',
+                'start_date': str(s.start_date),
+                'end_date': str(s.end_date),
+                'location': s.location or '',
+                'capacity': s.capacity or 0,
+                'schedule_status': s.schedule_status or '',
+                'notes': s.notes or '',
+            } for s in schedules])
+        except Exception:
+            _logger.exception('API error in get_all_upcoming_schedules')
+            return self._json_error('Internal server error', status=500)
+
     @http.route('/sahyog/api/programs/<int:program_id>/schedules', type='http',
                 auth='user', methods=['GET'], csrf=False)
     def get_program_schedules(self, program_id, **kw):

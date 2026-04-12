@@ -50,9 +50,9 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
 }
 
 const NAV_ITEMS = [
-  { label: 'Request', icon: IconSend, path: '/' },
-  { label: 'History', icon: IconHistory, path: '/history' },
   { label: 'Programs', icon: IconBooks, path: '/programs' },
+  { label: 'History', icon: IconHistory, path: '/history' },
+  { label: 'Request', icon: IconSend, path: '/request' },
   { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
   { label: 'Profile', icon: IconUser, path: '/profile' },
 ] as const;

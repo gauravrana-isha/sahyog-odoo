@@ -10,9 +10,10 @@ export function App() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<RequestPage />} />
-        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/" element={<ProgramsPage />} />
         <Route path="/programs" element={<ProgramsPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/request" element={<RequestPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
