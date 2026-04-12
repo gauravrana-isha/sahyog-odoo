@@ -16,12 +16,38 @@ import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconAlertCircle } from '@tabler/icons-react';
-import { format } from 'date-fns';
+import { format, isBefore, startOfDay } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { AvailableProgram, ProgramSchedule } from '../types';
 
 type RequestType = 'program' | 'break' | 'silence' | 'unavailability';
+
+/** Validate that end date is >= start date. Returns error string or null. */
+function validateDateRange(start: Date | null, end: Date | null): string | null {
+  if (!start || !end) return null;
+  if (isBefore(startOfDay(end), startOfDay(start))) {
+    return 'End date must be on or after start date';
+  }
+  return null;
+}
+
+/** Validate HH:MM time format. Returns error string or null. */
+function validateTime(value: string): string | null {
+  if (!value) return null;
+  if (!/^\d{2}:\d{2}$/.test(value)) return 'Use HH:MM format';
+  const [h, m] = value.split(':').map(Number);
+  if (h < 0 || h > 23 || m < 0 || m > 59) return 'Invalid time';
+  return null;
+}
+
+/** Validate start time < end time (same-day, no cross-midnight). Returns error or null. */
+function validateTimeRange(start: string, end: string): string | null {
+  if (!start || !end) return null;
+  if (validateTime(start) || validateTime(end)) return null; // let individual validators handle
+  if (start >= end) return 'End time must be after start time';
+  return null;
+}
 
 export function RequestPage() {
   const navigate = useNavigate();
@@ -127,11 +153,10 @@ export function RequestPage() {
     setError(null);
     try {
       if (requestType === 'program') {
-        if (!programId || !startDate || !endDate) {
-          setError('Please fill in all required fields');
-          setSubmitting(false);
-          return;
-        }
+        if (!programId) { setError('Please select a program'); setSubmitting(false); return; }
+        if (!startDate || !endDate) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
+        const dateErr = validateDateRange(startDate, endDate);
+        if (dateErr) { setError(dateErr); setSubmitting(false); return; }
         await apiPost('/programs/create', {
           program_id: Number(programId),
           participation_type: participationType,
@@ -141,19 +166,14 @@ export function RequestPage() {
           notes,
           ...(scheduleId ? { schedule_id: Number(scheduleId) } : {}),
         });
-        notifications.show({
-          title: 'Request Submitted',
-          message: 'Your program enrollment has been submitted.',
-          color: 'green',
-        });
+        notifications.show({ title: 'Request Submitted', message: 'Your program enrollment has been submitted.', color: 'green' });
         resetAll();
         navigate('/history?filter=programs');
       } else if (requestType === 'break') {
-        if (!breakType || !breakStart || !breakEnd) {
-          setError('Please fill in all required fields');
-          setSubmitting(false);
-          return;
-        }
+        if (!breakType) { setError('Please select a break type'); setSubmitting(false); return; }
+        if (!breakStart || !breakEnd) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
+        const dateErr = validateDateRange(breakStart, breakEnd);
+        if (dateErr) { setError(dateErr); setSubmitting(false); return; }
         await apiPost('/breaks/create', {
           break_type: breakType,
           start_date: fmtDate(breakStart),
@@ -161,18 +181,21 @@ export function RequestPage() {
           reason: breakReason,
           notes: breakNotes,
         });
-        notifications.show({
-          title: 'Request Submitted',
-          message: 'Your break request has been submitted.',
-          color: 'green',
-        });
+        notifications.show({ title: 'Request Submitted', message: 'Your break request has been submitted.', color: 'green' });
         resetAll();
         navigate('/history?filter=breaks');
       } else if (requestType === 'silence') {
-        if (!silenceType || !silenceStart || !silenceEnd) {
-          setError('Please fill in all required fields');
-          setSubmitting(false);
-          return;
+        if (!silenceType) { setError('Please select a silence type'); setSubmitting(false); return; }
+        if (!silenceStart || !silenceEnd) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
+        const dateErr = validateDateRange(silenceStart, silenceEnd);
+        if (dateErr) { setError(dateErr); setSubmitting(false); return; }
+        if (isRecurring) {
+          if (!silenceStartTime || !silenceEndTime) { setError('Please fill in start and end times for recurring silence'); setSubmitting(false); return; }
+          const stErr = validateTime(silenceStartTime);
+          if (stErr) { setError('Start time: ' + stErr); setSubmitting(false); return; }
+          const etErr = validateTime(silenceEndTime);
+          if (etErr) { setError('End time: ' + etErr); setSubmitting(false); return; }
+          // Note: cross-midnight is valid for recurring silence (e.g. 21:00-09:00), so no time range check
         }
         await apiPost('/silence/create', {
           silence_type: silenceType,
@@ -183,30 +206,25 @@ export function RequestPage() {
           start_time: silenceStartTime,
           end_time: silenceEndTime,
         });
-        notifications.show({
-          title: 'Request Submitted',
-          message: 'Your silence request has been submitted.',
-          color: 'green',
-        });
+        notifications.show({ title: 'Request Submitted', message: 'Your silence request has been submitted.', color: 'green' });
         resetAll();
         navigate('/history?filter=silence');
       } else {
-        if (!unavailDate || !unavailStartTime || !unavailEndTime) {
-          setError('Please fill in all required fields');
-          setSubmitting(false);
-          return;
-        }
+        if (!unavailDate) { setError('Please select a date'); setSubmitting(false); return; }
+        if (!unavailStartTime || !unavailEndTime) { setError('Please fill in start and end times'); setSubmitting(false); return; }
+        const stErr = validateTime(unavailStartTime);
+        if (stErr) { setError('Start time: ' + stErr); setSubmitting(false); return; }
+        const etErr = validateTime(unavailEndTime);
+        if (etErr) { setError('End time: ' + etErr); setSubmitting(false); return; }
+        const trErr = validateTimeRange(unavailStartTime, unavailEndTime);
+        if (trErr) { setError(trErr); setSubmitting(false); return; }
         await apiPost('/unavailability/create', {
           date: fmtDate(unavailDate),
           start_time: unavailStartTime,
           end_time: unavailEndTime,
           reason: unavailReason,
         });
-        notifications.show({
-          title: 'Marked Unavailable',
-          message: 'Your unavailability has been recorded.',
-          color: 'green',
-        });
+        notifications.show({ title: 'Marked Unavailable', message: 'Your unavailability has been recorded.', color: 'green' });
         resetAll();
         navigate('/history?filter=unavailability');
       }
@@ -224,252 +242,92 @@ export function RequestPage() {
     label: p.name,
   }));
 
+  // Inline validation errors for date ranges
+  const programDateErr = validateDateRange(startDate, endDate);
+  const breakDateErr = validateDateRange(breakStart, breakEnd);
+  const silenceDateErr = validateDateRange(silenceStart, silenceEnd);
+  const unavailStartTimeErr = validateTime(unavailStartTime);
+  const unavailEndTimeErr = validateTime(unavailEndTime);
+  const unavailTimeRangeErr = !unavailStartTimeErr && !unavailEndTimeErr ? validateTimeRange(unavailStartTime, unavailEndTime) : null;
+  const silenceStartTimeErr = isRecurring ? validateTime(silenceStartTime) : null;
+  const silenceEndTimeErr = isRecurring ? validateTime(silenceEndTime) : null;
+
   const formContent = (
     <Box>
       {requestType === 'program' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Select
-            label="Choose Program"
-            placeholder="Search programs..."
-            searchable
-            data={programOptions}
-            value={programId}
-            onChange={setProgramId}
-            size="md"
-          />
-          <SegmentedControl
-            value={participationType}
-            onChange={setParticipationType}
-            data={[
-              { label: 'Participant', value: 'participant' },
-              { label: 'Volunteer', value: 'volunteer' },
-            ]}
-            size="sm"
-          />
+          <Select label="Choose Program" placeholder="Search programs..." searchable data={programOptions} value={programId} onChange={setProgramId} size="md" />
+          <SegmentedControl value={participationType} onChange={setParticipationType} data={[{ label: 'Participant', value: 'participant' }, { label: 'Volunteer', value: 'volunteer' }]} size="sm" />
           {schedules.length > 0 && (
             <Select
               label="Schedule"
               placeholder="Pick a schedule"
-              data={schedules.map((s) => ({
-                value: String(s.id),
-                label: `${s.start_date} → ${s.end_date} at ${s.location}`,
-              }))}
+              data={schedules.map((s) => ({ value: String(s.id), label: `${s.start_date} → ${s.end_date} at ${s.location}` }))}
               value={scheduleId}
               onChange={(val) => {
                 setScheduleId(val);
                 const selected = schedules.find((s) => String(s.id) === val);
-                if (selected) {
-                  setStartDate(new Date(selected.start_date));
-                  setEndDate(new Date(selected.end_date));
-                  setLocation(selected.location);
-                }
+                if (selected) { setStartDate(new Date(selected.start_date)); setEndDate(new Date(selected.end_date)); setLocation(selected.location); }
               }}
               size="md"
             />
           )}
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput
-              label="Start Date"
-              placeholder="Pick start date"
-              value={startDate}
-              onChange={setStartDate}
-              size="md"
-            />
-            <DateInput
-              label="End Date"
-              placeholder="Pick end date"
-              value={endDate}
-              onChange={setEndDate}
-              size="md"
-            />
+            <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
+            <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
           </SimpleGrid>
-          <TextInput
-            label="Location"
-            placeholder="Optional"
-            value={location}
-            onChange={(e) => setLocation(e.currentTarget.value)}
-            size="md"
-          />
-          <Textarea
-            label="Notes"
-            placeholder="Optional"
-            value={notes}
-            onChange={(e) => setNotes(e.currentTarget.value)}
-            minRows={2}
-            autosize
-            size="md"
-          />
-          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>
-            Submit Request
-          </Button>
+          <TextInput label="Location" placeholder="Optional" value={location} onChange={(e) => setLocation(e.currentTarget.value)} size="md" />
+          <Textarea label="Notes" placeholder="Optional" value={notes} onChange={(e) => setNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Submit Request</Button>
         </Box>
       )}
 
       {requestType === 'break' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Select
-            label="Break Type"
-            placeholder="Select type"
-            data={[
-              { value: 'personal', label: 'Personal' },
-              { value: 'health', label: 'Health' },
-              { value: 'family_emergency', label: 'Family Emergency' },
-            ]}
-            value={breakType}
-            onChange={setBreakType}
-            size="md"
-          />
+          <Select label="Break Type" placeholder="Select type" data={[{ value: 'personal', label: 'Personal' }, { value: 'health', label: 'Health' }, { value: 'family_emergency', label: 'Family Emergency' }]} value={breakType} onChange={setBreakType} size="md" />
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput
-              label="Start Date"
-              placeholder="Pick start date"
-              value={breakStart}
-              onChange={setBreakStart}
-              size="md"
-            />
-            <DateInput
-              label="End Date"
-              placeholder="Pick end date"
-              value={breakEnd}
-              onChange={setBreakEnd}
-              size="md"
-            />
+            <DateInput label="Start Date" placeholder="Pick start date" value={breakStart} onChange={setBreakStart} size="md" error={breakDateErr && breakStart && breakEnd ? breakDateErr : undefined} />
+            <DateInput label="End Date" placeholder="Pick end date" value={breakEnd} onChange={setBreakEnd} size="md" minDate={breakStart || undefined} />
           </SimpleGrid>
-          <TextInput
-            label="Reason"
-            placeholder="Optional"
-            value={breakReason}
-            onChange={(e) => setBreakReason(e.currentTarget.value)}
-            size="md"
-          />
-          <Textarea
-            label="Notes"
-            placeholder="Optional"
-            value={breakNotes}
-            onChange={(e) => setBreakNotes(e.currentTarget.value)}
-            minRows={2}
-            autosize
-            size="md"
-          />
-          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>
-            Submit Request
-          </Button>
+          <TextInput label="Reason" placeholder="Optional" value={breakReason} onChange={(e) => setBreakReason(e.currentTarget.value)} size="md" />
+          <Textarea label="Notes" placeholder="Optional" value={breakNotes} onChange={(e) => setBreakNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Submit Request</Button>
         </Box>
       )}
 
       {requestType === 'silence' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Select
-            label="Silence Type"
-            placeholder="Select type"
-            data={[
-              { value: 'personal', label: 'Personal' },
-              { value: '9pm_9am', label: '9PM–9AM' },
-              { value: 'program', label: 'Program' },
-            ]}
-            value={silenceType}
-            onChange={setSilenceType}
-            size="md"
-          />
+          <Select label="Silence Type" placeholder="Select type" data={[{ value: 'personal', label: 'Personal' }, { value: '9pm_9am', label: '9PM–9AM' }, { value: 'program', label: 'Program' }]} value={silenceType} onChange={setSilenceType} size="md" />
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput
-              label="Start Date"
-              placeholder="Pick start date"
-              value={silenceStart}
-              onChange={setSilenceStart}
-              size="md"
-            />
-            <DateInput
-              label="End Date"
-              placeholder="Pick end date"
-              value={silenceEnd}
-              onChange={setSilenceEnd}
-              size="md"
-            />
+            <DateInput label="Start Date" placeholder="Pick start date" value={silenceStart} onChange={setSilenceStart} size="md" error={silenceDateErr && silenceStart && silenceEnd ? silenceDateErr : undefined} />
+            <DateInput label="End Date" placeholder="Pick end date" value={silenceEnd} onChange={setSilenceEnd} size="md" minDate={silenceStart || undefined} />
           </SimpleGrid>
-          <Checkbox
-            label="Recurring"
-            checked={isRecurring}
-            onChange={(e) => setIsRecurring(e.currentTarget.checked)}
-          />
+          <Checkbox label="Recurring" checked={isRecurring} onChange={(e) => setIsRecurring(e.currentTarget.checked)} />
           {isRecurring && (
             <SimpleGrid cols={2} spacing="sm">
-              <TextInput
-                label="Start Time"
-                type="time"
-                value={silenceStartTime}
-                onChange={(e) => setSilenceStartTime(e.currentTarget.value)}
-                size="md"
-              />
-              <TextInput
-                label="End Time"
-                type="time"
-                value={silenceEndTime}
-                onChange={(e) => setSilenceEndTime(e.currentTarget.value)}
-                size="md"
-              />
+              <TextInput label="Start Time" type="time" value={silenceStartTime} onChange={(e) => setSilenceStartTime(e.currentTarget.value)} size="md" error={silenceStartTimeErr} />
+              <TextInput label="End Time" type="time" value={silenceEndTime} onChange={(e) => setSilenceEndTime(e.currentTarget.value)} size="md" error={silenceEndTimeErr} />
             </SimpleGrid>
           )}
-          <Textarea
-            label="Notes"
-            placeholder="Optional"
-            value={silenceNotes}
-            onChange={(e) => setSilenceNotes(e.currentTarget.value)}
-            minRows={2}
-            autosize
-            size="md"
-          />
-          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>
-            Submit Request
-          </Button>
+          <Textarea label="Notes" placeholder="Optional" value={silenceNotes} onChange={(e) => setSilenceNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Submit Request</Button>
         </Box>
       )}
 
       {requestType === 'unavailability' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <DateInput
-            label="Date"
-            placeholder="Pick date"
-            value={unavailDate}
-            onChange={setUnavailDate}
-            size="md"
-          />
+          <DateInput label="Date" placeholder="Pick date" value={unavailDate} onChange={setUnavailDate} size="md" />
           <SimpleGrid cols={2} spacing="sm">
-            <TextInput
-              label="Start Time"
-              placeholder="HH:MM"
-              value={unavailStartTime}
-              onChange={(e) => setUnavailStartTime(e.currentTarget.value)}
-              size="md"
-            />
-            <TextInput
-              label="End Time"
-              placeholder="HH:MM"
-              value={unavailEndTime}
-              onChange={(e) => setUnavailEndTime(e.currentTarget.value)}
-              size="md"
-            />
+            <TextInput label="Start Time" type="time" value={unavailStartTime} onChange={(e) => setUnavailStartTime(e.currentTarget.value)} size="md" error={unavailStartTimeErr} />
+            <TextInput label="End Time" type="time" value={unavailEndTime} onChange={(e) => setUnavailEndTime(e.currentTarget.value)} size="md" error={unavailEndTimeErr || unavailTimeRangeErr} />
           </SimpleGrid>
-          <TextInput
-            label="Reason"
-            placeholder="Optional"
-            value={unavailReason}
-            onChange={(e) => setUnavailReason(e.currentTarget.value)}
-            size="md"
-          />
-          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>
-            Mark Unavailable
-          </Button>
+          <TextInput label="Reason" placeholder="Optional" value={unavailReason} onChange={(e) => setUnavailReason(e.currentTarget.value)} size="md" />
+          <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Mark Unavailable</Button>
         </Box>
       )}
 
       {error && (
-        <Alert
-          icon={<IconAlertCircle size={16} />}
-          color="red"
-          mt="md"
-          title="Error"
-        >
+        <Alert icon={<IconAlertCircle size={16} />} color="red" mt="md" title="Error">
           {error}
         </Alert>
       )}
@@ -481,10 +339,7 @@ export function RequestPage() {
       <SegmentedControl
         fullWidth
         value={requestType}
-        onChange={(v) => {
-          setRequestType(v as RequestType);
-          setError(null);
-        }}
+        onChange={(v) => { setRequestType(v as RequestType); setError(null); }}
         data={[
           { label: 'Program', value: 'program' },
           { label: 'Break', value: 'break' },
