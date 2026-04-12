@@ -490,6 +490,10 @@ class SahyogAPI(http.Controller):
                 # Skip prerequisites of completed programs
                 if pid in completed_prereq_ids:
                     continue
+                # Skip programs with gender restriction that doesn't match volunteer
+                prog_gender = s.program_id.gender
+                if volunteer and prog_gender and prog_gender != volunteer.sex:
+                    continue
                 result.append({
                     'id': s.id,
                     'program_id': s.program_id.id,
