@@ -15,6 +15,7 @@ class Program(models.Model):
     gender = fields.Selection([('male', 'Male'), ('female', 'Female')])
     program_type = fields.Selection([
         ('main', 'Main'),
+        ('hatha', 'Hatha'),
         ('silence', 'Silence'),
         ('other', 'Other'),
     ], required=True, default='main')

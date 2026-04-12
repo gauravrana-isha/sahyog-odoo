@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Checkbox,
@@ -23,16 +23,12 @@ import type { AvailableProgram, ProgramSchedule } from '../types';
 
 type RequestType = 'program' | 'break' | 'silence' | 'unavailability';
 
-/** Validate that end date is >= start date. Returns error string or null. */
 function validateDateRange(start: Date | null, end: Date | null): string | null {
   if (!start || !end) return null;
-  if (isBefore(startOfDay(end), startOfDay(start))) {
-    return 'End date must be on or after start date';
-  }
+  if (isBefore(startOfDay(end), startOfDay(start))) return 'End date must be on or after start date';
   return null;
 }
 
-/** Validate HH:MM time format. Returns error string or null. */
 function validateTime(value: string): string | null {
   if (!value) return null;
   if (!/^\d{2}:\d{2}$/.test(value)) return 'Use HH:MM format';
@@ -41,22 +37,22 @@ function validateTime(value: string): string | null {
   return null;
 }
 
-/** Validate start time < end time (same-day, no cross-midnight). Returns error or null. */
 function validateTimeRange(start: string, end: string): string | null {
   if (!start || !end) return null;
-  if (validateTime(start) || validateTime(end)) return null; // let individual validators handle
+  if (validateTime(start) || validateTime(end)) return null;
   if (start >= end) return 'End time must be after start time';
   return null;
 }
 
 export function RequestPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isWide = useMediaQuery('(min-width: 768px)');
   const [requestType, setRequestType] = useState<RequestType>('program');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Program form state
+  // Program form
   const { data: programs } = useApi<AvailableProgram[]>('/programs/available');
   const [programId, setProgramId] = useState<string | null>(null);
   const [participationType, setParticipationType] = useState('participant');
@@ -64,16 +60,19 @@ export function RequestPage() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [schedules, setSchedules] = useState<ProgramSchedule[]>([]);
+  const [scheduleId, setScheduleId] = useState<string | null>(null);
 
-  // Break form state
+  // Break form
   const [breakType, setBreakType] = useState<string | null>(null);
   const [breakReason, setBreakReason] = useState('');
   const [breakNotes, setBreakNotes] = useState('');
   const [breakStart, setBreakStart] = useState<Date | null>(null);
   const [breakEnd, setBreakEnd] = useState<Date | null>(null);
 
-  // Silence form state
+  // Silence form
   const [silenceType, setSilenceType] = useState<string | null>(null);
+  const [silenceProgramId, setSilenceProgramId] = useState<string | null>(null);
   const [silenceNotes, setSilenceNotes] = useState('');
   const [silenceStart, setSilenceStart] = useState<Date | null>(null);
   const [silenceEnd, setSilenceEnd] = useState<Date | null>(null);
@@ -81,11 +80,7 @@ export function RequestPage() {
   const [silenceStartTime, setSilenceStartTime] = useState('');
   const [silenceEndTime, setSilenceEndTime] = useState('');
 
-  // Program schedule state
-  const [schedules, setSchedules] = useState<ProgramSchedule[]>([]);
-  const [scheduleId, setScheduleId] = useState<string | null>(null);
-
-  // Unavailability form state
+  // Unavailability form
   const [unavailDate, setUnavailDate] = useState<Date | null>(null);
   const [unavailStartTime, setUnavailStartTime] = useState('');
   const [unavailEndTime, setUnavailEndTime] = useState('');
@@ -93,59 +88,62 @@ export function RequestPage() {
 
   const fmtDate = (d: Date) => format(d, 'yyyy-MM-dd');
 
+  // Pre-fill from URL params (coming from Programs page "Enroll" button)
+  useEffect(() => {
+    const pid = searchParams.get('program_id');
+    const sid = searchParams.get('schedule_id');
+    if (pid) {
+      setRequestType('program');
+      setProgramId(pid);
+      if (sid) setScheduleId(sid);
+    }
+  }, [searchParams]);
+
   // Auto-set recurring fields when silence_type is 9pm_9am
   useEffect(() => {
     if (silenceType === '9pm_9am') {
       setIsRecurring(true);
       setSilenceStartTime('21:00');
       setSilenceEndTime('09:00');
+    } else if (silenceType === 'personal') {
+      setIsRecurring(false);
+      setSilenceStartTime('');
+      setSilenceEndTime('');
     }
   }, [silenceType]);
 
   // Fetch schedules when a program is selected
   useEffect(() => {
-    if (!programId) {
-      setSchedules([]);
-      setScheduleId(null);
-      return;
-    }
+    if (!programId) { setSchedules([]); setScheduleId(null); return; }
     apiGet<ProgramSchedule[]>(`/programs/${programId}/schedules`)
       .then((data) => {
         setSchedules(data || []);
-        setScheduleId(null);
+        // If schedule_id came from URL, pre-fill dates
+        const sid = searchParams.get('schedule_id');
+        if (sid && data) {
+          const selected = data.find((s) => String(s.id) === sid);
+          if (selected) {
+            setScheduleId(sid);
+            setStartDate(new Date(selected.start_date));
+            setEndDate(new Date(selected.end_date));
+            setLocation(selected.location);
+          }
+        }
       })
-      .catch(() => {
-        setSchedules([]);
-        setScheduleId(null);
-      });
-  }, [programId]);
+      .catch(() => { setSchedules([]); setScheduleId(null); });
+  }, [programId, searchParams]);
 
   const resetAll = () => {
-    setProgramId(null);
-    setParticipationType('participant');
-    setStartDate(null);
-    setEndDate(null);
-    setLocation('');
-    setNotes('');
-    setBreakType(null);
-    setBreakReason('');
-    setBreakNotes('');
-    setBreakStart(null);
-    setBreakEnd(null);
-    setSilenceType(null);
-    setSilenceNotes('');
-    setSilenceStart(null);
-    setSilenceEnd(null);
-    setIsRecurring(false);
-    setSilenceStartTime('');
-    setSilenceEndTime('');
-    setSchedules([]);
-    setScheduleId(null);
-    setUnavailDate(null);
-    setUnavailStartTime('');
-    setUnavailEndTime('');
-    setUnavailReason('');
-    setError(null);
+    setProgramId(null); setParticipationType('participant');
+    setStartDate(null); setEndDate(null); setLocation(''); setNotes('');
+    setBreakType(null); setBreakReason(''); setBreakNotes('');
+    setBreakStart(null); setBreakEnd(null);
+    setSilenceType(null); setSilenceProgramId(null); setSilenceNotes('');
+    setSilenceStart(null); setSilenceEnd(null);
+    setIsRecurring(false); setSilenceStartTime(''); setSilenceEndTime('');
+    setSchedules([]); setScheduleId(null);
+    setUnavailDate(null); setUnavailStartTime(''); setUnavailEndTime('');
+    setUnavailReason(''); setError(null);
   };
 
   const handleSubmit = async () => {
@@ -158,34 +156,26 @@ export function RequestPage() {
         const dateErr = validateDateRange(startDate, endDate);
         if (dateErr) { setError(dateErr); setSubmitting(false); return; }
         await apiPost('/programs/create', {
-          program_id: Number(programId),
-          participation_type: participationType,
-          start_date: fmtDate(startDate),
-          end_date: fmtDate(endDate),
-          location,
-          notes,
-          ...(scheduleId ? { schedule_id: Number(scheduleId) } : {}),
+          program_id: Number(programId), participation_type: participationType,
+          start_date: fmtDate(startDate), end_date: fmtDate(endDate),
+          location, notes, ...(scheduleId ? { schedule_id: Number(scheduleId) } : {}),
         });
         notifications.show({ title: 'Request Submitted', message: 'Your program enrollment has been submitted.', color: 'green' });
-        resetAll();
-        navigate('/history?filter=programs');
+        resetAll(); navigate('/history?filter=programs');
       } else if (requestType === 'break') {
         if (!breakType) { setError('Please select a break type'); setSubmitting(false); return; }
         if (!breakStart || !breakEnd) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
         const dateErr = validateDateRange(breakStart, breakEnd);
         if (dateErr) { setError(dateErr); setSubmitting(false); return; }
         await apiPost('/breaks/create', {
-          break_type: breakType,
-          start_date: fmtDate(breakStart),
-          end_date: fmtDate(breakEnd),
-          reason: breakReason,
-          notes: breakNotes,
+          break_type: breakType, start_date: fmtDate(breakStart), end_date: fmtDate(breakEnd),
+          reason: breakReason, notes: breakNotes,
         });
         notifications.show({ title: 'Request Submitted', message: 'Your break request has been submitted.', color: 'green' });
-        resetAll();
-        navigate('/history?filter=breaks');
+        resetAll(); navigate('/history?filter=breaks');
       } else if (requestType === 'silence') {
         if (!silenceType) { setError('Please select a silence type'); setSubmitting(false); return; }
+        if (silenceType === 'program' && !silenceProgramId) { setError('Please select a program for program silence'); setSubmitting(false); return; }
         if (!silenceStart || !silenceEnd) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
         const dateErr = validateDateRange(silenceStart, silenceEnd);
         if (dateErr) { setError(dateErr); setSubmitting(false); return; }
@@ -195,20 +185,15 @@ export function RequestPage() {
           if (stErr) { setError('Start time: ' + stErr); setSubmitting(false); return; }
           const etErr = validateTime(silenceEndTime);
           if (etErr) { setError('End time: ' + etErr); setSubmitting(false); return; }
-          // Note: cross-midnight is valid for recurring silence (e.g. 21:00-09:00), so no time range check
         }
         await apiPost('/silence/create', {
-          silence_type: silenceType,
-          start_date: fmtDate(silenceStart),
-          end_date: fmtDate(silenceEnd),
-          notes: silenceNotes,
-          is_recurring: isRecurring,
-          start_time: silenceStartTime,
-          end_time: silenceEndTime,
+          silence_type: silenceType, start_date: fmtDate(silenceStart), end_date: fmtDate(silenceEnd),
+          notes: silenceNotes, is_recurring: isRecurring,
+          start_time: silenceStartTime, end_time: silenceEndTime,
+          ...(silenceProgramId ? { program_id: Number(silenceProgramId) } : {}),
         });
         notifications.show({ title: 'Request Submitted', message: 'Your silence request has been submitted.', color: 'green' });
-        resetAll();
-        navigate('/history?filter=silence');
+        resetAll(); navigate('/history?filter=silence');
       } else {
         if (!unavailDate) { setError('Please select a date'); setSubmitting(false); return; }
         if (!unavailStartTime || !unavailEndTime) { setError('Please fill in start and end times'); setSubmitting(false); return; }
@@ -219,30 +204,20 @@ export function RequestPage() {
         const trErr = validateTimeRange(unavailStartTime, unavailEndTime);
         if (trErr) { setError(trErr); setSubmitting(false); return; }
         await apiPost('/unavailability/create', {
-          date: fmtDate(unavailDate),
-          start_time: unavailStartTime,
-          end_time: unavailEndTime,
-          reason: unavailReason,
+          date: fmtDate(unavailDate), start_time: unavailStartTime, end_time: unavailEndTime, reason: unavailReason,
         });
         notifications.show({ title: 'Marked Unavailable', message: 'Your unavailability has been recorded.', color: 'green' });
-        resetAll();
-        navigate('/history?filter=unavailability');
+        resetAll(); navigate('/history?filter=unavailability');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(msg);
       notifications.show({ title: 'Error', message: msg, color: 'red' });
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
-  const programOptions = (programs || []).map((p) => ({
-    value: String(p.id),
-    label: p.name,
-  }));
+  const programOptions = (programs || []).map((p) => ({ value: String(p.id), label: p.name }));
 
-  // Inline validation errors for date ranges
   const programDateErr = validateDateRange(startDate, endDate);
   const breakDateErr = validateDateRange(breakStart, breakEnd);
   const silenceDateErr = validateDateRange(silenceStart, silenceEnd);
@@ -251,6 +226,7 @@ export function RequestPage() {
   const unavailTimeRangeErr = !unavailStartTimeErr && !unavailEndTimeErr ? validateTimeRange(unavailStartTime, unavailEndTime) : null;
   const silenceStartTimeErr = isRecurring ? validateTime(silenceStartTime) : null;
   const silenceEndTimeErr = isRecurring ? validateTime(silenceEndTime) : null;
+  const is9to9 = silenceType === '9pm_9am';
 
   const formContent = (
     <Box>
@@ -259,9 +235,7 @@ export function RequestPage() {
           <Select label="Choose Program" placeholder="Search programs..." searchable data={programOptions} value={programId} onChange={setProgramId} size="md" />
           <SegmentedControl value={participationType} onChange={setParticipationType} data={[{ label: 'Participant', value: 'participant' }, { label: 'Volunteer', value: 'volunteer' }]} size="sm" />
           {schedules.length > 0 && (
-            <Select
-              label="Schedule"
-              placeholder="Pick a schedule"
+            <Select label="Schedule" placeholder="Pick a schedule"
               data={schedules.map((s) => ({ value: String(s.id), label: `${s.start_date} → ${s.end_date} at ${s.location}` }))}
               value={scheduleId}
               onChange={(val) => {
@@ -269,8 +243,7 @@ export function RequestPage() {
                 const selected = schedules.find((s) => String(s.id) === val);
                 if (selected) { setStartDate(new Date(selected.start_date)); setEndDate(new Date(selected.end_date)); setLocation(selected.location); }
               }}
-              size="md"
-            />
+              size="md" />
           )}
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
             <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
@@ -298,17 +271,28 @@ export function RequestPage() {
       {requestType === 'silence' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Select label="Silence Type" placeholder="Select type" data={[{ value: 'personal', label: 'Personal' }, { value: '9pm_9am', label: '9PM–9AM' }, { value: 'program', label: 'Program' }]} value={silenceType} onChange={setSilenceType} size="md" />
+
+          {/* Program dropdown — only when silence type is "program" */}
+          {silenceType === 'program' && (
+            <Select label="Program" placeholder="Select program..." searchable data={programOptions} value={silenceProgramId} onChange={setSilenceProgramId} size="md" />
+          )}
+
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
             <DateInput label="Start Date" placeholder="Pick start date" value={silenceStart} onChange={setSilenceStart} size="md" error={silenceDateErr && silenceStart && silenceEnd ? silenceDateErr : undefined} />
             <DateInput label="End Date" placeholder="Pick end date" value={silenceEnd} onChange={setSilenceEnd} size="md" minDate={silenceStart || undefined} />
           </SimpleGrid>
-          <Checkbox label="Recurring" checked={isRecurring} onChange={(e) => setIsRecurring(e.currentTarget.checked)} />
+
+          {/* Recurring checkbox — auto-checked and disabled for 9pm-9am */}
+          <Checkbox label="Recurring" checked={isRecurring} disabled={is9to9} onChange={(e) => setIsRecurring(e.currentTarget.checked)} />
+
+          {/* Time fields — shown when recurring, read-only for 9pm-9am */}
           {isRecurring && (
             <SimpleGrid cols={2} spacing="sm">
-              <TextInput label="Start Time" type="time" value={silenceStartTime} onChange={(e) => setSilenceStartTime(e.currentTarget.value)} size="md" error={silenceStartTimeErr} />
-              <TextInput label="End Time" type="time" value={silenceEndTime} onChange={(e) => setSilenceEndTime(e.currentTarget.value)} size="md" error={silenceEndTimeErr} />
+              <TextInput label="Start Time" type="time" value={silenceStartTime} onChange={(e) => setSilenceStartTime(e.currentTarget.value)} size="md" error={silenceStartTimeErr} readOnly={is9to9} />
+              <TextInput label="End Time" type="time" value={silenceEndTime} onChange={(e) => setSilenceEndTime(e.currentTarget.value)} size="md" error={silenceEndTimeErr} readOnly={is9to9} />
             </SimpleGrid>
           )}
+
           <Textarea label="Notes" placeholder="Optional" value={silenceNotes} onChange={(e) => setSilenceNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
           <Button fullWidth size="md" loading={submitting} onClick={handleSubmit}>Submit Request</Button>
         </Box>
@@ -327,18 +311,14 @@ export function RequestPage() {
       )}
 
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} color="red" mt="md" title="Error">
-          {error}
-        </Alert>
+        <Alert icon={<IconAlertCircle size={16} />} color="red" mt="md" title="Error">{error}</Alert>
       )}
     </Box>
   );
 
   return (
     <Box style={{ maxWidth: isWide ? 600 : undefined, margin: isWide ? '0 auto' : undefined }}>
-      <SegmentedControl
-        fullWidth
-        value={requestType}
+      <SegmentedControl fullWidth value={requestType}
         onChange={(v) => { setRequestType(v as RequestType); setError(null); }}
         data={[
           { label: 'Program', value: 'program' },
@@ -346,16 +326,8 @@ export function RequestPage() {
           { label: 'Silence', value: 'silence' },
           { label: 'Unavailability', value: 'unavailability' },
         ]}
-        size="sm"
-        mb="lg"
-      />
-      {isWide ? (
-        <Card shadow="sm" padding="lg" withBorder>
-          {formContent}
-        </Card>
-      ) : (
-        formContent
-      )}
+        size="sm" mb="lg" />
+      {isWide ? <Card shadow="sm" padding="lg" withBorder>{formContent}</Card> : formContent}
     </Box>
   );
 }

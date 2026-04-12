@@ -252,6 +252,8 @@ class SahyogAPI(http.Controller):
                 'start_time': data.get('start_time', ''),
                 'end_time': data.get('end_time', ''),
             }
+            if data.get('program_id'):
+                vals['program_id'] = int(data['program_id'])
             record = request.env['sahyog.silence.period'].sudo().create(vals)
 
             # Advisory silence limit warning
@@ -432,25 +434,49 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_all_upcoming_schedules(self, **kw):
         try:
+            volunteer = self._get_volunteer()
+
+            # Only show main and hatha program types
+            eligible_programs = request.env['sahyog.program'].sudo().search([
+                ('program_type', 'in', ('main', 'hatha')),
+            ])
+            eligible_program_ids = eligible_programs.ids
+
+            # Exclude programs the volunteer has already completed
+            completed_program_ids = set()
+            if volunteer:
+                completed_enrollments = request.env['sahyog.volunteer.program'].sudo().search([
+                    ('volunteer_id', '=', volunteer.id),
+                    ('completion_status', '=', 'done'),
+                ])
+                completed_program_ids = set(completed_enrollments.mapped('program_id.id'))
+
             schedules = request.env['sahyog.program.schedule'].sudo().search([
                 ('schedule_status', '=', 'upcoming'),
+                ('program_id', 'in', eligible_program_ids),
             ], order='start_date asc')
-            return self._json_success([{
-                'id': s.id,
-                'program_id': s.program_id.id,
-                'program_name': s.program_id.name or '',
-                'program_type': s.program_id.program_type or '',
-                'start_date': str(s.start_date),
-                'end_date': str(s.end_date),
-                'start_time': s.start_time or '',
-                'end_time': s.end_time or '',
-                'is_recurring': s.is_recurring,
-                'location': s.location or '',
-                'capacity': s.capacity or 0,
-                'fee': s.fee or '',
-                'schedule_status': s.schedule_status or '',
-                'notes': s.notes or '',
-            } for s in schedules])
+
+            result = []
+            for s in schedules:
+                if s.program_id.id in completed_program_ids:
+                    continue
+                result.append({
+                    'id': s.id,
+                    'program_id': s.program_id.id,
+                    'program_name': s.program_id.name or '',
+                    'program_type': s.program_id.program_type or '',
+                    'start_date': str(s.start_date),
+                    'end_date': str(s.end_date),
+                    'start_time': s.start_time or '',
+                    'end_time': s.end_time or '',
+                    'is_recurring': s.is_recurring,
+                    'location': s.location or '',
+                    'capacity': s.capacity or 0,
+                    'fee': s.fee or '',
+                    'schedule_status': s.schedule_status or '',
+                    'notes': s.notes or '',
+                })
+            return self._json_success(result)
         except Exception:
             _logger.exception('API error in get_all_upcoming_schedules')
             return self._json_error('Internal server error', status=500)

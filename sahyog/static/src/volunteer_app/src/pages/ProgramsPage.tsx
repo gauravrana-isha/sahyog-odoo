@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -9,6 +10,8 @@ import {
   Alert,
   Center,
   Group,
+  TextInput,
+  Button,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import {
@@ -18,6 +21,7 @@ import {
   IconCalendarEvent,
   IconClock,
   IconRepeat,
+  IconSearch,
 } from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet } from '../api';
@@ -41,23 +45,23 @@ interface UpcomingSchedule {
 
 const TYPE_COLORS: Record<string, string> = {
   main: 'blue',
+  hatha: 'teal',
   silence: 'violet',
   other: 'gray',
 };
 
 function fmtDate(d: string) {
-  try {
-    return format(parseISO(d), 'MMM d, yyyy');
-  } catch {
-    return d;
-  }
+  try { return format(parseISO(d), 'MMM d, yyyy'); }
+  catch { return d; }
 }
 
 export function ProgramsPage() {
+  const navigate = useNavigate();
   const isWide = useMediaQuery('(min-width: 768px)');
   const [schedules, setSchedules] = useState<UpcomingSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const fetchSchedules = useCallback(() => {
     setLoading(true);
@@ -68,79 +72,71 @@ export function ProgramsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+  useEffect(() => { fetchSchedules(); }, [fetchSchedules]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return schedules;
+    const q = search.toLowerCase();
+    return schedules.filter((s) =>
+      s.program_name.toLowerCase().includes(q) ||
+      (s.location && s.location.toLowerCase().includes(q))
+    );
+  }, [schedules, search]);
 
   return (
     <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined }}>
-      <Text fw={600} size="lg" mb="md">
-        Upcoming Programs
-      </Text>
+      <Text fw={600} size="lg" mb="sm">Upcoming Programs</Text>
+
+      <TextInput
+        placeholder="Search programs..."
+        leftSection={<IconSearch size={16} />}
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        size="sm"
+        mb="md"
+      />
 
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} color="red" mb="md">
-          {error}
-        </Alert>
+        <Alert icon={<IconAlertCircle size={16} />} color="red" mb="md">{error}</Alert>
       )}
 
       {loading ? (
         <Stack gap="sm">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={90} radius="md" />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} height={90} radius="md" />)}
         </Stack>
-      ) : schedules.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Center py="xl">
           <Stack align="center" gap="xs">
             <IconMoodEmpty size={48} color="var(--mantine-color-gray-4)" />
-            <Text c="dimmed">No upcoming programs scheduled</Text>
+            <Text c="dimmed">{search ? 'No programs match your search' : 'No upcoming programs scheduled'}</Text>
           </Stack>
         </Center>
       ) : (
         <Stack gap="sm">
-          {schedules.map((s) => (
-            <Card
-              key={s.id}
-              padding="sm"
-              withBorder
-              shadow="xs"
-              style={{ borderLeft: '4px solid #5CB85C' }}
-            >
-              {/* Header: program name + type badge + recurring badge */}
+          {filtered.map((s) => (
+            <Card key={s.id} padding="sm" withBorder shadow="xs" style={{ borderLeft: '4px solid #5CB85C' }}>
               <Group justify="space-between" mb={4} wrap="wrap">
                 <Text size="sm" fw={600}>{s.program_name}</Text>
                 <Group gap={4}>
                   {s.is_recurring && (
-                    <Badge size="xs" variant="light" color="violet" leftSection={<IconRepeat size={10} />}>
-                      Recurring
-                    </Badge>
+                    <Badge size="xs" variant="light" color="violet" leftSection={<IconRepeat size={10} />}>Recurring</Badge>
                   )}
-                  <Badge size="xs" variant="light" color={TYPE_COLORS[s.program_type] || 'gray'}>
-                    {s.program_type}
-                  </Badge>
+                  <Badge size="xs" variant="light" color={TYPE_COLORS[s.program_type] || 'gray'}>{s.program_type}</Badge>
                 </Group>
               </Group>
 
-              {/* Dates */}
               <Group gap="xs">
                 <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
-                <Text size="xs" c="dimmed">
-                  {fmtDate(s.start_date)} → {fmtDate(s.end_date)}
-                </Text>
+                <Text size="xs" c="dimmed">{fmtDate(s.start_date)} → {fmtDate(s.end_date)}</Text>
               </Group>
 
-              {/* Time window — shown for recurring or when times are set */}
               {s.start_time && s.end_time && (
                 <Group gap="xs" mt={2}>
                   <IconClock size={14} color="var(--mantine-color-gray-5)" />
-                  <Text size="xs" c="dimmed">
-                    {s.start_time} – {s.end_time}
-                  </Text>
+                  <Text size="xs" c="dimmed">{s.start_time} – {s.end_time}</Text>
                 </Group>
               )}
 
-              {/* Location */}
               {s.location && (
                 <Group gap="xs" mt={2}>
                   <IconMapPin size={14} color="var(--mantine-color-gray-5)" />
@@ -148,22 +144,23 @@ export function ProgramsPage() {
                 </Group>
               )}
 
-              {/* Capacity + Fee row */}
               {(s.capacity > 0 || s.fee) && (
                 <Group gap="md" mt={4}>
-                  {s.capacity > 0 && (
-                    <Text size="xs" c="dimmed">Capacity: {s.capacity}</Text>
-                  )}
-                  {s.fee && (
-                    <Text size="xs" c="dimmed">Fee: {s.fee}</Text>
-                  )}
+                  {s.capacity > 0 && <Text size="xs" c="dimmed">Capacity: {s.capacity}</Text>}
+                  {s.fee && <Text size="xs" c="dimmed">Fee: {s.fee}</Text>}
                 </Group>
               )}
 
-              {/* Notes */}
-              {s.notes && (
-                <Text size="xs" c="dimmed" mt={4}>{s.notes}</Text>
-              )}
+              {s.notes && <Text size="xs" c="dimmed" mt={4}>{s.notes}</Text>}
+
+              <Button
+                variant="light"
+                size="compact-xs"
+                mt="xs"
+                onClick={() => navigate(`/request?program_id=${s.program_id}&schedule_id=${s.id}`)}
+              >
+                Enroll
+              </Button>
             </Card>
           ))}
         </Stack>
