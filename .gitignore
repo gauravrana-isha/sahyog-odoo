@@ -1,7 +1,29 @@
-node_modules/
+# Environment & secrets
+.env
+.env.local
+.env.production
+
+# Python
 __pycache__/
 *.pyc
-.DS_Store
 *.pyo
-.env
-sahyog/static/src/volunteer_app/node_modules/
+*.egg-info/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docker volumes (local)
+pgdata/
+odoo-filestore/
+
+# Odoo
+*.log
+filestore/
