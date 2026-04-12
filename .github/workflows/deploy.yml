@@ -31,16 +31,24 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          # Add server to known hosts
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Sync files (exclude node_modules, .git)
-          rsync -avz --delete \
-            --exclude='node_modules' \
-            --exclude='.git' \
-            --exclude='__pycache__' \
-            --exclude='.DS_Store' \
-            ./ $SERVER_USER@$SERVER_IP:~/sahyog-odoo/
+          # Git pull on server + copy built SPA + restart
+          ssh $SERVER_USER@$SERVER_IP "sudo bash -c '
+            cd /home/gauravrana/sahyog-odoo
+            git pull origin main
+            docker compose restart odoo
+          '"
 
-          # Restart Odoo on the server
-          ssh $SERVER_USER@$SERVER_IP "cd ~/sahyog-odoo && sudo docker compose restart odoo"
+          # Copy the built SPA dist (not in git)
+          rsync -avz --chmod=D755,F644 \
+            sahyog/static/dist/ \
+            $SERVER_USER@$SERVER_IP:/tmp/sahyog-dist/
+
+          # Move built files into place with sudo
+          ssh $SERVER_USER@$SERVER_IP "sudo bash -c '
+            cp -r /tmp/sahyog-dist/* /home/gauravrana/sahyog-odoo/sahyog/static/dist/
+            rm -rf /tmp/sahyog-dist
+            cd /home/gauravrana/sahyog-odoo
+            docker compose restart odoo
+          '"
