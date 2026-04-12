@@ -482,10 +482,10 @@ class SahyogAPI(http.Controller):
                 # Skip if exact program completed
                 if pid in completed_program_ids:
                     continue
-                # Skip if base name matches a completed program (fuzzy)
+                # Skip if base name matches a completed program (fuzzy: prefix match)
                 import re as _re
                 base = _re.sub(r'\s*\([^)]*\)\s*$', '', pname).strip().lower()
-                if base in completed_base_names:
+                if any(base.startswith(cb) or cb.startswith(base) for cb in completed_base_names):
                     continue
                 # Skip prerequisites of completed programs
                 if pid in completed_prereq_ids:

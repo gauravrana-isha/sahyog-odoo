@@ -102,22 +102,34 @@ export function RequestPage() {
     }
   }, [searchParams]);
 
-  // Auto-set recurring fields when silence_type is 9pm_9am
+  // Auto-set recurring fields when silence_type changes — clear dependent fields
   useEffect(() => {
+    setSilenceProgramId(null);
+    setSilenceStart(null);
+    setSilenceEnd(null);
+    setSilenceNotes('');
     if (silenceType === '9pm_9am') {
       setIsRecurring(true);
       setSilenceStartTime('21:00');
       setSilenceEndTime('09:00');
-    } else if (silenceType === 'personal') {
+    } else {
       setIsRecurring(false);
       setSilenceStartTime('');
       setSilenceEndTime('');
     }
   }, [silenceType]);
 
-  // Fetch schedules when a program is selected
+  // Fetch schedules when a program is selected — clear dependent fields
   useEffect(() => {
-    if (!programId) { setSchedules([]); setScheduleId(null); return; }
+    // Clear dependent fields when program changes
+    setScheduleId(null);
+    setStartDate(null);
+    setEndDate(null);
+    setLocation('');
+    setProgStartTime('');
+    setProgEndTime('');
+    setProgIsRecurring(false);
+    if (!programId) { setSchedules([]); return; }
     apiGet<ProgramSchedule[]>(`/programs/${programId}/schedules`)
       .then((data) => {
         setSchedules(data || []);
@@ -136,7 +148,7 @@ export function RequestPage() {
           }
         }
       })
-      .catch(() => { setSchedules([]); setScheduleId(null); });
+      .catch(() => { setSchedules([]); });
   }, [programId, searchParams]);
 
   const resetAll = () => {
