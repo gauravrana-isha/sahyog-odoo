@@ -50,5 +50,6 @@ jobs:
             cp -r /tmp/sahyog-dist/* /home/gauravrana/sahyog-odoo/sahyog/static/dist/
             rm -rf /tmp/sahyog-dist
             cd /home/gauravrana/sahyog-odoo
+            docker compose run --rm odoo odoo -d sahyog -u sahyog --stop-after-init
             docker compose restart odoo
           '"
