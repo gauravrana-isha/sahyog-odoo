@@ -6,6 +6,7 @@ import {
   UnstyledButton,
   Stack,
   ActionIcon,
+  Avatar,
   Indicator,
   Drawer,
   Card,
@@ -53,7 +54,16 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
   return parts;
 }
 
-const NAV_ITEMS = [
+// Bottom nav: 4 items (no Profile)
+const BOTTOM_NAV = [
+  { label: 'Programs', icon: IconBooks, path: '/programs', color: 'var(--mantine-color-green-6)' },
+  { label: 'History', icon: IconHistory, path: '/history', color: 'var(--mantine-color-orange-6)' },
+  { label: 'Request', icon: IconSend, path: '/request', color: 'var(--mantine-color-blue-6)' },
+  { label: 'Calendar', icon: IconCalendar, path: '/calendar', color: 'var(--mantine-color-violet-6)' },
+] as const;
+
+// Sidebar nav: all 5 items
+const SIDEBAR_NAV = [
   { label: 'Programs', icon: IconBooks, path: '/programs' },
   { label: 'History', icon: IconHistory, path: '/history' },
   { label: 'Request', icon: IconSend, path: '/request' },
@@ -62,7 +72,7 @@ const NAV_ITEMS = [
 ] as const;
 
 const HEADER_H = 56;
-const BOTTOM_H = 56;
+const BOTTOM_H = 64;
 const SIDEBAR_W = 280;
 
 interface AppLayoutProps {
@@ -75,12 +85,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [sidebarOpen, { toggle: toggleSidebar }] = useDisclosure(true);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
 
-  // Poll unread count
   const fetchUnread = useCallback(() => {
     apiGet<{ count: number }>('/notifications/unread-count')
       .then((r) => setUnreadCount(r.count))
@@ -93,7 +102,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => clearInterval(interval);
   }, [fetchUnread]);
 
-  // Fetch notifications when drawer opens
   const fetchNotifications = useCallback(() => {
     setNotifLoading(true);
     apiGet<Notification[]>('/notifications')
@@ -103,20 +111,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (drawerOpen) fetchNotifications();
-  }, [drawerOpen, fetchNotifications]);
+    if (notifDrawerOpen) fetchNotifications();
+  }, [notifDrawerOpen, fetchNotifications]);
 
   const markRead = async (id: number) => {
     try {
       await apiPost('/notifications/read', { notification_id: id });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
       const result = await apiGet<{ count: number }>('/notifications/unread-count');
       setUnreadCount(result.count);
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   };
 
   const activePath = location.pathname;
@@ -125,9 +129,18 @@ export function AppLayout({ children }: AppLayoutProps) {
   const computedColorScheme = useComputedColorScheme('light');
   const toggleColorScheme = () => setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark');
 
+  // On mobile, profile opens as drawer; navigate to /profile content inside drawer
+  const handleProfileClick = () => {
+    if (isDesktop) {
+      navigate('/profile');
+    } else {
+      navigate('/profile');
+    }
+  };
+
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Header — full width */}
+      {/* ── Header ── */}
       <Box
         component="header"
         style={{
@@ -136,9 +149,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingLeft: 16,
-          paddingRight: 16,
+          paddingRight: 12,
           backgroundColor: 'var(--mantine-color-body)',
-          borderBottom: '1px solid var(--mantine-color-gray-2)',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
           position: 'sticky',
           top: 0,
           zIndex: 100,
@@ -150,113 +163,68 @@ export function AppLayout({ children }: AppLayoutProps) {
               {sidebarOpen ? <IconLayoutSidebarLeftCollapse size={22} /> : <IconMenu2 size={22} />}
             </ActionIcon>
           )}
-          <Text fw={600} size="lg" c="blue">
-            Sahyog
-          </Text>
+          <Text fw={700} size="lg" c="blue">Sahyog</Text>
         </Group>
-        <Group gap={4}>
-          <ActionIcon
-            variant="subtle"
-            size="lg"
-            aria-label="Toggle dark mode"
-            onClick={toggleColorScheme}
-          >
+        <Group gap={6}>
+          <ActionIcon variant="subtle" size="lg" aria-label="Toggle dark mode" onClick={toggleColorScheme}>
             {computedColorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            size="lg"
-            aria-label="Notifications"
-            onClick={() => setDrawerOpen(true)}
-            style={{ overflow: 'visible' }}
-          >
-            <Indicator
-              disabled={unreadCount === 0}
-              label={unreadCount > 99 ? '99+' : String(unreadCount)}
-              size={20}
-              color="red"
-              offset={2}
-              styles={{ indicator: { padding: '0 4px', minWidth: 20, height: 20, fontSize: 11 } }}
-            >
+          <ActionIcon variant="subtle" size="lg" aria-label="Notifications" onClick={() => setNotifDrawerOpen(true)} style={{ overflow: 'visible' }}>
+            <Indicator disabled={unreadCount === 0} label={unreadCount > 99 ? '99+' : String(unreadCount)} size={18} color="red" offset={2}
+              styles={{ indicator: { padding: '0 4px', minWidth: 18, height: 18, fontSize: 10 } }}>
               <IconBell size={22} />
             </Indicator>
+          </ActionIcon>
+          <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
+            <Avatar size={28} radius="xl" color="blue"><IconUser size={16} /></Avatar>
           </ActionIcon>
         </Group>
       </Box>
 
       <Box style={{ display: 'flex', flex: 1 }}>
-        {/* Desktop Sidebar */}
+        {/* ── Desktop Sidebar ── */}
         {showSidebar && (
-          <Box
-            component="nav"
-            style={{
-              width: SIDEBAR_W,
-              flexShrink: 0,
-              borderRight: '1px solid var(--mantine-color-gray-2)',
-              backgroundColor: 'var(--mantine-color-body)',
-              position: 'fixed',
-              top: HEADER_H,
-              bottom: 0,
-              left: 0,
-              paddingTop: 8,
-              zIndex: 99,
-            }}
-          >
-            {NAV_ITEMS.map((item) => {
-              const active = activePath === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  label={item.label}
-                  leftSection={<item.icon size={20} />}
-                  active={active}
-                  onClick={() => navigate(item.path)}
-                  variant="filled"
-                  style={{ borderRadius: 0 }}
-                />
-              );
-            })}
+          <Box component="nav" style={{
+            width: SIDEBAR_W, flexShrink: 0,
+            borderRight: '1px solid var(--mantine-color-default-border)',
+            backgroundColor: 'var(--mantine-color-body)',
+            position: 'fixed', top: HEADER_H, bottom: 0, left: 0, paddingTop: 8, zIndex: 99,
+          }}>
+            {SIDEBAR_NAV.map((item) => (
+              <NavLink key={item.path} label={item.label} leftSection={<item.icon size={20} />}
+                active={activePath === item.path} onClick={() => navigate(item.path)}
+                variant="filled" style={{ borderRadius: 0 }} />
+            ))}
           </Box>
         )}
 
-        {/* Main Content */}
-        <Box
-          component="main"
-          style={{
-            flex: 1,
-            marginLeft: showSidebar ? SIDEBAR_W : 0,
-            paddingBottom: isDesktop ? 16 : BOTTOM_H + 16,
-            paddingTop: 16,
-            paddingLeft: 16,
-            paddingRight: 16,
-            maxWidth: isDesktop ? undefined : 1024,
-            marginInline: isDesktop ? undefined : 'auto',
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
+        {/* ── Main Content ── */}
+        <Box component="main" style={{
+          flex: 1,
+          marginLeft: showSidebar ? SIDEBAR_W : 0,
+          paddingBottom: isDesktop ? 16 : BOTTOM_H + 16,
+          paddingTop: 16, paddingLeft: 16, paddingRight: 16,
+          maxWidth: isDesktop ? undefined : 1024,
+          marginInline: isDesktop ? undefined : 'auto',
+          width: '100%', boxSizing: 'border-box',
+        }}>
           {children}
         </Box>
       </Box>
 
-      {/* Mobile/Tablet Bottom Tab Bar */}
+      {/* ── Mobile Bottom Nav (4 items, no Profile) ── */}
       {!isDesktop && (
-        <Box
-          component="nav"
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: BOTTOM_H,
-            backgroundColor: 'var(--mantine-color-body)',
-            borderTop: '1px solid var(--mantine-color-gray-2)',
-            display: 'flex',
-            zIndex: 100,
-          }}
-        >
-          {NAV_ITEMS.map((item) => {
-            const active = activePath === item.path;
+        <Box component="nav" style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          height: BOTTOM_H,
+          backgroundColor: 'var(--mantine-color-body)',
+          borderTop: '1px solid var(--mantine-color-default-border)',
+          display: 'flex',
+          zIndex: 100,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}>
+          {BOTTOM_NAV.map((item) => {
+            const active = activePath === item.path || (item.path === '/programs' && activePath === '/');
             const Icon = item.icon;
             return (
               <UnstyledButton
@@ -265,48 +233,51 @@ export function AppLayout({ children }: AppLayoutProps) {
                 style={{
                   flex: 1,
                   display: 'flex',
+                  flexDirection: 'column',
                   justifyContent: 'center',
                   alignItems: 'center',
+                  gap: 2,
                   minHeight: 44,
+                  position: 'relative',
                 }}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                <Stack align="center" gap={2}>
-                  <Icon
-                    size={22}
-                    color={
-                      active
-                        ? 'var(--mantine-color-blue-6)'
-                        : 'var(--mantine-color-gray-5)'
-                    }
-                  />
-                  <Text
-                    size="xs"
-                    c={active ? 'blue.6' : 'gray.5'}
-                    fw={active ? 600 : 400}
-                  >
-                    {item.label}
-                  </Text>
-                </Stack>
+                {/* Active pill indicator */}
+                {active && (
+                  <Box style={{
+                    position: 'absolute',
+                    top: 4,
+                    width: 48,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: 'var(--mantine-color-blue-light)',
+                  }} />
+                )}
+                <Icon
+                  size={22}
+                  color={active ? item.color : 'var(--mantine-color-dimmed)'}
+                  style={{ position: 'relative', zIndex: 1 }}
+                />
+                <Text
+                  size="10px"
+                  c={active ? 'blue' : 'dimmed'}
+                  fw={active ? 700 : 400}
+                  style={{ position: 'relative', zIndex: 1 }}
+                >
+                  {item.label}
+                </Text>
               </UnstyledButton>
             );
           })}
         </Box>
       )}
 
-      {/* Notification Drawer */}
-      <Drawer
-        opened={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        position="right"
-        size={isDesktop ? 360 : '100%'}
-        title={<Text fw={600} size="lg">Notifications</Text>}
-      >
+      {/* ── Notification Drawer ── */}
+      <Drawer opened={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} position="right"
+        size={isDesktop ? 360 : '100%'} title={<Text fw={600} size="lg">Notifications</Text>}>
         {notifLoading ? (
-          <Center py="xl">
-            <Loader size="sm" />
-          </Center>
+          <Center py="xl"><Loader size="sm" /></Center>
         ) : notifications.length === 0 ? (
           <Center py="xl">
             <Stack align="center" gap="xs">
@@ -317,46 +288,21 @@ export function AppLayout({ children }: AppLayoutProps) {
         ) : (
           <Stack gap="xs">
             {notifications.map((n) => (
-              <Card
-                key={n.id}
-                padding="sm"
-                withBorder
-                style={{
-                  backgroundColor: n.is_read
-                    ? undefined
-                    : 'var(--mantine-color-blue-light)',
-                }}
-              >
-                <Text size="sm" fw={600}>
-                  {n.title}
-                </Text>
+              <Card key={n.id} padding="sm" withBorder
+                style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-blue-light)' }}>
+                <Text size="sm" fw={600}>{n.title}</Text>
                 <Text size="xs" c="dimmed" mt={2}>
                   {parseActionTokens(n.message).map((part, i) =>
-                    part.type === 'text' ? (
-                      <span key={i}>{part.content}</span>
-                    ) : (
-                      <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}>
-                        View
-                      </Text>
-                    ),
+                    part.type === 'text' ? <span key={i}>{part.content}</span> :
+                    <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}>View</Text>
                   )}
                 </Text>
                 <Group justify="space-between" mt="xs">
                   <Text size="xs" c="dimmed">
-                    {n.create_date
-                      ? formatDistanceToNow(parseISO(n.create_date), {
-                          addSuffix: true,
-                        })
-                      : ''}
+                    {n.create_date ? formatDistanceToNow(parseISO(n.create_date), { addSuffix: true }) : ''}
                   </Text>
                   {!n.is_read && (
-                    <Button
-                      variant="subtle"
-                      size="compact-xs"
-                      onClick={() => markRead(n.id)}
-                    >
-                      Mark as Read
-                    </Button>
+                    <Button variant="subtle" size="compact-xs" onClick={() => markRead(n.id)}>Mark as Read</Button>
                   )}
                 </Group>
               </Card>
