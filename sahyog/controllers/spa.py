@@ -65,7 +65,7 @@ class SahyogSPA(http.Controller):
             return request.redirect('/sahyog/login')
         return request.redirect('/sahyog/redirect')
 
-    @http.route('/my', type='http', auth='user', website=False)
+    @http.route(['/my', '/my/home'], type='http', auth='user', website=True)
     def my_redirect(self, **kw):
         """Override /my to redirect based on role instead of showing portal."""
         return request.redirect('/sahyog/redirect')
