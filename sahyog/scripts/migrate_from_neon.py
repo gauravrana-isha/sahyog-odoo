@@ -191,7 +191,6 @@ def map_volunteer_employee(row):
         "x_nationality": str_or_false(row.get("nationality")),
         "work_mode": _map_work_mode(row.get("work_mode")),
         "date_of_joining_isha": date_or_false(row.get("date_of_joining_isha")),
-        "disha_samskriti_batch": str_or_false(row.get("disha_samskriti_batch")),
         "date_of_joining_guest_care": date_or_false(row.get("date_of_joining_guest_care")),
         "role_in_guest_care": str_or_false(row.get("role_in_guest_care")),
         "current_assignment_area": str_or_false(row.get("current_assignment_area")),

@@ -72,12 +72,6 @@ class SilencePeriod(models.Model):
                 if t and not time_re.match(t):
                     raise ValidationError(_('Time must be in HH:MM format.'))
 
-    @api.constrains('silence_type', 'program_id')
-    def _check_program_silence(self):
-        for rec in self:
-            if rec.silence_type == 'program' and not rec.program_id:
-                raise ValidationError(_('Program is required for program silence type.'))
-
     @api.onchange('silence_type')
     def _onchange_silence_type(self):
         if self.silence_type == '9pm_9am':
