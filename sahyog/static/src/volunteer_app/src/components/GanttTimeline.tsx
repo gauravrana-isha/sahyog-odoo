@@ -114,7 +114,7 @@ export function GanttTimeline({ volunteers, entries, dateArray, zoomLevel, isMob
                             minWidth: 0,
                             borderRight: '1px solid var(--mantine-color-default-border)',
                             borderBottom: '1px solid var(--mantine-color-default-border)',
-                            backgroundColor: isT ? 'var(--mantine-color-blue-light)' : wknd ? 'var(--mantine-color-gray-light)' : undefined,
+                            backgroundColor: isT ? 'var(--mantine-color-blue-light)' : wknd ? 'var(--mantine-color-gray-light)' : 'var(--mantine-color-body)',
                             opacity: wknd && !isT ? 0.5 : 1,
                           }}
                         />
