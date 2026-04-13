@@ -21,6 +21,17 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error('Session expired');
   }
 
+  // Check content type before parsing — Odoo may return HTML on errors/redirects
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    // If we got HTML back, session likely expired
+    if (contentType.includes('text/html')) {
+      window.location.href = '/sahyog/login';
+      throw new Error('Session expired');
+    }
+    throw new Error('Unexpected response from server');
+  }
+
   const json = await res.json();
   if (!json.success) throw new Error(json.error || 'Unknown error');
   return json.data as T;
