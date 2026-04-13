@@ -88,7 +88,7 @@ class SahyogSPA(http.Controller):
                     })
                     params = {
                         'client_id': p.client_id,
-                        'redirect_uri': request.httprequest.url_root.rstrip('/').replace('http://', 'https://') + '/auth_oauth/signin',
+                        'redirect_uri': request.httprequest.url_root.rstrip('/') + '/auth_oauth/signin',
                         'response_type': 'token',
                         'scope': p.scope or 'openid email profile',
                         'state': state,
