@@ -14,6 +14,8 @@ import {
   Center,
   Loader,
   NavLink,
+  useMantineColorScheme,
+  useComputedColorScheme,
 } from '@mantine/core';
 import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import {
@@ -26,6 +28,8 @@ import {
   IconMenu2,
   IconLayoutSidebarLeftCollapse,
   IconBooks,
+  IconSun,
+  IconMoon,
 } from '@tabler/icons-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
@@ -117,6 +121,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const activePath = location.pathname;
   const showSidebar = isDesktop && sidebarOpen;
+  const { setColorScheme } = useMantineColorScheme();
+  const computedColorScheme = useComputedColorScheme('light');
+  const toggleColorScheme = () => setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark');
 
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -130,7 +137,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           justifyContent: 'space-between',
           paddingLeft: 16,
           paddingRight: 16,
-          backgroundColor: '#fff',
+          backgroundColor: 'var(--mantine-color-body)',
           borderBottom: '1px solid var(--mantine-color-gray-2)',
           position: 'sticky',
           top: 0,
@@ -147,24 +154,34 @@ export function AppLayout({ children }: AppLayoutProps) {
             Sahyog
           </Text>
         </Group>
-        <ActionIcon
-          variant="subtle"
-          size="lg"
-          aria-label="Notifications"
-          onClick={() => setDrawerOpen(true)}
-          style={{ overflow: 'visible' }}
-        >
-          <Indicator
-            disabled={unreadCount === 0}
-            label={unreadCount > 99 ? '99+' : String(unreadCount)}
-            size={20}
-            color="red"
-            offset={2}
-            styles={{ indicator: { padding: '0 4px', minWidth: 20, height: 20, fontSize: 11 } }}
+        <Group gap={4}>
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label="Toggle dark mode"
+            onClick={toggleColorScheme}
           >
-            <IconBell size={22} />
-          </Indicator>
-        </ActionIcon>
+            {computedColorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+          </ActionIcon>
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label="Notifications"
+            onClick={() => setDrawerOpen(true)}
+            style={{ overflow: 'visible' }}
+          >
+            <Indicator
+              disabled={unreadCount === 0}
+              label={unreadCount > 99 ? '99+' : String(unreadCount)}
+              size={20}
+              color="red"
+              offset={2}
+              styles={{ indicator: { padding: '0 4px', minWidth: 20, height: 20, fontSize: 11 } }}
+            >
+              <IconBell size={22} />
+            </Indicator>
+          </ActionIcon>
+        </Group>
       </Box>
 
       <Box style={{ display: 'flex', flex: 1 }}>
@@ -176,7 +193,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               width: SIDEBAR_W,
               flexShrink: 0,
               borderRight: '1px solid var(--mantine-color-gray-2)',
-              backgroundColor: '#fff',
+              backgroundColor: 'var(--mantine-color-body)',
               position: 'fixed',
               top: HEADER_H,
               bottom: 0,
@@ -232,7 +249,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             left: 0,
             right: 0,
             height: BOTTOM_H,
-            backgroundColor: '#fff',
+            backgroundColor: 'var(--mantine-color-body)',
             borderTop: '1px solid var(--mantine-color-gray-2)',
             display: 'flex',
             zIndex: 100,
@@ -306,8 +323,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                 withBorder
                 style={{
                   backgroundColor: n.is_read
-                    ? '#fff'
-                    : 'var(--mantine-color-blue-0)',
+                    ? undefined
+                    : 'var(--mantine-color-blue-light)',
                 }}
               >
                 <Text size="sm" fw={600}>
