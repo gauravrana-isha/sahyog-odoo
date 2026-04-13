@@ -343,7 +343,7 @@ export function ProfilePage() {
       )}
 
       {!editing && (
-        <Affix position={{ bottom: 80, right: 24 }}>
+        <Affix position={{ bottom: 24, right: 24 }}>
           <ActionIcon size={56} radius="xl" variant="filled" color="blue" onClick={() => setEditing(true)} aria-label="Edit profile">
             <IconEdit size={24} />
           </ActionIcon>

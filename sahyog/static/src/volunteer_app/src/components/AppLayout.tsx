@@ -31,6 +31,7 @@ import {
   IconBooks,
   IconSun,
   IconMoon,
+  IconX,
 } from '@tabler/icons-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
@@ -56,10 +57,10 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
 
 // Bottom nav: 4 items (no Profile)
 const BOTTOM_NAV = [
-  { label: 'Programs', icon: IconBooks, path: '/programs', color: 'var(--mantine-color-green-6)' },
-  { label: 'History', icon: IconHistory, path: '/history', color: 'var(--mantine-color-orange-6)' },
-  { label: 'Request', icon: IconSend, path: '/request', color: 'var(--mantine-color-blue-6)' },
-  { label: 'Calendar', icon: IconCalendar, path: '/calendar', color: 'var(--mantine-color-violet-6)' },
+  { label: 'Programs', icon: IconBooks, path: '/programs' },
+  { label: 'History', icon: IconHistory, path: '/history' },
+  { label: 'Request', icon: IconSend, path: '/request' },
+  { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
 ] as const;
 
 // Sidebar nav: all 5 items
@@ -124,7 +125,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const activePath = location.pathname;
+  const isProfileOpen = activePath === '/profile';
   const showSidebar = isDesktop && sidebarOpen;
+  const showBottomNav = !isDesktop && !isProfileOpen;
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme('light');
   const toggleColorScheme = () => setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark');
@@ -163,21 +166,34 @@ export function AppLayout({ children }: AppLayoutProps) {
               {sidebarOpen ? <IconLayoutSidebarLeftCollapse size={22} /> : <IconMenu2 size={22} />}
             </ActionIcon>
           )}
-          <Text fw={700} size="lg" c="blue">Sahyog</Text>
+          {!isDesktop && isProfileOpen ? (
+            <Text fw={600} size="lg">Profile</Text>
+          ) : (
+            <Text fw={700} size="lg" c="blue">Sahyog</Text>
+          )}
         </Group>
         <Group gap={6}>
-          <ActionIcon variant="subtle" size="lg" aria-label="Toggle dark mode" onClick={toggleColorScheme}>
-            {computedColorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
-          </ActionIcon>
-          <ActionIcon variant="subtle" size="lg" aria-label="Notifications" onClick={() => setNotifDrawerOpen(true)} style={{ overflow: 'visible' }}>
-            <Indicator disabled={unreadCount === 0} label={unreadCount > 99 ? '99+' : String(unreadCount)} size={18} color="red" offset={2}
-              styles={{ indicator: { padding: '0 4px', minWidth: 18, height: 18, fontSize: 10 } }}>
-              <IconBell size={22} />
-            </Indicator>
-          </ActionIcon>
-          <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
-            <Avatar size={28} radius="xl" color="blue"><IconUser size={16} /></Avatar>
-          </ActionIcon>
+          {!isDesktop && isProfileOpen ? (
+            /* Close button for profile — navigates back */
+            <ActionIcon variant="subtle" size="lg" aria-label="Close profile" onClick={() => navigate(-1)}>
+              <IconX size={22} />
+            </ActionIcon>
+          ) : (
+            <>
+              <ActionIcon variant="subtle" size="lg" aria-label="Toggle dark mode" onClick={toggleColorScheme}>
+                {computedColorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+              </ActionIcon>
+              <ActionIcon variant="subtle" size="lg" aria-label="Notifications" onClick={() => setNotifDrawerOpen(true)} style={{ overflow: 'visible' }}>
+                <Indicator disabled={unreadCount === 0} label={unreadCount > 99 ? '99+' : String(unreadCount)} size={18} color="red" offset={2}
+                  styles={{ indicator: { padding: '0 4px', minWidth: 18, height: 18, fontSize: 10 } }}>
+                  <IconBell size={22} />
+                </Indicator>
+              </ActionIcon>
+              <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
+                <Avatar size={28} radius="xl" color="blue"><IconUser size={16} /></Avatar>
+              </ActionIcon>
+            </>
+          )}
         </Group>
       </Box>
 
@@ -202,7 +218,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <Box component="main" style={{
           flex: 1,
           marginLeft: showSidebar ? SIDEBAR_W : 0,
-          paddingBottom: isDesktop ? 16 : BOTTOM_H + 16,
+          paddingBottom: isDesktop ? 16 : (isProfileOpen ? 16 : BOTTOM_H + 16),
           paddingTop: 16, paddingLeft: 16, paddingRight: 16,
           maxWidth: isDesktop ? undefined : 1024,
           marginInline: isDesktop ? undefined : 'auto',
@@ -212,8 +228,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         </Box>
       </Box>
 
-      {/* ── Mobile Bottom Nav (4 items, no Profile) ── */}
-      {!isDesktop && (
+      {/* ── Mobile Bottom Nav (4 items, hidden on profile) ── */}
+      {showBottomNav && (
         <Box component="nav" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           height: BOTTOM_H,
@@ -236,34 +252,22 @@ export function AppLayout({ children }: AppLayoutProps) {
                   flexDirection: 'column',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  gap: 2,
+                  gap: 3,
                   minHeight: 44,
-                  position: 'relative',
+                  backgroundColor: active ? 'var(--mantine-color-blue-light)' : undefined,
+                  transition: 'background-color 0.15s ease',
                 }}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                {/* Active pill indicator */}
-                {active && (
-                  <Box style={{
-                    position: 'absolute',
-                    top: 4,
-                    width: 48,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: 'var(--mantine-color-blue-light)',
-                  }} />
-                )}
                 <Icon
-                  size={22}
-                  color={active ? item.color : 'var(--mantine-color-dimmed)'}
-                  style={{ position: 'relative', zIndex: 1 }}
+                  size={24}
+                  color={active ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-dimmed)'}
                 />
                 <Text
-                  size="10px"
+                  size="11px"
                   c={active ? 'blue' : 'dimmed'}
                   fw={active ? 700 : 400}
-                  style={{ position: 'relative', zIndex: 1 }}
                 >
                   {item.label}
                 </Text>
