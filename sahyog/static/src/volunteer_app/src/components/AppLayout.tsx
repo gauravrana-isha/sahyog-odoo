@@ -336,7 +336,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Text>
                 <Group justify="space-between" mt="xs">
                   <Text size="xs" c="dimmed">
-                    {n.create_date ? formatDistanceToNow(parseISO(n.create_date), { addSuffix: true }) : ''}
+                    {n.create_date ? formatDistanceToNow(parseISO(n.create_date.endsWith('Z') ? n.create_date : n.create_date + 'Z'), { addSuffix: true }) : ''}
                   </Text>
                   {!n.is_read && (
                     <Button variant="subtle" size="compact-xs" onClick={() => markRead(n.id)}>Mark as Read</Button>
