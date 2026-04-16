@@ -137,8 +137,11 @@
                 <field name="name"/>
                 <field name="work_email" string="Email"/>
                 <field name="computed_status" string="Status" widget="badge"/>
-                <field name="work_mode"/>
-                <field name="sub_team_id"/>
+                <field name="silence_summary" string="Silence"/>
+                <field name="break_summary" string="Break"/>
+                <field name="program_summary" string="Programs"/>
+                <field name="work_mode" optional="hide"/>
+                <field name="sub_team_id" optional="hide"/>
                 <field name="work_phone" string="Phone" optional="hide"/>
                 <field name="whatsapp_number" optional="hide"/>
             </list>

@@ -59,6 +59,11 @@ class HrEmployee(models.Model):
     break_period_ids = fields.One2many('sahyog.break.period', 'volunteer_id')
     volunteer_program_ids = fields.One2many('sahyog.volunteer.program', 'volunteer_id')
 
+    # ── Summary fields for list view ──
+    silence_summary = fields.Char('Silence', compute='_compute_entry_summaries', store=True)
+    break_summary = fields.Char('Break', compute='_compute_entry_summaries', store=True)
+    program_summary = fields.Char('Programs', compute='_compute_entry_summaries', store=True)
+
     def _is_in_time_window(self, entry, now_time):
         """Check if *now_time* falls within entry's start_time..end_time.
 
@@ -78,6 +83,97 @@ class HrEmployee(models.Model):
         else:
             # cross-midnight
             return now_time >= start or now_time <= end
+
+    @staticmethod
+    def _fmt_date_compact(d, today):
+        """Format a date compactly: 'Apr 5' if same year, 'Dec'25 5' if different."""
+        if not d:
+            return ''
+        if d.year != today.year:
+            return "%s'%s %d" % (d.strftime('%b'), str(d.year)[-2:], d.day)
+        return '%s %d' % (d.strftime('%b'), d.day)
+
+    @staticmethod
+    def _fmt_range_compact(start, end, today):
+        """Format a date range compactly."""
+        if not start or not end:
+            return ''
+        s = HrEmployee._fmt_date_compact(start, today)
+        if start.month == end.month and start.year == end.year:
+            return '%s–%d' % (s, end.day)
+        e = HrEmployee._fmt_date_compact(end, today)
+        return '%s – %s' % (s, e)
+
+    @api.depends(
+        'silence_period_ids.status', 'silence_period_ids.start_date', 'silence_period_ids.end_date',
+        'break_period_ids.status', 'break_period_ids.start_date', 'break_period_ids.end_date',
+        'volunteer_program_ids.completion_status', 'volunteer_program_ids.start_date', 'volunteer_program_ids.end_date',
+    )
+    def _compute_entry_summaries(self):
+        today = fields.Date.context_today(self)
+        ACTIVE = ('approved', 'on_going')
+        for rec in self:
+            # ── Silence ──
+            last_silence = rec.silence_period_ids.filtered(
+                lambda s: s.status == 'done'
+            ).sorted('end_date', reverse=True)[:1]
+            current_silence = rec.silence_period_ids.filtered(
+                lambda s: s.status in ACTIVE and s.start_date <= today <= s.end_date
+            ).sorted('start_date')[:1]
+            next_silence = rec.silence_period_ids.filtered(
+                lambda s: s.status in ACTIVE and s.start_date > today
+            ).sorted('start_date')[:1] if not current_silence else rec.silence_period_ids.browse()
+            parts = []
+            if last_silence:
+                parts.append('%s ✓' % self._fmt_range_compact(last_silence.start_date, last_silence.end_date, today))
+            active_s = current_silence or next_silence
+            if active_s:
+                symbol = '●' if current_silence else '→'
+                parts.append('%s %s' % (self._fmt_range_compact(active_s.start_date, active_s.end_date, today), symbol))
+            rec.silence_summary = ' · '.join(parts) if parts else '–'
+
+            # ── Break ──
+            last_break = rec.break_period_ids.filtered(
+                lambda b: b.status == 'done'
+            ).sorted('end_date', reverse=True)[:1]
+            current_break = rec.break_period_ids.filtered(
+                lambda b: b.status in ACTIVE and b.start_date <= today <= b.end_date
+            ).sorted('start_date')[:1]
+            next_break = rec.break_period_ids.filtered(
+                lambda b: b.status in ACTIVE and b.start_date > today
+            ).sorted('start_date')[:1] if not current_break else rec.break_period_ids.browse()
+            parts = []
+            if last_break:
+                parts.append('%s ✓' % self._fmt_range_compact(last_break.start_date, last_break.end_date, today))
+            active_b = current_break or next_break
+            if active_b:
+                symbol = '●' if current_break else '→'
+                parts.append('%s %s' % (self._fmt_range_compact(active_b.start_date, active_b.end_date, today), symbol))
+            rec.break_summary = ' · '.join(parts) if parts else '–'
+
+            # ── Programs ──
+            last_prog = rec.volunteer_program_ids.filtered(
+                lambda p: p.completion_status == 'done'
+            ).sorted('end_date', reverse=True)[:1]
+            current_prog = rec.volunteer_program_ids.filtered(
+                lambda p: p.completion_status == 'upcoming' and p.start_date <= today <= p.end_date
+            ).sorted('start_date')[:1]
+            next_prog = rec.volunteer_program_ids.filtered(
+                lambda p: p.completion_status == 'upcoming' and p.start_date > today
+            ).sorted('start_date')[:1] if not current_prog else rec.volunteer_program_ids.browse()
+            parts = []
+            if last_prog:
+                name = last_prog.program_id.name or ''
+                # Shorten long names
+                short = name[:15] + '…' if len(name) > 15 else name
+                parts.append('%s ✓' % short)
+            active_p = current_prog or next_prog
+            if active_p:
+                name = active_p.program_id.name or ''
+                short = name[:15] + '…' if len(name) > 15 else name
+                symbol = '●' if current_prog else '→'
+                parts.append('%s %s' % (short, symbol))
+            rec.program_summary = ' · '.join(parts) if parts else '–'
 
     @api.depends(
         'base_status',
