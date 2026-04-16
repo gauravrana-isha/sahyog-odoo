@@ -1,4 +1,8 @@
+import logging
+
 from odoo import api, fields, models
+
+_logger = logging.getLogger(__name__)
 
 
 class Notification(models.Model):
@@ -26,6 +30,12 @@ class Notification(models.Model):
 
     def _send_email(self):
         template = self.env.ref('sahyog.mail_template_notification', raise_if_not_found=False)
-        if template:
-            template.send_mail(self.id, force_send=True)
+        if not template:
+            _logger.warning('Notification %s: mail template not found', self.id)
+            return
+        try:
+            mail_id = template.send_mail(self.id, force_send=True)
             self.write({'email_sent': True})
+            _logger.info('Notification %s: email queued to %s', self.id, self.volunteer_id.work_email)
+        except Exception:
+            _logger.exception('Notification %s: failed to send email', self.id)
