@@ -21,6 +21,7 @@ class VolunteerProgram(models.Model):
     completion_status = fields.Selection([
         ('done', 'Done'),
         ('upcoming', 'Upcoming'),
+        ('on_going', 'On Going'),
         ('dropped', 'Dropped'),
         ('pending_volunteer', 'Pending Volunteer Approval'),
         ('pending_admin', 'Pending Admin Approval'),

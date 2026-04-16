@@ -169,10 +169,10 @@ class HrEmployee(models.Model):
                 lambda p: p.completion_status == 'done'
             ).sorted('end_date', reverse=True)[:1]
             current_prog = rec.volunteer_program_ids.filtered(
-                lambda p: p.completion_status == 'upcoming' and p.start_date <= today <= p.end_date
+                lambda p: p.completion_status in ('upcoming', 'on_going') and p.start_date <= today <= p.end_date
             ).sorted('start_date')[:1]
             next_prog = rec.volunteer_program_ids.filtered(
-                lambda p: p.completion_status == 'upcoming' and p.start_date > today
+                lambda p: p.completion_status in ('upcoming', 'on_going') and p.start_date > today
             ).sorted('start_date')[:1] if not current_prog else rec.volunteer_program_ids.browse()
             parts = []
             if last_prog:
@@ -214,7 +214,7 @@ class HrEmployee(models.Model):
             ):
                 rec.computed_status = 'On Break'
             elif rec.volunteer_program_ids.filtered(
-                lambda p: p.completion_status == 'upcoming' and p.start_date <= today <= p.end_date
+                lambda p: p.completion_status in ('upcoming', 'on_going') and p.start_date <= today <= p.end_date
             ):
                 rec.computed_status = 'On Program'
             else:

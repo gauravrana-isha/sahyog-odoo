@@ -296,9 +296,32 @@ class SilencePeriod(models.Model):
         # ── 3. Volunteer programs ──
         VolunteerProgram = self.env['sahyog.volunteer.program']
 
-        # Upcoming → Done (today > end_date)
-        programs_to_done = VolunteerProgram.search([
+        # Upcoming → On Going (today between start_date and end_date)
+        programs_to_ongoing = VolunteerProgram.search([
             ('completion_status', '=', 'upcoming'),
+            ('start_date', '<=', today),
+            ('end_date', '>=', today),
+        ])
+        for rec in programs_to_ongoing:
+            try:
+                old_status = rec.completion_status
+                rec.write({'completion_status': 'on_going'})
+                CronLog.create({
+                    'entry_type': 'program',
+                    'entry_id': rec.id,
+                    'volunteer_name': rec.volunteer_id.name or '',
+                    'old_status': old_status,
+                    'new_status': 'on_going',
+                })
+                affected_volunteer_ids.add(rec.volunteer_id.id)
+            except Exception:
+                _logger.exception(
+                    "Cron: failed transitioning volunteer.program %s to on_going", rec.id
+                )
+
+        # On Going → Done (today > end_date)
+        programs_to_done = VolunteerProgram.search([
+            ('completion_status', 'in', ('upcoming', 'on_going')),
             ('end_date', '<', today),
         ])
         for rec in programs_to_done:

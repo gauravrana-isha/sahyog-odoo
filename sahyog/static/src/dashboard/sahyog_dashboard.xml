@@ -9,7 +9,7 @@
                 <!-- Summary Cards (6 cards matching production) -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardActive">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">Active</h5>
                                 <p class="display-6 fw-bold text-primary">
@@ -19,7 +19,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardGuestCare">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">Guest Care</h5>
                                 <p class="display-6 fw-bold text-secondary">
@@ -29,7 +29,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardSilence">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">On Silence</h5>
                                 <p class="display-6 fw-bold text-warning">
@@ -39,7 +39,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardBreak">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">On Break</h5>
                                 <p class="display-6 fw-bold text-info">
@@ -49,7 +49,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardProgram">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">On Program</h5>
                                 <p class="display-6 fw-bold text-success">
@@ -59,7 +59,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2">
-                        <div class="card text-center shadow-sm">
+                        <div class="card text-center shadow-sm" style="cursor:pointer" t-on-click="onCardAway">
                             <div class="card-body">
                                 <h5 class="card-title text-muted">Away</h5>
                                 <p class="display-6 fw-bold text-danger">

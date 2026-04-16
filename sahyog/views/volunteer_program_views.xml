@@ -6,7 +6,7 @@
         <field name="name">sahyog.volunteer.program.list</field>
         <field name="model">sahyog.volunteer.program</field>
         <field name="arch" type="xml">
-            <list decoration-info="completion_status == 'upcoming'"
+            <list decoration-info="completion_status in ('upcoming', 'on_going')"
                   decoration-success="completion_status == 'done'"
                   decoration-danger="completion_status in ('pending_admin','pending_volunteer')"
                   decoration-muted="completion_status == 'dropped'">
@@ -17,7 +17,7 @@
                 <field name="end_date"/>
                 <field name="location" optional="hide"/>
                 <field name="completion_status" widget="badge"
-                       decoration-info="completion_status == 'upcoming'"
+                       decoration-info="completion_status in ('upcoming', 'on_going')"
                        decoration-success="completion_status == 'done'"
                        decoration-danger="completion_status in ('pending_admin','pending_volunteer')"
                        decoration-muted="completion_status == 'dropped'"/>
@@ -33,7 +33,7 @@
             <form>
                 <header>
                     <field name="completion_status" widget="statusbar"
-                           statusbar_visible="upcoming,done"/>
+                           statusbar_visible="upcoming,on_going,done"/>
                     <button name="action_approve" string="Approve" type="object"
                             class="btn-primary"
                             invisible="completion_status not in ('pending_admin','pending_volunteer')"/>
