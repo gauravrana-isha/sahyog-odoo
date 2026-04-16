@@ -49,6 +49,10 @@ class VolunteerProgram(models.Model):
     def action_reject(self):
         self.write({'completion_status': 'dropped'})
 
+    def action_request_volunteer(self):
+        """Set status to pending_volunteer — volunteer must accept/reject from SPA."""
+        self.write({'completion_status': 'pending_volunteer'})
+
     def write(self, vals):
         res = super().write(vals)
         if 'completion_status' in vals:
@@ -70,6 +74,15 @@ class VolunteerProgram(models.Model):
                         'type': 'program_rejected',
                         'title': 'Program Enrollment Rejected',
                         'message': 'Your enrollment in %s from %s to %s has been rejected. [[action:/history?filter=programs|program|%s]]' % (
+                            rec.program_id.name, rec.start_date, rec.end_date, rec.id,
+                        ),
+                    })
+                elif new_status == 'pending_volunteer':
+                    Notification.create({
+                        'volunteer_id': rec.volunteer_id.id,
+                        'type': 'program_pending_volunteer',
+                        'title': 'Program Enrollment — Your Approval Needed',
+                        'message': 'Your enrollment in %s from %s to %s needs your confirmation. [[action:/history?filter=programs|program|%s]]' % (
                             rec.program_id.name, rec.start_date, rec.end_date, rec.id,
                         ),
                     })

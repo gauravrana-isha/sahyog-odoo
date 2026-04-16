@@ -37,6 +37,9 @@
                     <button name="action_approve" string="Approve" type="object"
                             class="btn-primary"
                             invisible="completion_status not in ('pending_admin','pending_volunteer')"/>
+                    <button name="action_request_volunteer" string="Request Volunteer Approval" type="object"
+                            class="btn-secondary"
+                            invisible="completion_status not in ('upcoming','pending_admin')"/>
                     <button name="action_reject" string="Reject" type="object"
                             class="btn-secondary"
                             invisible="completion_status not in ('pending_admin','pending_volunteer')"/>

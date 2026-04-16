@@ -61,6 +61,10 @@ class SilencePeriod(models.Model):
     def action_cancel(self):
         self.write({'status': 'cancelled'})
 
+    def action_request_volunteer(self):
+        """Set status to pending_volunteer — volunteer must accept/reject from SPA."""
+        self.write({'status': 'pending_volunteer'})
+
     @api.constrains('start_date', 'end_date')
     def _check_dates(self):
         for rec in self:
@@ -163,6 +167,15 @@ class SilencePeriod(models.Model):
                             rec.volunteer_id.name, rec.start_date, rec.end_date, rec.id,
                         ),
                     )
+                elif new_status == 'pending_volunteer':
+                    Notification.create({
+                        'volunteer_id': rec.volunteer_id.id,
+                        'type': 'silence_pending_volunteer',
+                        'title': 'Silence Period — Your Approval Needed',
+                        'message': 'A silence period from %s to %s needs your confirmation. [[action:/history?filter=silence|silence|%s]]' % (
+                            rec.start_date, rec.end_date, rec.id,
+                        ),
+                    })
         return res
 
     def _notify_admins(self, notif_type, title, message):

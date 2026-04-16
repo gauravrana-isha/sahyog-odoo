@@ -40,6 +40,9 @@
                     <button name="action_approve" string="Approve" type="object"
                             class="btn-primary"
                             invisible="status not in ('requested','pending_admin','pending_volunteer')"/>
+                    <button name="action_request_volunteer" string="Request Volunteer Approval" type="object"
+                            class="btn-secondary"
+                            invisible="status not in ('approved','requested','pending_admin')"/>
                     <button name="action_cancel" string="Cancel" type="object"
                             class="btn-secondary"
                             invisible="status in ('done','cancelled')"/>

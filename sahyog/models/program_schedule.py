@@ -7,7 +7,9 @@ class ProgramSchedule(models.Model):
     _name = 'sahyog.program.schedule'
     _description = 'Program Schedule'
     _order = 'start_date desc'
+    _rec_name = 'display_name'
 
+    display_name = fields.Char(compute='_compute_display_name', store=False)
     program_id = fields.Many2one('sahyog.program', required=True, ondelete='cascade')
     start_date = fields.Date(required=True)
     end_date = fields.Date(required=True)
@@ -23,6 +25,13 @@ class ProgramSchedule(models.Model):
         ('completed', 'Completed'),
     ], required=True, default='planning')
     notes = fields.Text()
+
+    @api.depends('program_id', 'start_date', 'end_date', 'location')
+    def _compute_display_name(self):
+        for rec in self:
+            prog = rec.program_id.name or 'Schedule'
+            loc = (' @ %s' % rec.location) if rec.location else ''
+            rec.display_name = '%s (%s → %s%s)' % (prog, rec.start_date or '', rec.end_date or '', loc)
 
     @api.constrains('start_date', 'end_date')
     def _check_dates(self):
