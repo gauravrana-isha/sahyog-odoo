@@ -124,6 +124,22 @@ export function AppLayout({ children }: AppLayoutProps) {
     } catch { /* silent */ }
   };
 
+  const markAllRead = async () => {
+    try {
+      await apiPost('/notifications/read-all', {});
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch { /* silent */ }
+  };
+
+  const clearAll = async () => {
+    try {
+      await apiPost('/notifications/clear', {});
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch { /* silent */ }
+  };
+
   const activePath = location.pathname;
   const isProfileOpen = activePath === '/profile';
   const showSidebar = isDesktop && sidebarOpen;
@@ -291,6 +307,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Center>
         ) : (
           <Stack gap="xs">
+            <Group justify="flex-end" gap="xs">
+              <Button variant="subtle" size="compact-xs" onClick={markAllRead}>Mark All Read</Button>
+              <Button variant="subtle" size="compact-xs" color="red" onClick={clearAll}>Clear All</Button>
+            </Group>
             {notifications.map((n) => (
               <Card key={n.id} padding="sm" withBorder
                 style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-blue-light)' }}>

@@ -651,6 +651,39 @@ class SahyogAPI(http.Controller):
             _logger.exception('API error in mark_notification_read')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/sahyog/api/notifications/read-all', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def mark_all_notifications_read(self, **kw):
+        try:
+            volunteer = self._get_volunteer()
+            if not volunteer:
+                return self._json_error('No volunteer record linked to your account')
+            notifs = request.env['sahyog.notification'].sudo().search([
+                ('volunteer_id', '=', volunteer.id),
+                ('is_read', '=', False),
+            ])
+            notifs.write({'is_read': True})
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('API error in mark_all_notifications_read')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/sahyog/api/notifications/clear', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def clear_notifications(self, **kw):
+        try:
+            volunteer = self._get_volunteer()
+            if not volunteer:
+                return self._json_error('No volunteer record linked to your account')
+            notifs = request.env['sahyog.notification'].sudo().search([
+                ('volunteer_id', '=', volunteer.id),
+            ])
+            notifs.unlink()
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('API error in clear_notifications')
+            return self._json_error('Internal server error', status=500)
+
     # ── Unavailability ──────────────────────────────────────────────────
 
     @http.route('/sahyog/api/unavailability', type='http', auth='user',
