@@ -331,7 +331,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {parseActionTokens(n.message).map((part, i) =>
                     part.type === 'text' ? <span key={i}>{part.content}</span> :
                     <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}
-                      onClick={() => setNotifDrawerOpen(false)}>View</Text>
+                      onClick={() => { markRead(n.id); setNotifDrawerOpen(false); }}>View</Text>
                   )}
                 </Text>
                 <Group justify="space-between" mt="xs">
