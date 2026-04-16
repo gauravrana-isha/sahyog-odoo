@@ -8,7 +8,7 @@
         <field name="name">Sahyog: Generic Notification</field>
         <field name="model_id" ref="model_sahyog_notification"/>
         <field name="subject">{{ object.title }}</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -27,7 +27,7 @@
         <field name="name">Sahyog: Silence Period Approved</field>
         <field name="model_id" ref="model_sahyog_silence_period"/>
         <field name="subject">Your Silence Period has been Approved</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -46,7 +46,7 @@
         <field name="name">Sahyog: Silence Period Cancelled</field>
         <field name="model_id" ref="model_sahyog_silence_period"/>
         <field name="subject">Silence Period Cancelled</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -66,7 +66,7 @@
         <field name="name">Sahyog: Break Period Approved</field>
         <field name="model_id" ref="model_sahyog_break_period"/>
         <field name="subject">Your Break Period has been Approved</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -85,7 +85,7 @@
         <field name="name">Sahyog: Break Period Cancelled</field>
         <field name="model_id" ref="model_sahyog_break_period"/>
         <field name="subject">Break Period Cancelled</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -104,7 +104,7 @@
         <field name="name">Sahyog: Program Enrollment</field>
         <field name="model_id" ref="model_sahyog_volunteer_program"/>
         <field name="subject">You have been enrolled in a Program</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -124,7 +124,7 @@
         <field name="name">Sahyog: Request Pending Admin Approval</field>
         <field name="model_id" ref="model_sahyog_notification"/>
         <field name="subject">{{ object.title }}</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
@@ -145,7 +145,7 @@
         <field name="name">Sahyog: Meeting Scheduled</field>
         <field name="model_id" ref="model_sahyog_meeting"/>
         <field name="subject">Meeting Scheduled: {{ object.title }}</field>
-        <field name="email_from">noreply@sahyog.online</field>
+        <field name="email_from">Sahyog <noreply@sahyog.online></field>
         <field name="email_to">{{ object.volunteer_id.work_email }}</field>
         <field name="body_html" type="html">
             <div style="margin: 0; padding: 0;">
