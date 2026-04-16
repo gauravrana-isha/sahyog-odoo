@@ -684,6 +684,26 @@ class SahyogAPI(http.Controller):
             _logger.exception('API error in clear_notifications')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/sahyog/api/notifications/delete', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def delete_notification(self, **kw):
+        try:
+            volunteer = self._get_volunteer()
+            if not volunteer:
+                return self._json_error('No volunteer record linked to your account')
+            data = self._parse_json()
+            notif_id = int(data.get('notification_id', 0))
+            notif = request.env['sahyog.notification'].sudo().browse(notif_id)
+            if not notif.exists():
+                return self._json_error('Notification not found')
+            if notif.volunteer_id.id != volunteer.id:
+                return self._json_error('Access denied', status=403)
+            notif.unlink()
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('API error in delete_notification')
+            return self._json_error('Internal server error', status=500)
+
     # ── Unavailability ──────────────────────────────────────────────────
 
     @http.route('/sahyog/api/unavailability', type='http', auth='user',

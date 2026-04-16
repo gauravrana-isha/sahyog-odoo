@@ -88,17 +88,16 @@ class SilencePeriod(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Auto-determine status: past end_date → done, started → on_going, future → pending_admin."""
+        """Auto-determine status based on dates."""
         today = fields.Date.context_today(self)
         for vals in vals_list:
-            if vals.get('status') == 'pending_admin':
-                end_date = fields.Date.from_string(vals.get('end_date')) if vals.get('end_date') else None
-                start_date = fields.Date.from_string(vals.get('start_date')) if vals.get('start_date') else None
-                if end_date and end_date < today:
-                    vals['status'] = 'done'
-                elif start_date and start_date <= today:
-                    # Skip pending, go to pending_admin but skip pending_volunteer
-                    pass  # keep pending_admin, admin will approve to on_going
+            status = vals.get('status')
+            end_date = fields.Date.from_string(vals.get('end_date')) if vals.get('end_date') else None
+            start_date = fields.Date.from_string(vals.get('start_date')) if vals.get('start_date') else None
+            if status == 'pending_admin' and end_date and end_date < today:
+                vals['status'] = 'done'
+            elif status == 'pending_volunteer' and start_date and start_date <= today:
+                vals['status'] = 'approved'
         return super().create(vals_list)
 
     @api.constrains('start_date', 'end_date', 'volunteer_id')

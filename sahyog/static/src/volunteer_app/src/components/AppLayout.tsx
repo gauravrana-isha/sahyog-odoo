@@ -140,6 +140,15 @@ export function AppLayout({ children }: AppLayoutProps) {
     } catch { /* silent */ }
   };
 
+  const deleteNotification = async (id: number) => {
+    try {
+      await apiPost('/notifications/delete', { notification_id: id });
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      const result = await apiGet<{ count: number }>('/notifications/unread-count');
+      setUnreadCount(result.count);
+    } catch { /* silent */ }
+  };
+
   const activePath = location.pathname;
   const isProfileOpen = activePath === '/profile';
   const showSidebar = isDesktop && sidebarOpen;
@@ -312,13 +321,17 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Button variant="subtle" size="compact-xs" color="red" onClick={clearAll}>Clear All</Button>
             </Group>
             {notifications.map((n) => (
-              <Card key={n.id} padding="sm" withBorder
-                style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-blue-light)' }}>
-                <Text size="sm" fw={600}>{n.title}</Text>
+              <Card key={n.id} padding="sm" withBorder style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-blue-light)', position: 'relative' }}>
+                <ActionIcon variant="subtle" size="xs" color="gray" style={{ position: 'absolute', top: 6, right: 6 }}
+                  onClick={() => deleteNotification(n.id)} aria-label="Delete notification">
+                  <IconX size={14} />
+                </ActionIcon>
+                <Text size="sm" fw={600} pr={20}>{n.title}</Text>
                 <Text size="xs" c="dimmed" mt={2}>
                   {parseActionTokens(n.message).map((part, i) =>
                     part.type === 'text' ? <span key={i}>{part.content}</span> :
-                    <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}>View</Text>
+                    <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}
+                      onClick={() => setNotifDrawerOpen(false)}>View</Text>
                   )}
                 </Text>
                 <Group justify="space-between" mt="xs">

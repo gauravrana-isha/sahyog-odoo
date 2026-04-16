@@ -77,6 +77,16 @@ class VolunteerProgram(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Auto-determine status based on dates."""
+        today = fields.Date.context_today(self)
+        for vals in vals_list:
+            status = vals.get('completion_status')
+            end_date = fields.Date.from_string(vals.get('end_date')) if vals.get('end_date') else None
+            start_date = fields.Date.from_string(vals.get('start_date')) if vals.get('start_date') else None
+            if status == 'pending_admin' and end_date and end_date < today:
+                vals['completion_status'] = 'done'
+            elif status == 'pending_volunteer' and start_date and start_date <= today:
+                vals['completion_status'] = 'upcoming'
         records = super().create(vals_list)
         Notification = self.env['sahyog.notification']
         for rec in records:
