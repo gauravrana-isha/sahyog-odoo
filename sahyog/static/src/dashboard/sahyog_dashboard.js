@@ -87,63 +87,49 @@ export class SahyogDashboard extends Component {
 
         this.state.todayPrograms = await this.orm.searchRead(
             "sahyog.volunteer.program",
-            [
-                ["start_date", "<=", today],
-                ["end_date", ">=", today],
-                ["completion_status", "in", ["upcoming", "on_going"]],
-            ],
+            [["completion_status", "=", "on_going"]],
             ["volunteer_id", "program_id", "start_date", "end_date", "completion_status"],
         );
 
-        // On Program count — use actual active enrollments, not computed_status
+        // On Program count — direct from on_going status
         this.state.onProgram = this.state.todayPrograms.length;
     }
 
     // ---- Card click handlers ----
     onCardActive() {
-        this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Active Volunteers",
-            res_model: "hr.employee",
-            view_mode: "list,form",
-            views: [[false, "list"], [false, "form"]],
-            domain: [["base_status", "not in", ["away", "left"]]],
-            target: "current",
+        this.action.doAction("sahyog.action_sahyog_volunteers", {
+            additionalContext: { search_default_filter_available: 0 },
         });
     }
 
     onCardGuestCare() {
-        this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Guest Care Volunteers",
-            res_model: "hr.employee",
-            view_mode: "list,form",
-            views: [[false, "list"], [false, "form"]],
-            domain: [["work_mode", "=", "guest_care"], ["base_status", "!=", "left"]],
-            target: "current",
+        this.action.doAction("sahyog.action_sahyog_volunteers", {
+            additionalContext: { search_default_filter_guest_care: 1 },
         });
     }
 
     onCardSilence() {
+        const today = new Date().toISOString().split("T")[0];
         this.action.doAction({
             type: "ir.actions.act_window",
             name: "Active Silence Periods",
             res_model: "sahyog.silence.period",
             view_mode: "list,form",
             views: [[false, "list"], [false, "form"]],
-            domain: [["status", "in", ["approved", "on_going"]]],
+            domain: [["status", "in", ["approved", "on_going"]], ["start_date", "<=", today], ["end_date", ">=", today]],
             target: "current",
         });
     }
 
     onCardBreak() {
+        const today = new Date().toISOString().split("T")[0];
         this.action.doAction({
             type: "ir.actions.act_window",
             name: "Active Breaks",
             res_model: "sahyog.break.period",
             view_mode: "list,form",
             views: [[false, "list"], [false, "form"]],
-            domain: [["status", "in", ["approved", "on_going"]]],
+            domain: [["status", "in", ["approved", "on_going"]], ["start_date", "<=", today], ["end_date", ">=", today]],
             target: "current",
         });
     }
@@ -155,20 +141,14 @@ export class SahyogDashboard extends Component {
             res_model: "sahyog.volunteer.program",
             view_mode: "list,form",
             views: [[false, "list"], [false, "form"]],
-            domain: [["completion_status", "=", "upcoming"]],
+            domain: [["completion_status", "=", "on_going"]],
             target: "current",
         });
     }
 
     onCardAway() {
-        this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Away Volunteers",
-            res_model: "hr.employee",
-            view_mode: "list,form",
-            views: [[false, "list"], [false, "form"]],
-            domain: [["base_status", "=", "away"]],
-            target: "current",
+        this.action.doAction("sahyog.action_sahyog_volunteers", {
+            additionalContext: { search_default_filter_away: 1 },
         });
     }
 

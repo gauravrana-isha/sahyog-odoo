@@ -159,6 +159,8 @@
             <search string="Search Volunteers">
                 <field name="name" string="Name"/>
                 <field name="work_email" string="Email"/>
+                <field name="work_phone" string="Phone"/>
+                <separator/>
                 <filter string="Office" name="filter_office" domain="[('work_mode', '=', 'office')]"/>
                 <filter string="Remote" name="filter_remote" domain="[('work_mode', '=', 'remote')]"/>
                 <filter string="Guest Care" name="filter_guest_care" domain="[('work_mode', '=', 'guest_care')]"/>
@@ -167,6 +169,14 @@
                 <filter string="On Break" name="filter_break" domain="[('base_status', '=', 'break')]"/>
                 <filter string="Away" name="filter_away" domain="[('base_status', '=', 'away')]"/>
                 <filter string="Left" name="filter_left" domain="[('base_status', '=', 'left')]"/>
+                <separator/>
+                <filter string="Joined Isha" name="filter_joined_isha" date="date_of_joining_isha"/>
+                <filter string="Joined Guest Care" name="filter_joined_gc" date="date_of_joining_guest_care"/>
+                <separator/>
+                <filter string="Status" name="groupby_status" domain="[]" context="{'group_by': 'base_status'}"/>
+                <filter string="Work Mode" name="groupby_work_mode" domain="[]" context="{'group_by': 'work_mode'}"/>
+                <filter string="Sub Team" name="groupby_sub_team" domain="[]" context="{'group_by': 'sub_team_id'}"/>
+                <filter string="Region" name="groupby_region" domain="[]" context="{'group_by': 'region_id'}"/>
             </search>
         </field>
     </record>

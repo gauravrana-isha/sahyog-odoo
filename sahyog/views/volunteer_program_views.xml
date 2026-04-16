@@ -74,6 +74,7 @@
                 <field name="program_id" string="Program"/>
                 <separator/>
                 <filter string="Upcoming" name="filter_upcoming" domain="[('completion_status', '=', 'upcoming')]"/>
+                <filter string="On Going" name="filter_on_going" domain="[('completion_status', '=', 'on_going')]"/>
                 <filter string="Done" name="filter_done" domain="[('completion_status', '=', 'done')]"/>
                 <filter string="Dropped" name="filter_dropped" domain="[('completion_status', '=', 'dropped')]"/>
                 <filter string="Pending" name="filter_pending" domain="[('completion_status', 'in', ('pending_admin','pending_volunteer'))]"/>
