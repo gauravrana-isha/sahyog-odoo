@@ -70,6 +70,82 @@
                     </div>
                 </div>
 
+                <!-- Pending Approvals -->
+                <t t-if="state.pendingSilences.length || state.pendingBreaks.length || state.pendingPrograms.length">
+                    <h4 class="mb-3">
+                        Pending Approvals
+                        <span class="badge bg-danger ms-2">
+                            <t t-esc="state.pendingSilences.length + state.pendingBreaks.length + state.pendingPrograms.length"/>
+                        </span>
+                    </h4>
+                    <div class="row g-3 mb-4">
+                        <t t-foreach="state.pendingSilences" t-as="s" t-key="'ps' + s.id">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card shadow-sm border-warning">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-warning text-dark">Silence</span>
+                                            <small class="text-muted"><t t-esc="s.start_date"/> → <t t-esc="s.end_date"/></small>
+                                        </div>
+                                        <div class="fw-bold mb-2"><t t-esc="s.volunteer_id[1]"/></div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-success" t-on-click="() => this.approveSilence(s.id)">
+                                                <i class="fa fa-check me-1"/>Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" t-on-click="() => this.rejectSilence(s.id)">
+                                                <i class="fa fa-times me-1"/>Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-foreach="state.pendingBreaks" t-as="b" t-key="'pb' + b.id">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card shadow-sm border-info">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-info text-dark">Break</span>
+                                            <small class="text-muted"><t t-esc="b.start_date"/> → <t t-esc="b.end_date"/></small>
+                                        </div>
+                                        <div class="fw-bold mb-2"><t t-esc="b.volunteer_id[1]"/></div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-success" t-on-click="() => this.approveBreak(b.id)">
+                                                <i class="fa fa-check me-1"/>Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" t-on-click="() => this.rejectBreak(b.id)">
+                                                <i class="fa fa-times me-1"/>Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-foreach="state.pendingPrograms" t-as="p" t-key="'pp' + p.id">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card shadow-sm border-success">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-success">Program</span>
+                                            <small class="text-muted"><t t-esc="p.start_date"/> → <t t-esc="p.end_date"/></small>
+                                        </div>
+                                        <div class="fw-bold mb-1"><t t-esc="p.volunteer_id[1]"/></div>
+                                        <div class="text-muted small mb-2"><t t-esc="p.program_id[1]"/></div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-success" t-on-click="() => this.approveProgram(p.id)">
+                                                <i class="fa fa-check me-1"/>Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" t-on-click="() => this.rejectProgram(p.id)">
+                                                <i class="fa fa-times me-1"/>Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+
                 <!-- Daily Overview (clickable entries) -->
                 <h4 class="mb-3">Today's Active Entries</h4>
                 <div class="row g-3">

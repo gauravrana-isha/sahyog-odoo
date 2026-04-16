@@ -44,7 +44,14 @@ class BreakPeriod(models.Model):
             rec.display_name = '%s — %s (%s → %s)' % (vol, btype, rec.start_date or '', rec.end_date or '')
 
     def action_approve(self):
-        self.write({'status': 'approved'})
+        today = fields.Date.context_today(self)
+        for rec in self:
+            if rec.end_date < today:
+                rec.write({'status': 'done'})
+            elif rec.start_date <= today:
+                rec.write({'status': 'on_going'})
+            else:
+                rec.write({'status': 'approved'})
 
     def action_cancel(self):
         self.write({'status': 'cancelled'})

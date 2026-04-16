@@ -37,10 +37,43 @@ class VolunteerProgram(models.Model):
             rec.display_name = '%s — %s (%s → %s)' % (vol, prog, rec.start_date or '', rec.end_date or '')
 
     def action_approve(self):
-        self.write({'completion_status': 'upcoming'})
+        today = fields.Date.context_today(self)
+        for rec in self:
+            if rec.end_date < today:
+                rec.write({'completion_status': 'done'})
+            elif rec.start_date <= today:
+                rec.write({'completion_status': 'on_going'})
+            else:
+                rec.write({'completion_status': 'upcoming'})
 
     def action_reject(self):
         self.write({'completion_status': 'dropped'})
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'completion_status' in vals:
+            Notification = self.env['sahyog.notification']
+            new_status = vals['completion_status']
+            for rec in self:
+                if new_status in ('upcoming', 'on_going'):
+                    Notification.create({
+                        'volunteer_id': rec.volunteer_id.id,
+                        'type': 'program_approved',
+                        'title': 'Program Enrollment Approved',
+                        'message': 'Your enrollment in %s from %s to %s has been approved. [[action:/history?filter=programs|program|%s]]' % (
+                            rec.program_id.name, rec.start_date, rec.end_date, rec.id,
+                        ),
+                    })
+                elif new_status == 'dropped':
+                    Notification.create({
+                        'volunteer_id': rec.volunteer_id.id,
+                        'type': 'program_rejected',
+                        'title': 'Program Enrollment Rejected',
+                        'message': 'Your enrollment in %s from %s to %s has been rejected. [[action:/history?filter=programs|program|%s]]' % (
+                            rec.program_id.name, rec.start_date, rec.end_date, rec.id,
+                        ),
+                    })
+        return res
 
     @api.model_create_multi
     def create(self, vals_list):

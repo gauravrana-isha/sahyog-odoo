@@ -245,13 +245,20 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             data = self._parse_json()
+            today = fields.Date.context_today(request.env['hr.employee'])
+            end_date = fields.Date.from_string(data['end_date'])
+            # Past end_date → auto-done, no approval needed
+            if end_date < today:
+                status = 'done'
+            else:
+                status = 'pending_admin'
             vals = {
                 'volunteer_id': volunteer.id,
                 'start_date': data['start_date'],
                 'end_date': data['end_date'],
                 'silence_type': data.get('silence_type', 'personal'),
                 'notes': data.get('notes', ''),
-                'status': 'pending_admin',
+                'status': status,
                 'created_by': request.env.uid,
                 'is_recurring': data.get('is_recurring', False),
                 'start_time': data.get('start_time', ''),
@@ -323,6 +330,9 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             data = self._parse_json()
+            today = fields.Date.context_today(request.env['hr.employee'])
+            end_date = fields.Date.from_string(data['end_date'])
+            status = 'done' if end_date < today else 'pending_admin'
             record = request.env['sahyog.break.period'].sudo().create({
                 'volunteer_id': volunteer.id,
                 'break_type': data.get('break_type', 'personal'),
@@ -330,7 +340,7 @@ class SahyogAPI(http.Controller):
                 'end_date': data['end_date'],
                 'reason': data.get('reason', ''),
                 'notes': data.get('notes', ''),
-                'status': 'pending_admin',
+                'status': status,
                 'created_by': request.env.uid,
             })
             return self._json_success({'id': record.id})
@@ -548,6 +558,12 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             data = self._parse_json()
+            today = fields.Date.context_today(request.env['hr.employee'])
+            end_date = fields.Date.from_string(data['end_date'])
+            if end_date < today:
+                comp_status = 'done'
+            else:
+                comp_status = 'pending_admin'
             vals = {
                 'volunteer_id': volunteer.id,
                 'program_id': int(data['program_id']),
@@ -556,7 +572,7 @@ class SahyogAPI(http.Controller):
                 'end_date': data['end_date'],
                 'location': data.get('location', ''),
                 'notes': data.get('notes', ''),
-                'completion_status': 'pending_admin',
+                'completion_status': comp_status,
                 'created_by': request.env.uid,
             }
             if data.get('schedule_id'):

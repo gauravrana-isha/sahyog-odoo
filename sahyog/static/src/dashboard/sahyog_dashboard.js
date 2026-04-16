@@ -20,6 +20,9 @@ export class SahyogDashboard extends Component {
             todaySilences: [],
             todayBreaks: [],
             todayPrograms: [],
+            pendingSilences: [],
+            pendingBreaks: [],
+            pendingPrograms: [],
         });
         onWillStart(async () => {
             await this.loadData();
@@ -93,9 +96,52 @@ export class SahyogDashboard extends Component {
 
         // On Program count — direct from on_going status
         this.state.onProgram = this.state.todayPrograms.length;
+
+        // Pending approvals
+        this.state.pendingSilences = await this.orm.searchRead(
+            "sahyog.silence.period",
+            [["status", "=", "pending_admin"]],
+            ["volunteer_id", "silence_type", "start_date", "end_date", "status"],
+        );
+        this.state.pendingBreaks = await this.orm.searchRead(
+            "sahyog.break.period",
+            [["status", "=", "pending_admin"]],
+            ["volunteer_id", "break_type", "start_date", "end_date", "status"],
+        );
+        this.state.pendingPrograms = await this.orm.searchRead(
+            "sahyog.volunteer.program",
+            [["completion_status", "=", "pending_admin"]],
+            ["volunteer_id", "program_id", "start_date", "end_date", "completion_status"],
+        );
     }
 
-    // ---- Card click handlers ----
+    // ---- Approve/Reject from dashboard ----
+    async approveSilence(id) {
+        await this.orm.call("sahyog.silence.period", "action_approve", [[id]]);
+        await this.loadData();
+    }
+    async rejectSilence(id) {
+        await this.orm.call("sahyog.silence.period", "action_cancel", [[id]]);
+        await this.loadData();
+    }
+    async approveBreak(id) {
+        await this.orm.call("sahyog.break.period", "action_approve", [[id]]);
+        await this.loadData();
+    }
+    async rejectBreak(id) {
+        await this.orm.call("sahyog.break.period", "action_cancel", [[id]]);
+        await this.loadData();
+    }
+    async approveProgram(id) {
+        await this.orm.call("sahyog.volunteer.program", "action_approve", [[id]]);
+        await this.loadData();
+    }
+    async rejectProgram(id) {
+        await this.orm.call("sahyog.volunteer.program", "action_reject", [[id]]);
+        await this.loadData();
+    }
+
+    // ---- Click handlers for daily entries ----
     onCardActive() {
         this.action.doAction("sahyog.action_sahyog_volunteers", {
             additionalContext: { search_default_filter_available: 0 },

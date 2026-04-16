@@ -65,13 +65,11 @@
                                     <field name="language_ids" widget="many2many_tags"/>
                                     <field name="special_skills"/>
                                 </group>
-                                <group string="Spiritual">
-                                    <field name="sadhana_practice_ids" widget="many2many_tags"/>
-                                </group>
                             </group>
                             <group string="Health">
                                 <field name="health_conditions" nolabel="1"
-                                       placeholder="Any health conditions to note..."/>
+                                       placeholder="Any health conditions to note..."
+                                       widget="text" options="{'rows': 4}"/>
                             </group>
                         </page>
 
