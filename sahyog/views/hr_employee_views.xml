@@ -135,11 +135,11 @@
                   decoration-info="base_status == 'break'"
                   decoration-muted="base_status in ('away','left')">
                 <field name="name"/>
-                <field name="work_email" string="Email"/>
+                <field name="silence_summary" string="Silence" widget="html"/>
+                <field name="break_summary" string="Break" widget="html"/>
+                <field name="program_summary" string="Programs" widget="html"/>
+                <field name="work_email" string="Email" optional="hide"/>
                 <field name="computed_status" string="Status" widget="badge"/>
-                <field name="silence_summary" string="Silence"/>
-                <field name="break_summary" string="Break"/>
-                <field name="program_summary" string="Programs"/>
                 <field name="work_mode" optional="hide"/>
                 <field name="sub_team_id" optional="hide"/>
                 <field name="work_phone" string="Phone" optional="hide"/>

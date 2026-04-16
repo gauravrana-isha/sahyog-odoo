@@ -60,9 +60,9 @@ class HrEmployee(models.Model):
     volunteer_program_ids = fields.One2many('sahyog.volunteer.program', 'volunteer_id')
 
     # ── Summary fields for list view ──
-    silence_summary = fields.Char('Silence', compute='_compute_entry_summaries', store=True)
-    break_summary = fields.Char('Break', compute='_compute_entry_summaries', store=True)
-    program_summary = fields.Char('Programs', compute='_compute_entry_summaries', store=True)
+    silence_summary = fields.Html('Silence', compute='_compute_entry_summaries', store=True, sanitize=False)
+    break_summary = fields.Html('Break', compute='_compute_entry_summaries', store=True, sanitize=False)
+    program_summary = fields.Html('Programs', compute='_compute_entry_summaries', store=True, sanitize=False)
 
     def _is_in_time_window(self, entry, now_time):
         """Check if *now_time* falls within entry's start_time..end_time.
@@ -112,6 +112,17 @@ class HrEmployee(models.Model):
     def _compute_entry_summaries(self):
         today = fields.Date.context_today(self)
         ACTIVE = ('approved', 'on_going')
+
+        def pill(text, color):
+            """Return an HTML pill/badge span."""
+            colors = {
+                'grey': ('background:#e9ecef;color:#495057;', ''),
+                'blue': ('background:#d0ebff;color:#1971c2;', ''),
+                'green': ('background:#d3f9d8;color:#2b8a3e;', ''),
+            }
+            style = colors.get(color, colors['grey'])[0]
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;margin:1px 2px;white-space:nowrap;%s">%s</span>' % (style, text)
+
         for rec in self:
             # ── Silence ──
             last_silence = rec.silence_period_ids.filtered(
@@ -125,12 +136,13 @@ class HrEmployee(models.Model):
             ).sorted('start_date')[:1] if not current_silence else rec.silence_period_ids.browse()
             parts = []
             if last_silence:
-                parts.append('%s ✓' % self._fmt_range_compact(last_silence.start_date, last_silence.end_date, today))
+                parts.append(pill('%s ✓' % self._fmt_range_compact(last_silence.start_date, last_silence.end_date, today), 'grey'))
             active_s = current_silence or next_silence
             if active_s:
+                color = 'blue' if current_silence else 'green'
                 symbol = '●' if current_silence else '→'
-                parts.append('%s %s' % (self._fmt_range_compact(active_s.start_date, active_s.end_date, today), symbol))
-            rec.silence_summary = ' · '.join(parts) if parts else '–'
+                parts.append(pill('%s %s' % (self._fmt_range_compact(active_s.start_date, active_s.end_date, today), symbol), color))
+            rec.silence_summary = ' '.join(parts) if parts else '<span style="color:#adb5bd">–</span>'
 
             # ── Break ──
             last_break = rec.break_period_ids.filtered(
@@ -144,12 +156,13 @@ class HrEmployee(models.Model):
             ).sorted('start_date')[:1] if not current_break else rec.break_period_ids.browse()
             parts = []
             if last_break:
-                parts.append('%s ✓' % self._fmt_range_compact(last_break.start_date, last_break.end_date, today))
+                parts.append(pill('%s ✓' % self._fmt_range_compact(last_break.start_date, last_break.end_date, today), 'grey'))
             active_b = current_break or next_break
             if active_b:
+                color = 'blue' if current_break else 'green'
                 symbol = '●' if current_break else '→'
-                parts.append('%s %s' % (self._fmt_range_compact(active_b.start_date, active_b.end_date, today), symbol))
-            rec.break_summary = ' · '.join(parts) if parts else '–'
+                parts.append(pill('%s %s' % (self._fmt_range_compact(active_b.start_date, active_b.end_date, today), symbol), color))
+            rec.break_summary = ' '.join(parts) if parts else '<span style="color:#adb5bd">–</span>'
 
             # ── Programs ──
             last_prog = rec.volunteer_program_ids.filtered(
@@ -164,16 +177,16 @@ class HrEmployee(models.Model):
             parts = []
             if last_prog:
                 name = last_prog.program_id.name or ''
-                # Shorten long names
                 short = name[:15] + '…' if len(name) > 15 else name
-                parts.append('%s ✓' % short)
+                parts.append(pill('%s ✓' % short, 'grey'))
             active_p = current_prog or next_prog
             if active_p:
                 name = active_p.program_id.name or ''
                 short = name[:15] + '…' if len(name) > 15 else name
+                color = 'blue' if current_prog else 'green'
                 symbol = '●' if current_prog else '→'
-                parts.append('%s %s' % (short, symbol))
-            rec.program_summary = ' · '.join(parts) if parts else '–'
+                parts.append(pill('%s %s' % (short, symbol), color))
+            rec.program_summary = ' '.join(parts) if parts else '<span style="color:#adb5bd">–</span>'
 
     @api.depends(
         'base_status',
