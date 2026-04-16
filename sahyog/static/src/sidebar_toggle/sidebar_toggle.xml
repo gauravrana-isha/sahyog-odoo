@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <!-- No OWL template needed — toggle is injected via plain JS -->
+</templates>

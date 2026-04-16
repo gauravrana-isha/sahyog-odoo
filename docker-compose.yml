@@ -21,6 +21,13 @@ services:
       - odoo-filestore:/var/lib/odoo
       - ./odoo.conf:/etc/odoo/odoo.conf:ro
       - ./sahyog:/mnt/extra-addons/sahyog:ro
+      - ./muk_backend_theme/muk_web_theme:/mnt/extra-addons/muk_web_theme:ro
+      - ./muk_backend_theme/muk_web_appsbar:/mnt/extra-addons/muk_web_appsbar:ro
+      - ./muk_backend_theme/muk_web_chatter:/mnt/extra-addons/muk_web_chatter:ro
+      - ./muk_backend_theme/muk_web_colors:/mnt/extra-addons/muk_web_colors:ro
+      - ./muk_backend_theme/muk_web_dialog:/mnt/extra-addons/muk_web_dialog:ro
+      - ./muk_backend_theme/muk_web_group:/mnt/extra-addons/muk_web_group:ro
+      - ./muk_backend_theme/muk_web_refresh:/mnt/extra-addons/muk_web_refresh:ro
     environment:
       - SMTP_SERVER=${SMTP_SERVER:-smtp.resend.com}
       - SMTP_PORT=${SMTP_PORT:-465}

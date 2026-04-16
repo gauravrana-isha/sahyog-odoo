@@ -1,0 +1,88 @@
+/* ── Sidebar collapse ── */
+
+body.sahyog_sidebar_collapsed {
+    .mk_apps_sidebar_panel {
+        width: 52px !important;
+        min-width: 52px !important;
+    }
+
+    .mk_apps_sidebar_name {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+    }
+
+    .mk_apps_sidebar_logo {
+        opacity: 0;
+        height: 0;
+        overflow: hidden;
+    }
+
+    /* Center the icons */
+    .mk_apps_sidebar_menu > li > a {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 10px 11px !important;
+    }
+
+    .mk_apps_sidebar_icon {
+        margin-right: 0 !important;
+    }
+}
+
+/* Smooth transitions on everything */
+.mk_apps_sidebar_panel {
+    transition: width 0.25s ease, min-width 0.25s ease;
+    overflow: hidden;
+}
+
+.mk_apps_sidebar_name {
+    transition: opacity 0.2s ease, width 0.25s ease;
+    white-space: nowrap;
+}
+
+.mk_apps_sidebar_logo {
+    transition: opacity 0.2s ease, height 0.25s ease;
+}
+
+.mk_apps_sidebar_icon {
+    transition: margin 0.2s ease;
+}
+
+.mk_apps_sidebar_menu > li > a {
+    transition: padding 0.2s ease;
+    padding: 10px 11px !important;
+}
+
+/* Ensure sidebar is flex column */
+.mk_apps_sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+
+    .mk_apps_sidebar_menu {
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+
+/* Toggle button at bottom of sidebar */
+.sahyog-sidebar-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 14px 0;
+    cursor: pointer;
+    color: var(--appbar-text, rgba(255, 255, 255, 0.7));
+    font-size: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+}

@@ -9,6 +9,16 @@
               sequence="100"
               web_icon="sahyog,static/description/icon.png"/>
 
+    <!-- Hide the Employees app (HR) — we use Sahyog's Volunteers instead -->
+    <record id="hr.menu_hr_root" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- Hide Time Off app — we use Sahyog's Leave Management instead -->
+    <record id="hr_holidays.menu_hr_holidays_root" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
     <!-- ============================================================ -->
     <!-- 1. Dashboard -->
     <!-- ============================================================ -->
