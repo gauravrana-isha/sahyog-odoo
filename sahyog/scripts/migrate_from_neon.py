@@ -621,21 +621,6 @@ def migrate_volunteers(conn, models, db, uid, pw, dry_run):
 
             id_map["users"][src_id] = user_id
 
-            # Set OAuth fields so Google login works
-            if email:
-                try:
-                    # Find the Google OAuth provider
-                    google_providers = odoo_search(models, db, uid, pw, "auth.oauth.provider",
-                                                   [("enabled", "=", True)])
-                    if google_providers:
-                        odoo_write(models, db, uid, pw, "res.users", [user_id], {
-                            "oauth_provider_id": google_providers[0],
-                            "oauth_uid": email,
-                        })
-                        log.debug("Set oauth_uid='%s' on user id=%d", email, user_id)
-                except Exception as e:
-                    log.warning("Failed to set oauth for user %d: %s", user_id, e)
-
             # 2. Create hr.employee linked to the user
             emp_vals = map_volunteer_employee(row)
             emp_vals["user_id"] = user_id
