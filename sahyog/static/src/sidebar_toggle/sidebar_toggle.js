@@ -18,14 +18,11 @@ function injectToggle(sidebar) {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isCollapsed = document.body.classList.contains('sahyog_sidebar_collapsed');
-
         if (isCollapsed) {
-            // Expanding — remove our collapsed class, muk's own class takes over
             document.body.classList.remove('sahyog_sidebar_collapsed');
             btn.innerHTML = '<i class="fa fa-chevron-left"></i>';
             btn.title = 'Collapse Sidebar';
         } else {
-            // Collapsing — add our class to override muk's width
             document.body.classList.add('sahyog_sidebar_collapsed');
             btn.innerHTML = '<i class="fa fa-chevron-right"></i>';
             btn.title = 'Expand Sidebar';
@@ -37,19 +34,26 @@ function injectToggle(sidebar) {
     inner.appendChild(btn);
 }
 
-// Watch for the sidebar to appear
-const observer = new MutationObserver(() => {
+function init() {
     const sidebar = document.querySelector('.mk_apps_sidebar_panel');
     if (sidebar) {
         injectToggle(sidebar);
-        observer.disconnect();
+        return;
     }
-});
-observer.observe(document.body, { childList: true, subtree: true });
+    // Watch for sidebar to appear
+    const observer = new MutationObserver(() => {
+        const el = document.querySelector('.mk_apps_sidebar_panel');
+        if (el) {
+            injectToggle(el);
+            observer.disconnect();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
 
-// Check immediately
-const existing = document.querySelector('.mk_apps_sidebar_panel');
-if (existing) {
-    injectToggle(existing);
-    observer.disconnect();
+// Wait for DOM to be ready
+if (document.body) {
+    init();
+} else {
+    document.addEventListener('DOMContentLoaded', init);
 }
