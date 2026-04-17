@@ -1,10 +1,8 @@
-/* ── Sidebar collapse ── */
+/* ── Sidebar collapse toggle ── */
 
+/* When our toggle collapses the sidebar, mimic muk's small mode */
 body.sahyog_sidebar_collapsed {
-    .mk_apps_sidebar_panel {
-        width: 52px !important;
-        min-width: 52px !important;
-    }
+    --mk-sidebar-width: 52px !important;
 
     .mk_apps_sidebar_name {
         opacity: 0;
@@ -18,7 +16,6 @@ body.sahyog_sidebar_collapsed {
         overflow: hidden;
     }
 
-    /* Center the icons */
     .mk_apps_sidebar_menu > li > a {
         display: flex !important;
         align-items: center !important;
@@ -31,7 +28,12 @@ body.sahyog_sidebar_collapsed {
     }
 }
 
-/* Smooth transitions on everything */
+/* Always hide the logo — we use the collapse button instead */
+.mk_apps_sidebar_logo {
+    display: none !important;
+}
+
+/* Smooth transitions */
 .mk_apps_sidebar_panel {
     transition: width 0.25s ease, min-width 0.25s ease;
     overflow: hidden;
@@ -40,10 +42,6 @@ body.sahyog_sidebar_collapsed {
 .mk_apps_sidebar_name {
     transition: opacity 0.2s ease, width 0.25s ease;
     white-space: nowrap;
-}
-
-.mk_apps_sidebar_logo {
-    transition: opacity 0.2s ease, height 0.25s ease;
 }
 
 .mk_apps_sidebar_icon {
@@ -55,7 +53,7 @@ body.sahyog_sidebar_collapsed {
     padding: 10px 11px !important;
 }
 
-/* Ensure sidebar is flex column */
+/* Sidebar flex layout */
 .mk_apps_sidebar {
     display: flex !important;
     flex-direction: column !important;
@@ -67,7 +65,7 @@ body.sahyog_sidebar_collapsed {
     }
 }
 
-/* Toggle button at bottom of sidebar */
+/* Toggle button at bottom */
 .sahyog-sidebar-collapse-btn {
     display: flex;
     align-items: center;
