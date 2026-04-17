@@ -76,6 +76,11 @@ def odoo_create(models, db, uid, pw, model, vals):
     return models.execute_kw(db, uid, pw, model, "create", [vals])
 
 
+def odoo_write(models, db, uid, pw, model, ids, vals):
+    """Update Odoo records."""
+    return models.execute_kw(db, uid, pw, model, "write", [ids, vals])
+
+
 def odoo_search_read(models, db, uid, pw, model, domain, fields):
     """Search and read Odoo records."""
     return models.execute_kw(
@@ -615,6 +620,21 @@ def migrate_volunteers(conn, models, db, uid, pw, dry_run):
                 log.debug("Created res.users '%s' → id=%d", user_vals["login"], user_id)
 
             id_map["users"][src_id] = user_id
+
+            # Set OAuth fields so Google login works
+            if email:
+                try:
+                    # Find the Google OAuth provider
+                    google_providers = odoo_search(models, db, uid, pw, "auth.oauth.provider",
+                                                   [("enabled", "=", True)])
+                    if google_providers:
+                        odoo_write(models, db, uid, pw, "res.users", [user_id], {
+                            "oauth_provider_id": google_providers[0],
+                            "oauth_uid": email,
+                        })
+                        log.debug("Set oauth_uid='%s' on user id=%d", email, user_id)
+                except Exception as e:
+                    log.warning("Failed to set oauth for user %d: %s", user_id, e)
 
             # 2. Create hr.employee linked to the user
             emp_vals = map_volunteer_employee(row)
