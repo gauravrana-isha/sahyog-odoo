@@ -34,13 +34,18 @@ class Notification(models.Model):
             _logger.warning('Notification %s: mail template not found', self.id)
             return
         try:
+            # Create mail without sending
             mail_id = template.send_mail(self.id, force_send=False)
             if mail_id:
                 mail = self.env['mail.mail'].sudo().browse(mail_id)
-                # Force correct email_from (Resend requires display name)
-                mail.write({'email_from': 'Sahyog <noreply@sahyog.online>'})
-                mail.send()
+                if mail.exists():
+                    # Force correct email_from before sending
+                    mail.write({
+                        'email_from': 'Sahyog <noreply@sahyog.online>',
+                        'email_to': self.volunteer_id.work_email,
+                    })
+                    mail.send(auto_commit=False)
             self.write({'email_sent': True})
-            _logger.info('Notification %s: email queued to %s', self.id, self.volunteer_id.work_email)
+            _logger.info('Notification %s: email sent to %s', self.id, self.volunteer_id.work_email)
         except Exception:
             _logger.exception('Notification %s: failed to send email', self.id)
