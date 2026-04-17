@@ -29,20 +29,23 @@ class Notification(models.Model):
         self.write({'is_read': True})
 
     def _send_email(self):
+        import re
         template = self.env.ref('sahyog.mail_template_notification', raise_if_not_found=False)
         if not template:
             _logger.warning('Notification %s: mail template not found', self.id)
             return
         try:
-            # Create mail without sending
             mail_id = template.send_mail(self.id, force_send=False)
             if mail_id:
                 mail = self.env['mail.mail'].sudo().browse(mail_id)
                 if mail.exists():
-                    # Force correct email_from before sending
+                    # Strip [[action:...]] tokens from email body — those are SPA-only
+                    body = mail.body_html or ''
+                    body = re.sub(r'\[\[action:[^\]]*\]\]', '', body)
                     mail.write({
                         'email_from': 'Sahyog <noreply@sahyog.online>',
                         'email_to': self.volunteer_id.work_email,
+                        'body_html': body,
                     })
                     mail.send(auto_commit=False)
             self.write({'email_sent': True})
