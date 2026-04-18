@@ -61,20 +61,26 @@ class SahyogRegistration(http.Controller):
             )
 
         try:
-            # Create res.users account (portal user)
-            portal_group = request.env.ref('base.group_portal')
+            # Check if user with this email already exists
+            existing_user = request.env['res.users'].sudo().search(
+                [('login', '=', email)], limit=1)
+            if existing_user:
+                return request.redirect(
+                    '/sahyog/register/%s?error=A user with this email already exists.' % token
+                )
+
+            # Create res.users account
             user = request.env['res.users'].sudo().create({
                 'name': name,
                 'login': email,
                 'email': email,
-                'group_ids': [(6, 0, [portal_group.id])],
             })
 
             # Create hr.employee linked to the user
             employee = request.env['hr.employee'].sudo().create({
                 'name': name,
                 'work_email': email,
-                'phone': phone,
+                'work_phone': phone,
                 'whatsapp_number': whatsapp,
                 'user_id': user.id,
             })
