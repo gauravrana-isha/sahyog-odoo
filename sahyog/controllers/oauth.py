@@ -1,4 +1,3 @@
-import json
 import logging
 
 from odoo import http
@@ -12,25 +11,14 @@ class SahyogOAuthLogin(OAuthLogin):
 
     @http.route('/auth_oauth/signin', type='http', auth='none')
     def signin(self, **kw):
-        """Override OAuth signin to redirect volunteers to SPA after login."""
+        """Override OAuth signin to always redirect via /sahyog/redirect."""
         response = super().signin(**kw)
 
-        # After successful login, check if we should redirect to SPA
+        # After successful login, always redirect to our role-based router
         if response.status_code in (301, 302, 303):
             location = response.headers.get('Location', '')
-            # If redirecting to /web or /web/login, check if volunteer
-            if '/web' in location and '/web/login' not in location:
-                try:
-                    user = request.env.user
-                    if user and not user._is_public():
-                        admin_group = request.env.ref('sahyog.group_sahyog_admin', raise_if_not_found=False)
-                        is_admin = admin_group and admin_group in user.group_ids
-                        if not is_admin:
-                            has_employee = bool(request.env['hr.employee'].sudo().search(
-                                [('user_id', '=', user.id)], limit=1))
-                            if has_employee:
-                                return request.redirect('/sahyog/app')
-                except Exception:
-                    _logger.exception('Error checking volunteer redirect after OAuth')
+            # If going to /web, /web/login with error, or anywhere else after login
+            if '/web' in location and 'oauth_error' not in location:
+                return request.redirect('/sahyog/redirect')
 
         return response
