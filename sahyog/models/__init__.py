@@ -16,4 +16,8 @@ from . import registration_link
 from . import unavailability_slot
 from . import cron_log
 from . import calendar_entry
+from . import guest_feedback
+from . import center
+from . import guest_place
+from . import guest_visit
 from . import res_users

@@ -31,6 +31,7 @@ class HrEmployee(models.Model):
     x_state = fields.Char('State')
     x_nationality = fields.Char('Nationality')
     region_id = fields.Many2one('sahyog.region', string='Region')
+    center_id = fields.Many2one('sahyog.center', string='Center')
     sadhana_practice_ids = fields.Many2many('sahyog.sadhana.practice', string='Sadhana Practices')
     health_conditions = fields.Text('Health Conditions')
 

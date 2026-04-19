@@ -32,6 +32,7 @@ import {
   IconSun,
   IconMoon,
   IconX,
+  IconUsers,
 } from '@tabler/icons-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
@@ -55,18 +56,20 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
   return parts;
 }
 
-// Bottom nav: 4 items (no Profile)
+// Bottom nav: 5 items (no Profile)
 const BOTTOM_NAV = [
   { label: 'Programs', icon: IconBooks, path: '/programs' },
   { label: 'History', icon: IconHistory, path: '/history' },
+  { label: 'Guests', icon: IconUsers, path: '/guests' },
   { label: 'Request', icon: IconSend, path: '/request' },
   { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
 ] as const;
 
-// Sidebar nav: all 5 items
+// Sidebar nav: all 6 items
 const SIDEBAR_NAV = [
   { label: 'Programs', icon: IconBooks, path: '/programs' },
   { label: 'History', icon: IconHistory, path: '/history' },
+  { label: 'Guests', icon: IconUsers, path: '/guests' },
   { label: 'Request', icon: IconSend, path: '/request' },
   { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
   { label: 'Profile', icon: IconUser, path: '/profile' },

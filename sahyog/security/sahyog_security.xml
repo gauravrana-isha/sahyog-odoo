@@ -139,4 +139,42 @@
         <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
     </record>
 
+    <!-- Guest Visit: volunteer sees own OR same region -->
+    <record id="rule_guest_visit_volunteer" model="ir.rule">
+        <field name="name">Guest Visit: volunteer own or region</field>
+        <field name="model_id" ref="model_sahyog_guest_visit"/>
+        <field name="domain_force">['|', ('volunteer_id.user_id', '=', user.id), ('region_id', '=', user.employee_id.region_id.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_guest_visit_admin" model="ir.rule">
+        <field name="name">Guest Visit: admin full access</field>
+        <field name="model_id" ref="model_sahyog_guest_visit"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
+    <!-- Guest Feedback: volunteer sees own region -->
+    <record id="rule_guest_feedback_volunteer" model="ir.rule">
+        <field name="name">Guest Feedback: volunteer own region</field>
+        <field name="model_id" ref="model_sahyog_guest_feedback"/>
+        <field name="domain_force">[('visit_id.region_id', '=', user.employee_id.region_id.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_volunteer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_guest_feedback_admin" model="ir.rule">
+        <field name="name">Guest Feedback: admin full access</field>
+        <field name="model_id" ref="model_sahyog_guest_feedback"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sahyog_admin'))]"/>
+    </record>
+
 </odoo>

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Guest Feedback Form
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="sahyog_guest_feedback_form" name="Guest Feedback Form">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3 mb-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6">
+                            <h3 class="text-center mb-2">Guest Feedback</h3>
+                            <p class="text-center text-muted mb-4">
+                                Feedback for visit of <strong><t t-esc="visit.main_guest_name"/></strong>
+                            </p>
+
+                            <t t-if="error">
+                                <div class="alert alert-danger"><t t-esc="error"/></div>
+                            </t>
+
+                            <div class="card">
+                                <div class="card-body">
+                                    <form method="post" t-attf-action="/sahyog/guest-feedback/#{token}/submit">
+
+                                        <!-- Guest Name -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Your Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="guest_name" class="form-control" required="required"
+                                                   placeholder="Enter your full name"/>
+                                        </div>
+
+                                        <!-- Contact Phone -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Phone</label>
+                                            <input type="text" name="contact_phone" class="form-control"
+                                                   placeholder="Phone number"/>
+                                        </div>
+
+                                        <!-- Contact Email -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" name="contact_email" class="form-control"
+                                                   placeholder="Email address"/>
+                                        </div>
+
+                                        <!-- Overall Rating (Star Radio Buttons) -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Overall Rating <span class="text-danger">*</span></label>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <t t-foreach="[('1', '1 – Poor'), ('2', '2 – Fair'), ('3', '3 – Good'), ('4', '4 – Very Good'), ('5', '5 – Excellent')]" t-as="rating">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="overall_rating"
+                                                               t-att-id="'rating_' + rating[0]"
+                                                               t-att-value="rating[0]" required="required"/>
+                                                        <label class="form-check-label" t-att-for="'rating_' + rating[0]">
+                                                            <span style="font-size: 1.5rem; cursor: pointer;">★</span>
+                                                            <small class="d-block text-muted" style="font-size: 0.7rem;"><t t-esc="rating[1]"/></small>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <!-- Enjoyed Most -->
+                                        <div class="mb-3">
+                                            <label class="form-label">What did you enjoy most?</label>
+                                            <textarea name="enjoyed_most" class="form-control" rows="3"
+                                                      placeholder="Tell us what you enjoyed most about your visit..."/>
+                                        </div>
+
+                                        <!-- Could Be Improved -->
+                                        <div class="mb-3">
+                                            <label class="form-label">What could be improved?</label>
+                                            <textarea name="could_be_improved" class="form-control" rows="3"
+                                                      placeholder="Any suggestions for improvement..."/>
+                                        </div>
+
+                                        <!-- Interested in Programs -->
+                                        <div class="mb-3 form-check">
+                                            <input type="checkbox" name="interested_in_programs" value="1"
+                                                   class="form-check-input" id="interested_in_programs"/>
+                                            <label class="form-check-label" for="interested_in_programs">
+                                                I'm interested in learning about Isha programs
+                                            </label>
+                                        </div>
+
+                                        <!-- Want to Know Initiatives -->
+                                        <div class="mb-3 form-check">
+                                            <input type="checkbox" name="want_to_know_initiatives" value="1"
+                                                   class="form-check-input" id="want_to_know_initiatives"/>
+                                            <label class="form-check-label" for="want_to_know_initiatives">
+                                                I'd like to know about Isha's initiatives
+                                            </label>
+                                        </div>
+
+                                        <!-- Would Visit Again -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Would you visit again?</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="would_visit_again"
+                                                           id="visit_again_yes" value="yes"/>
+                                                    <label class="form-check-label" for="visit_again_yes">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="would_visit_again"
+                                                           id="visit_again_no" value="no"/>
+                                                    <label class="form-check-label" for="visit_again_no">No</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="would_visit_again"
+                                                           id="visit_again_maybe" value="maybe"/>
+                                                    <label class="form-check-label" for="visit_again_maybe">Maybe</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Additional Comments -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Additional Comments</label>
+                                            <textarea name="additional_comments" class="form-control" rows="3"
+                                                      placeholder="Any other thoughts or comments..."/>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary w-100">Submit Feedback</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Guest Feedback Thank You
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="sahyog_guest_feedback_thanks" name="Guest Feedback Thank You">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6 text-center">
+                            <div class="card border-success">
+                                <div class="card-body py-5">
+                                    <h4 class="text-success mb-3">Thank You!</h4>
+                                    <p>Your feedback has been submitted successfully.</p>
+                                    <p class="text-muted">
+                                        We appreciate you taking the time to share your experience
+                                        during your visit with <strong><t t-esc="visit.main_guest_name"/></strong>.
+                                    </p>
+                                    <p class="text-muted mt-3" style="font-size: 0.9rem;">
+                                        Wishing you well on your journey. 🙏
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Guest Feedback Error (Invalid Token)
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="sahyog_guest_feedback_error" name="Guest Feedback Error">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6 text-center">
+                            <div class="card border-danger">
+                                <div class="card-body py-5">
+                                    <h4 class="text-danger mb-3">Feedback Unavailable</h4>
+                                    <p><t t-esc="error_message"/></p>
+                                    <p class="text-muted">
+                                        Please check the link and try again, or contact the volunteer
+                                        who shared this link with you.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Guest Feedback Expired
+         ══════════════════════════════════════════════════════════════════ -->
+    <template id="sahyog_guest_feedback_expired" name="Guest Feedback Expired">
+        <t t-call="portal.portal_layout">
+            <div class="o_portal_wrap">
+                <div class="container mt-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6 text-center">
+                            <div class="card border-warning">
+                                <div class="card-body py-5">
+                                    <h4 class="text-warning mb-3">Link Expired</h4>
+                                    <p>This feedback link has expired.</p>
+                                    <p class="text-muted">
+                                        Feedback links are valid for 48 hours after the departure date.
+                                        Please contact the volunteer who shared this link if you'd like
+                                        to provide feedback.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

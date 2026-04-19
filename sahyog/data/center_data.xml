@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="center_iyc_coimbatore" model="sahyog.center">
+            <field name="name">IYC Coimbatore</field>
+        </record>
+        <record id="center_ssb_bangalore" model="sahyog.center">
+            <field name="name">SSB Bangalore</field>
+        </record>
+    </data>
+</odoo>

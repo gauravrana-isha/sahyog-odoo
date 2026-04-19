@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_guest_visit_tree" model="ir.ui.view">
+        <field name="name">sahyog.guest.visit.list</field>
+        <field name="model">sahyog.guest.visit</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'draft'"
+                  decoration-success="state == 'complete'">
+                <field name="main_guest_name"/>
+                <field name="volunteer_id"/>
+                <field name="region_id"/>
+                <field name="center_id"/>
+                <field name="arrival_date"/>
+                <field name="departure_date"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-success="state == 'complete'"/>
+                <field name="google_form_synced" widget="boolean"/>
+                <field name="feedback_count"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_guest_visit_form" model="ir.ui.view">
+        <field name="name">sahyog.guest.visit.form</field>
+        <field name="model">sahyog.guest.visit</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,complete"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Volunteer Info">
+                            <field name="volunteer_id"/>
+                            <field name="region_id"/>
+                            <field name="center_id"/>
+                            <field name="submitter_email"/>
+                        </group>
+                        <group string="Guest Details">
+                            <field name="main_guest_name"/>
+                            <field name="gender"/>
+                            <field name="designation_company"/>
+                            <field name="company_sector"/>
+                            <field name="phone"/>
+                            <field name="email"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Visit Details">
+                            <field name="arrival_date"/>
+                            <field name="departure_date"/>
+                            <field name="accommodation_type"/>
+                            <field name="reference_of"/>
+                            <field name="poc_name"/>
+                            <field name="poc_contact"/>
+                            <field name="accompanying_guest_count"/>
+                        </group>
+                        <group string="QR &amp; Feedback">
+                            <field name="qr_token" readonly="1"/>
+                            <field name="feedback_link" widget="url" readonly="1"/>
+                            <field name="qr_expiry" readonly="1"/>
+                            <field name="feedback_count"/>
+                            <field name="google_form_synced"/>
+                            <field name="google_form_error" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Address"/>
+                    <field name="address" nolabel="1"
+                           placeholder="Guest address..."/>
+                    <separator string="Places / Events Attended"/>
+                    <field name="place_event_ids" widget="many2many_tags" nolabel="1"
+                           domain="['|', ('center_id', '=', False), ('center_id', '=', center_id)]"/>
+                    <separator string="Experience"/>
+                    <group>
+                        <group>
+                            <field name="experience_rating"/>
+                        </group>
+                    </group>
+                    <field name="experience_details" nolabel="1"
+                           placeholder="Experience details..."/>
+                    <separator string="Action Required"/>
+                    <field name="action_required" nolabel="1"
+                           placeholder="Action required..."/>
+                    <separator string="Compliments Offered"/>
+                    <field name="compliments_offered" nolabel="1"
+                           placeholder="Compliments offered..."/>
+                    <separator string="Other Remarks"/>
+                    <field name="other_remarks" nolabel="1"
+                           placeholder="Other remarks..."/>
+                    <separator string="Feedback Submissions"/>
+                    <field name="feedback_ids" nolabel="1" readonly="1">
+                        <list>
+                            <field name="guest_name"/>
+                            <field name="overall_rating" widget="badge"
+                                   decoration-danger="overall_rating in ('1','2')"
+                                   decoration-warning="overall_rating == '3'"
+                                   decoration-success="overall_rating in ('4','5')"/>
+                            <field name="would_visit_again"/>
+                            <field name="create_date" string="Submitted"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_guest_visit_search" model="ir.ui.view">
+        <field name="name">sahyog.guest.visit.search</field>
+        <field name="model">sahyog.guest.visit</field>
+        <field name="arch" type="xml">
+            <search string="Search Guest Visits">
+                <field name="main_guest_name" string="Guest"/>
+                <field name="volunteer_id" string="Volunteer"/>
+                <field name="region_id" string="Region"/>
+                <field name="center_id" string="Center"/>
+                <separator/>
+                <filter string="Draft" name="filter_draft"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter string="Complete" name="filter_complete"
+                        domain="[('state', '=', 'complete')]"/>
+                <filter string="Synced" name="filter_synced"
+                        domain="[('google_form_synced', '=', True)]"/>
+                <filter string="Not Synced" name="filter_not_synced"
+                        domain="[('google_form_synced', '=', False)]"/>
+                <separator/>
+                <filter string="Arrival Date" name="filter_arrival" date="arrival_date"/>
+                <filter string="Departure Date" name="filter_departure" date="departure_date"/>
+                <separator/>
+                <filter string="Region" name="groupby_region"
+                        domain="[]" context="{'group_by': 'region_id'}"/>
+                <filter string="Center" name="groupby_center"
+                        domain="[]" context="{'group_by': 'center_id'}"/>
+                <filter string="Status" name="groupby_state"
+                        domain="[]" context="{'group_by': 'state'}"/>
+                <filter string="Volunteer" name="groupby_volunteer"
+                        domain="[]" context="{'group_by': 'volunteer_id'}"/>
+                <filter string="Month" name="groupby_month"
+                        domain="[]" context="{'group_by': 'arrival_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_guest_visit" model="ir.actions.act_window">
+        <field name="name">Guest Visits</field>
+        <field name="res_model">sahyog.guest.visit</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_guest_visit_search"/>
+    </record>
+
+</odoo>

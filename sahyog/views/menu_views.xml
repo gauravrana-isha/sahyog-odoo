@@ -132,6 +132,18 @@
               action="action_meeting"
               sequence="10"/>
 
+    <menuitem id="menu_sahyog_guest_visits"
+              name="Guest Visits"
+              parent="menu_sahyog_operations_parent"
+              action="action_guest_visit"
+              sequence="12"/>
+
+    <menuitem id="menu_sahyog_guest_feedback"
+              name="Guest Feedback"
+              parent="menu_sahyog_operations_parent"
+              action="action_guest_feedback"
+              sequence="15"/>
+
     <menuitem id="menu_sahyog_notifications"
               name="Notifications"
               parent="menu_sahyog_operations_parent"
@@ -181,6 +193,12 @@
               parent="menu_sahyog_config"
               action="action_sadhana_practice"
               sequence="50"/>
+
+    <menuitem id="menu_sahyog_config_centers"
+              name="Centers"
+              parent="menu_sahyog_config"
+              action="action_center"
+              sequence="55"/>
 
     <menuitem id="menu_sahyog_config_csv_import"
               name="Import Schedules (CSV)"

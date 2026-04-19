@@ -151,3 +151,59 @@ export interface Meeting {
   notes: string;
   status: string;
 }
+
+export interface GuestVisit {
+  id: number;
+  main_guest_name: string;
+  arrival_date: string;
+  departure_date: string;
+  state: 'draft' | 'complete';
+  feedback_count: number;
+  qr_token: string;
+  feedback_link: string;
+  qr_expiry: string;
+  google_form_synced: boolean;
+  volunteer_id: { id: number; name: string } | null;
+  region_id: { id: number; name: string } | null;
+  center_id: { id: number; name: string } | null;
+  // Full fields (only in detail view)
+  gender?: string;
+  designation_company?: string;
+  company_sector?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  accommodation_type?: string;
+  reference_of?: string;
+  poc_name?: string;
+  poc_contact?: string;
+  place_event_ids?: { id: number; name: string }[];
+  accompanying_guest_count?: number;
+  experience_rating?: string;
+  experience_details?: string;
+  action_required?: string;
+  compliments_offered?: string;
+  other_remarks?: string;
+  submitter_email?: string;
+  google_form_error?: string;
+}
+
+export interface GuestFeedbackEntry {
+  id: number;
+  guest_name: string;
+  contact_phone: string;
+  contact_email: string;
+  overall_rating: string;
+  enjoyed_most: string;
+  could_be_improved: string;
+  interested_in_programs: boolean;
+  want_to_know_initiatives: boolean;
+  would_visit_again: string;
+  additional_comments: string;
+  create_date: string;
+}
+
+export interface GuestPlace {
+  id: number;
+  name: string;
+}
