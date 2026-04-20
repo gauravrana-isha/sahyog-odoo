@@ -45,6 +45,7 @@
         'views/gantt_views.xml',
         'views/csv_import_wizard_views.xml',
         'views/center_views.xml',
+        'views/guest_place_views.xml',
         'views/menu_views.xml',
         # Portal & Registration Templates
         'views/portal_templates.xml',

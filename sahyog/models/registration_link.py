@@ -7,7 +7,12 @@ class RegistrationLink(models.Model):
     _name = 'sahyog.registration.link'
     _description = 'Registration Link'
     _order = 'create_date desc'
-    _sql_constraints = [('token_unique', 'unique(token)', 'Token must be unique.')]
+    _constraints = [
+        models.Constraint(
+            'unique(token)',
+            'Token must be unique.',
+        ),
+    ]
 
     token = fields.Char(required=True, default=lambda self: str(uuid.uuid4()))
     status = fields.Selection([

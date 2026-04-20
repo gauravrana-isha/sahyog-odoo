@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 class GuestFeedbackPublic(http.Controller):
 
     @http.route('/sahyog/guest-feedback/<string:token>', type='http',
-                auth='public', csrf=False, website=True)
+                auth='public', csrf=False)
     def feedback_form(self, token, **kw):
         """Validate token and render the public feedback form."""
         visit = request.env['sahyog.guest.visit'].sudo().search(
@@ -33,7 +33,7 @@ class GuestFeedbackPublic(http.Controller):
         })
 
     @http.route('/sahyog/guest-feedback/<string:token>/submit', type='http',
-                auth='public', csrf=False, website=True, methods=['POST'])
+                auth='public', csrf=False, methods=['POST'])
     def feedback_submit(self, token, **kw):
         """Process the feedback form submission and create a Guest Feedback record."""
         visit = request.env['sahyog.guest.visit'].sudo().search(

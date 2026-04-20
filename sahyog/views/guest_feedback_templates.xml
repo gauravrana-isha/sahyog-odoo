@@ -1,218 +1,410 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         Guest Feedback Form
-         ══════════════════════════════════════════════════════════════════ -->
     <template id="sahyog_guest_feedback_form" name="Guest Feedback Form">
-        <t t-call="portal.portal_layout">
-            <div class="o_portal_wrap">
-                <div class="container mt-3 mb-5">
-                    <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6">
-                            <h3 class="text-center mb-2">Guest Feedback</h3>
-                            <p class="text-center text-muted mb-4">
-                                Feedback for visit of <strong><t t-esc="visit.main_guest_name"/></strong>
-                            </p>
+        <t t-call="web.html_container">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Feedback</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@600;700&amp;family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&amp;display=swap" rel="stylesheet"/>
+                <style>
+                    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+                    html { scroll-behavior: smooth; }
+                    body {
+                        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+                        background: linear-gradient(135deg, #11136D 0%, #1a1d7a 50%, #252994 100%) !important;
+                        color: #2c2c2c;
+                        min-height: 100vh;
+                        -webkit-font-smoothing: antialiased;
+                        line-height: 1.5;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    /* Override Odoo's injected styles */
+                    .o_body_html, .o_body_pdf, .o_body_pdf.o_css_margins {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        min-height: 100vh !important;
+                        height: auto !important;
+                        background: linear-gradient(135deg, #11136D 0%, #1a1d7a 50%, #252994 100%) !important;
+                    }
 
-                            <t t-if="error">
-                                <div class="alert alert-danger"><t t-esc="error"/></div>
-                            </t>
+                    /* ── Header area (inside blue bg) ── */
+                    .fb-top {
+                        color: #fff;
+                        text-align: center;
+                        padding: 24px 16px 16px;
+                    }
+                    .fb-top-title {
+                        font-family: 'Fira Sans', sans-serif;
+                        font-size: 2.2rem;
+                        font-weight: 700;
+                        letter-spacing: -0.5px;
+                        margin-bottom: 6px;
+                        animation: fadeDown 0.5s ease-out;
+                    }
+                    .fb-top-sub {
+                        font-family: 'Inter', sans-serif;
+                        font-size: 0.95rem;
+                        opacity: 0.8;
+                        animation: fadeDown 0.5s ease-out 0.1s both;
+                    }
+                    .fb-top-center {
+                        display: inline-block;
+                        margin-top: 10px;
+                        padding: 5px 14px;
+                        background: rgba(255,255,255,0.15);
+                        border-radius: 16px;
+                        font-size: 0.82rem;
+                        animation: fadeDown 0.5s ease-out 0.2s both;
+                    }
 
-                            <div class="card">
-                                <div class="card-body">
-                                    <form method="post" t-attf-action="/sahyog/guest-feedback/#{token}/submit">
+                    @keyframes fadeDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+                    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
 
-                                        <!-- Guest Name -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Your Name <span class="text-danger">*</span></label>
-                                            <input type="text" name="guest_name" class="form-control" required="required"
-                                                   placeholder="Enter your full name"/>
-                                        </div>
+                    /* ── Card ── */
+                    .fb-card {
+                        max-width: 720px;
+                        width: 90%;
+                        margin: 0 auto 0;
+                        background: #fff;
+                        border-radius: 20px;
+                        box-shadow: 0 12px 48px rgba(0,0,0,0.15);
+                        padding: 40px 32px 44px;
+                        animation: fadeUp 0.5s ease-out 0.3s both;
+                    }
 
-                                        <!-- Contact Phone -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Phone</label>
-                                            <input type="text" name="contact_phone" class="form-control"
-                                                   placeholder="Phone number"/>
-                                        </div>
+                    .fb-spacer { height: 40px; }
 
-                                        <!-- Contact Email -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Email</label>
-                                            <input type="email" name="contact_email" class="form-control"
-                                                   placeholder="Email address"/>
-                                        </div>
+                    .fb-alert {
+                        background: #fef2f2; border-left: 4px solid #e53e3e; color: #b91c1c;
+                        border-radius: 8px; padding: 14px 18px; font-size: 0.9rem; margin-bottom: 24px;
+                    }
 
-                                        <!-- Overall Rating (Star Radio Buttons) -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Overall Rating <span class="text-danger">*</span></label>
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <t t-foreach="[('1', '1 – Poor'), ('2', '2 – Fair'), ('3', '3 – Good'), ('4', '4 – Very Good'), ('5', '5 – Excellent')]" t-as="rating">
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input" type="radio" name="overall_rating"
-                                                               t-att-id="'rating_' + rating[0]"
-                                                               t-att-value="rating[0]" required="required"/>
-                                                        <label class="form-check-label" t-att-for="'rating_' + rating[0]">
-                                                            <span style="font-size: 1.5rem; cursor: pointer;">★</span>
-                                                            <small class="d-block text-muted" style="font-size: 0.7rem;"><t t-esc="rating[1]"/></small>
-                                                        </label>
-                                                    </div>
-                                                </t>
-                                            </div>
-                                        </div>
+                    /* ── Sections ── */
+                    .fb-section { margin-bottom: 32px; }
+                    .fb-section-title {
+                        font-family: 'Fira Sans', sans-serif;
+                        font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+                        letter-spacing: 1.5px; color: #11136D; margin-bottom: 18px;
+                        padding-bottom: 8px; border-bottom: 2px solid #eae6e0;
+                        display: flex; align-items: center; gap: 8px;
+                    }
+                    .fb-section-title .si { width: 18px; height: 18px; opacity: 0.5; }
 
-                                        <!-- Enjoyed Most -->
-                                        <div class="mb-3">
-                                            <label class="form-label">What did you enjoy most?</label>
-                                            <textarea name="enjoyed_most" class="form-control" rows="3"
-                                                      placeholder="Tell us what you enjoyed most about your visit..."/>
-                                        </div>
+                    /* ── Fields ── */
+                    .fb-field { margin-bottom: 20px; }
+                    .fb-label { display: block; font-size: 0.88rem; font-weight: 600; color: #333; margin-bottom: 8px; }
+                    .fb-label .req { color: #e53e3e; }
 
-                                        <!-- Could Be Improved -->
-                                        <div class="mb-3">
-                                            <label class="form-label">What could be improved?</label>
-                                            <textarea name="could_be_improved" class="form-control" rows="3"
-                                                      placeholder="Any suggestions for improvement..."/>
-                                        </div>
+                    .fb-input, .fb-textarea {
+                        width: 100%; min-height: 52px; padding: 14px 16px; font-size: 1rem;
+                        border: 2px solid #e0dbd4; border-radius: 12px; background: #faf9f7;
+                        color: #2c2c2c; transition: all 0.25s; outline: none; font-family: inherit;
+                    }
+                    .fb-input:hover, .fb-textarea:hover { border-color: #c5bfb5; }
+                    .fb-input:focus, .fb-textarea:focus {
+                        border-color: #11136D; box-shadow: 0 0 0 4px rgba(17,19,109,0.08);
+                        background: #fff; transform: translateY(-1px);
+                    }
+                    .fb-input::placeholder, .fb-textarea::placeholder { color: #b5b0a8; font-style: italic; }
+                    .fb-textarea { min-height: 100px; resize: vertical; line-height: 1.5; }
 
-                                        <!-- Interested in Programs -->
-                                        <div class="mb-3 form-check">
-                                            <input type="checkbox" name="interested_in_programs" value="1"
-                                                   class="form-check-input" id="interested_in_programs"/>
-                                            <label class="form-check-label" for="interested_in_programs">
-                                                I'm interested in learning about Isha programs
-                                            </label>
-                                        </div>
+                    /* ── Stars ── */
+                    .star-rating {
+                        display: flex; flex-direction: row-reverse; justify-content: center;
+                        gap: 8px; padding: 12px 0;
+                    }
+                    .star-rating input { display: none; }
+                    .star-rating label {
+                        font-size: 2.8rem; color: #e0dbd4; cursor: pointer;
+                        transition: all 0.2s; line-height: 1;
+                    }
+                    .star-rating label:hover, .star-rating label:hover ~ label {
+                        color: #fbbf24; transform: scale(1.15);
+                        text-shadow: 0 2px 8px rgba(251,191,36,0.3);
+                    }
+                    .star-rating input:checked ~ label {
+                        color: #f59e0b; text-shadow: 0 2px 8px rgba(245,158,11,0.25);
+                    }
+                    .star-hint { text-align: center; font-size: 0.8rem; color: #aaa; margin-top: -2px; }
 
-                                        <!-- Want to Know Initiatives -->
-                                        <div class="mb-3 form-check">
-                                            <input type="checkbox" name="want_to_know_initiatives" value="1"
-                                                   class="form-check-input" id="want_to_know_initiatives"/>
-                                            <label class="form-check-label" for="want_to_know_initiatives">
-                                                I'd like to know about Isha's initiatives
-                                            </label>
-                                        </div>
+                    /* ── Pills ── */
+                    .pill-group { display: flex; gap: 10px; flex-wrap: wrap; }
+                    .pill-group input { display: none; }
+                    .pill-group label {
+                        padding: 12px 28px; border: 2px solid #e0dbd4; border-radius: 28px;
+                        cursor: pointer; transition: all 0.25s; font-weight: 600;
+                        font-size: 0.95rem; user-select: none; background: #fff;
+                    }
+                    .pill-group label:hover { border-color: #11136D; background: #f0f0fa; transform: translateY(-1px); }
+                    .pill-group input:checked + label {
+                        background: #11136D; color: #fff; border-color: #11136D;
+                        box-shadow: 0 4px 12px rgba(17,19,109,0.2);
+                    }
 
-                                        <!-- Would Visit Again -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Would you visit again?</label>
-                                            <div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="would_visit_again"
-                                                           id="visit_again_yes" value="yes"/>
-                                                    <label class="form-check-label" for="visit_again_yes">Yes</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="would_visit_again"
-                                                           id="visit_again_no" value="no"/>
-                                                    <label class="form-check-label" for="visit_again_no">No</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="would_visit_again"
-                                                           id="visit_again_maybe" value="maybe"/>
-                                                    <label class="form-check-label" for="visit_again_maybe">Maybe</label>
-                                                </div>
-                                            </div>
-                                        </div>
+                    /* ── Toggles ── */
+                    .toggle-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+                    .toggle-row + .toggle-row { border-top: 1px solid #f0ebe3; }
+                    .toggle-switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
+                    .toggle-switch input { display: none; }
+                    .toggle-switch .slider {
+                        position: absolute; inset: 0; background: #ddd; border-radius: 30px;
+                        cursor: pointer; transition: all 0.3s;
+                    }
+                    .toggle-switch .slider::after {
+                        content: ''; position: absolute; top: 3px; left: 3px;
+                        width: 24px; height: 24px; background: #fff; border-radius: 50%;
+                        transition: transform 0.3s cubic-bezier(0.68,-0.55,0.27,1.55);
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+                    }
+                    .toggle-switch input:checked + .slider { background: #11136D; }
+                    .toggle-switch input:checked + .slider::after { transform: translateX(22px); }
+                    .toggle-label { font-size: 0.95rem; color: #444; line-height: 1.4; }
 
-                                        <!-- Additional Comments -->
-                                        <div class="mb-3">
-                                            <label class="form-label">Additional Comments</label>
-                                            <textarea name="additional_comments" class="form-control" rows="3"
-                                                      placeholder="Any other thoughts or comments..."/>
-                                        </div>
+                    /* ── Submit ── */
+                    .fb-submit {
+                        display: block; width: 100%; padding: 18px; font-size: 1.1rem;
+                        font-weight: 700; color: #fff;
+                        background: linear-gradient(135deg, #11136D 0%, #1a1d7a 100%);
+                        border: none; border-radius: 14px; cursor: pointer;
+                        transition: all 0.2s; margin-top: 12px; font-family: inherit;
+                    }
+                    .fb-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(17,19,109,0.3); }
+                    .fb-submit:active { transform: translateY(0); }
 
-                                        <button type="submit" class="btn btn-primary w-100">Submit Feedback</button>
-                                    </form>
+                    /* ── Large screens: card is 70% ── */
+                    @media (min-width: 900px) {
+                        .fb-card { width: 70%; max-width: 780px; }
+                        .fb-top { padding: 32px 20px 20px; }
+                    }
+
+                    /* ── Small screens ── */
+                    @media (max-width: 680px) {
+                        .fb-top { padding: 20px 12px 12px; }
+                        .fb-top-title { font-size: 1.6rem; }
+                        .fb-card {
+                            width: calc(100% - 24px); margin: 0 12px 0;
+                            border-radius: 20px;
+                            box-shadow: none;
+                            padding: 24px 20px 28px;
+                        }
+                        .star-rating label { font-size: 2.4rem; }
+                        .star-rating { gap: 10px; }
+                        .fb-section { margin-bottom: 24px; }
+                        .fb-field { margin-bottom: 14px; }
+                    }
+                    @media (max-width: 400px) {
+                        .fb-top { padding: 16px 10px 10px; }
+                        .fb-top-title { font-size: 1.4rem; }
+                        .fb-card { padding: 20px 16px 24px; border-radius: 16px; width: calc(100% - 20px); margin: 0 10px 0; }
+                        .star-rating label { font-size: 2.2rem; }
+                        .pill-group label { padding: 10px 20px; font-size: 0.9rem; }
+                        .pill-group { justify-content: center; }
+                        .fb-section { margin-bottom: 20px; }
+                        .fb-field { margin-bottom: 12px; }
+                        .fb-input, .fb-textarea { min-height: 46px; padding: 12px 14px; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="fb-top">
+                    <div class="fb-top-title">Feedback</div>
+                    <div class="fb-top-sub">
+                        Your visit to
+                        <t t-if="visit.center_id"><strong><t t-esc="visit.center_id.name"/></strong></t>
+                    </div>
+                </div>
+
+                <div class="fb-card">
+                    <t t-if="error"><div class="fb-alert"><t t-esc="error"/></div></t>
+
+                    <form method="post" t-attf-action="/sahyog/guest-feedback/#{token}/submit">
+
+                        <div class="fb-section">
+                            <div class="fb-section-title">
+                                <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                Your Experience
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">How was your overall experience? <span class="req">*</span></label>
+                                <div class="star-rating">
+                                    <input type="radio" id="star5" name="overall_rating" value="5" required="required"/><label for="star5">&#9733;</label>
+                                    <input type="radio" id="star4" name="overall_rating" value="4"/><label for="star4">&#9733;</label>
+                                    <input type="radio" id="star3" name="overall_rating" value="3"/><label for="star3">&#9733;</label>
+                                    <input type="radio" id="star2" name="overall_rating" value="2"/><label for="star2">&#9733;</label>
+                                    <input type="radio" id="star1" name="overall_rating" value="1"/><label for="star1">&#9733;</label>
+                                </div>
+                                <div class="star-hint">Tap a star to rate</div>
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">What did you enjoy most?</label>
+                                <textarea name="enjoyed_most" class="fb-textarea" placeholder="The moments that made your visit special..."></textarea>
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">What could we do better?</label>
+                                <textarea name="could_be_improved" class="fb-textarea" placeholder="Your suggestions help us improve..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="fb-section">
+                            <div class="fb-section-title">
+                                <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                Stay Connected
+                            </div>
+                            <div class="toggle-row">
+                                <label class="toggle-switch"><input type="checkbox" name="interested_in_programs" value="1"/><span class="slider"></span></label>
+                                <span class="toggle-label">I'm interested in Isha programs</span>
+                            </div>
+                            <div class="toggle-row">
+                                <label class="toggle-switch"><input type="checkbox" name="want_to_know_initiatives" value="1"/><span class="slider"></span></label>
+                                <span class="toggle-label">Tell me about Isha's initiatives</span>
+                            </div>
+                            <div class="fb-field" style="margin-top: 20px;">
+                                <label class="fb-label">Would you visit again?</label>
+                                <div class="pill-group">
+                                    <input type="radio" id="visit_yes" name="would_visit_again" value="yes"/><label for="visit_yes">Yes</label>
+                                    <input type="radio" id="visit_maybe" name="would_visit_again" value="maybe"/><label for="visit_maybe">Maybe</label>
+                                    <input type="radio" id="visit_no" name="would_visit_again" value="no"/><label for="visit_no">No</label>
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <div class="fb-section">
+                            <div class="fb-section-title">
+                                <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                Anything Else?
+                            </div>
+                            <div class="fb-field">
+                                <textarea name="additional_comments" class="fb-textarea" placeholder="Any other thoughts you'd like to share..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="fb-section">
+                            <div class="fb-section-title">
+                                <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                About You
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">Your Name <span class="req">*</span></label>
+                                <input type="text" name="guest_name" class="fb-input" required="required" placeholder="Enter your full name" autocomplete="name"/>
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">Phone</label>
+                                <input type="tel" name="contact_phone" class="fb-input" placeholder="Your phone number" autocomplete="tel"/>
+                            </div>
+                            <div class="fb-field">
+                                <label class="fb-label">Email</label>
+                                <input type="email" name="contact_email" class="fb-input" placeholder="Your email address" autocomplete="email"/>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="fb-submit">Submit Feedback</button>
+                    </form>
                 </div>
-            </div>
+
+                <div class="fb-spacer"></div>
+                <script>document.title = 'Feedback';</script>
+            </body>
         </t>
     </template>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         Guest Feedback Thank You
-         ══════════════════════════════════════════════════════════════════ -->
     <template id="sahyog_guest_feedback_thanks" name="Guest Feedback Thank You">
-        <t t-call="portal.portal_layout">
-            <div class="o_portal_wrap">
-                <div class="container mt-3">
-                    <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6 text-center">
-                            <div class="card border-success">
-                                <div class="card-body py-5">
-                                    <h4 class="text-success mb-3">Thank You!</h4>
-                                    <p>Your feedback has been submitted successfully.</p>
-                                    <p class="text-muted">
-                                        We appreciate you taking the time to share your experience
-                                        during your visit with <strong><t t-esc="visit.main_guest_name"/></strong>.
-                                    </p>
-                                    <p class="text-muted mt-3" style="font-size: 0.9rem;">
-                                        Wishing you well on your journey. 🙏
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+        <t t-call="web.html_container">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Thank You</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@600;700&amp;family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&amp;display=swap" rel="stylesheet"/>
+                <style>
+                    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+                    body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:linear-gradient(135deg,#11136D 0%,#252994 100%) !important;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px !important;-webkit-font-smoothing:antialiased}
+                    .o_body_html,.o_body_pdf,.o_body_pdf.o_css_margins{padding:0 !important;margin:0 !important;min-height:100vh !important;height:auto !important;background:linear-gradient(135deg,#11136D 0%,#252994 100%) !important;display:flex;align-items:center;justify-content:center}
+                    .ty-card{max-width:480px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);padding:56px 36px;text-align:center;color:#2c2c2c;animation:popUp .5s cubic-bezier(.34,1.56,.64,1)}
+                    @media (max-width:680px){.ty-card{margin:0 12px;padding:40px 24px}}
+                    @media (max-width:400px){.ty-card{margin:0 10px;padding:36px 20px}}
+                    @keyframes popUp{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+                    .ck{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#11136D,#252994);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;animation:popIn .4s ease-out .3s both}
+                    @keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+                    .ck svg{width:40px;height:40px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:50;stroke-dashoffset:50;animation:draw .4s ease-out .6s forwards}
+                    @keyframes draw{to{stroke-dashoffset:0}}
+                    .ty-t{font-family:'Fira Sans',sans-serif;font-size:1.8rem;font-weight:700;color:#11136D;margin-bottom:12px}
+                    .ty-p{font-size:.95rem;color:#666;line-height:1.6;margin-bottom:8px}
+                    .ty-p strong{color:#2c2c2c}
+                    .ty-w{font-size:1.1rem;color:#888;margin-top:24px}
+                </style>
+            </head>
+            <body>
+                <div class="ty-card">
+                    <div class="ck"><svg viewBox="0 0 36 36"><polyline points="8 18 16 26 28 10"/></svg></div>
+                    <div class="ty-t">Thank You!</div>
+                    <div class="ty-p">Your feedback has been submitted successfully.</div>
+                    <div class="ty-p">We appreciate you sharing your experience during your visit to
+                        <t t-if="visit.center_id"><strong><t t-esc="visit.center_id.name"/></strong></t>.
                     </div>
+                    <div class="ty-w">Wishing you well on your journey &#x1F64F;</div>
                 </div>
-            </div>
+                <script>document.title = 'Thank You';</script>
+            </body>
         </t>
     </template>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         Guest Feedback Error (Invalid Token)
-         ══════════════════════════════════════════════════════════════════ -->
     <template id="sahyog_guest_feedback_error" name="Guest Feedback Error">
-        <t t-call="portal.portal_layout">
-            <div class="o_portal_wrap">
-                <div class="container mt-3">
-                    <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6 text-center">
-                            <div class="card border-danger">
-                                <div class="card-body py-5">
-                                    <h4 class="text-danger mb-3">Feedback Unavailable</h4>
-                                    <p><t t-esc="error_message"/></p>
-                                    <p class="text-muted">
-                                        Please check the link and try again, or contact the volunteer
-                                        who shared this link with you.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <t t-call="web.html_container">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Feedback Unavailable</title>
+                <style>
+                    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+                    body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;background:#f4f1ec;color:#2c2c2c;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;-webkit-font-smoothing:antialiased}
+                    .c{max-width:480px;width:100%;background:#fff;border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,.08);padding:56px 36px;text-align:center;animation:f .5s ease-out}
+                    @keyframes f{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+                    .ic{width:80px;height:80px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 28px}
+                    .ic svg{width:40px;height:40px;stroke:#e53e3e;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+                    .t{font-size:1.4rem;font-weight:700;color:#c53030;margin-bottom:12px}
+                    .p{font-size:.95rem;color:#666;line-height:1.6;margin-bottom:8px}
+                </style>
+            </head>
+            <body>
+                <div class="c">
+                    <div class="ic"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14"/><line x1="13" y1="13" x2="23" y2="23"/><line x1="23" y1="13" x2="13" y2="23"/></svg></div>
+                    <div class="t">Feedback Unavailable</div>
+                    <div class="p"><t t-esc="error_message"/></div>
+                    <div class="p" style="color:#999">Please check the link or contact the volunteer who shared it.</div>
                 </div>
-            </div>
+                <script>document.title = 'Feedback Unavailable';</script>
+            </body>
         </t>
     </template>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         Guest Feedback Expired
-         ══════════════════════════════════════════════════════════════════ -->
     <template id="sahyog_guest_feedback_expired" name="Guest Feedback Expired">
-        <t t-call="portal.portal_layout">
-            <div class="o_portal_wrap">
-                <div class="container mt-3">
-                    <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6 text-center">
-                            <div class="card border-warning">
-                                <div class="card-body py-5">
-                                    <h4 class="text-warning mb-3">Link Expired</h4>
-                                    <p>This feedback link has expired.</p>
-                                    <p class="text-muted">
-                                        Feedback links are valid for 48 hours after the departure date.
-                                        Please contact the volunteer who shared this link if you'd like
-                                        to provide feedback.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <t t-call="web.html_container">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Link Expired</title>
+                <style>
+                    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+                    body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;background:#f4f1ec;color:#2c2c2c;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;-webkit-font-smoothing:antialiased}
+                    .c{max-width:480px;width:100%;background:#fff;border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,.08);padding:56px 36px;text-align:center;animation:f .5s ease-out}
+                    @keyframes f{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+                    .ic{width:80px;height:80px;border-radius:50%;background:#fffbeb;display:flex;align-items:center;justify-content:center;margin:0 auto 28px}
+                    .ic svg{width:40px;height:40px;stroke:#d97706;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+                    .t{font-size:1.4rem;font-weight:700;color:#b45309;margin-bottom:12px}
+                    .p{font-size:.95rem;color:#666;line-height:1.6;margin-bottom:8px}
+                </style>
+            </head>
+            <body>
+                <div class="c">
+                    <div class="ic"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14"/><polyline points="18 10 18 18 24 22"/></svg></div>
+                    <div class="t">This Link Has Expired</div>
+                    <div class="p">Feedback links are valid for 48 hours after departure.</div>
+                    <div class="p" style="color:#999">Please contact the volunteer who shared this link.</div>
                 </div>
-            </div>
+                <script>document.title = 'Link Expired';</script>
+            </body>
         </t>
     </template>
 

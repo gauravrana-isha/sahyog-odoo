@@ -5,6 +5,23 @@ from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
+GUEST_REGIONS = [
+    ('uk_europe', 'UK, Europe'),
+    ('eastern_europe', 'Eastern Europe'),
+    ('middle_east', 'Middle East'),
+    ('africa', 'Africa'),
+    ('apac', 'APAC'),
+    ('india_up_delhi', 'India - UP & Delhi'),
+    ('india_north', 'India - North'),
+    ('india_east', 'India - East'),
+    ('india_west', 'India - West'),
+    ('india_ka', 'India - KA'),
+    ('india_apt', 'India - APT'),
+    ('india_tnk', 'India - TNK'),
+    ('nepal', 'Nepal'),
+    ('us', 'US'),
+]
+
 COMPANY_SECTORS = [
     ('entertainment_art_culture', 'Entertainment, Art and Culture'),
     ('government_bureaucrats', 'Government, Bureaucrats & Intergovernmental Organization'),
@@ -40,8 +57,11 @@ class GuestVisit(models.Model):
     _order = 'create_date desc'
     _rec_name = 'main_guest_name'
 
-    _sql_constraints = [
-        ('qr_token_unique', 'unique(qr_token)', 'QR token must be unique.'),
+    _constraints = [
+        models.Constraint(
+            'unique(qr_token)',
+            'QR token must be unique.',
+        ),
     ]
 
     # ── Volunteer / origin ──
@@ -64,6 +84,7 @@ class GuestVisit(models.Model):
     phone = fields.Char('Phone')
     email = fields.Char('Email')
     address = fields.Text('Address')
+    guest_region = fields.Selection(GUEST_REGIONS, string='Guest Region')
 
     # ── Visit details ──
     arrival_date = fields.Date('Arrival Date')
@@ -73,6 +94,7 @@ class GuestVisit(models.Model):
     poc_name = fields.Char('POC Name')
     poc_contact = fields.Char('POC Contact')
     place_event_ids = fields.Many2many('sahyog.guest.place', string='Places / Events Attended')
+    places_other = fields.Char('Places / Events - Other')
     accompanying_guest_count = fields.Integer('Accompanying Guest Count', default=0)
 
     # ── Experience ──

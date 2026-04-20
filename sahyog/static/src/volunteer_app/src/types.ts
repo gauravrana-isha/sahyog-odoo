@@ -23,6 +23,7 @@ export interface VolunteerProfile {
   x_city: string;
   x_state: string;
   region_id: { id: number; name: string } | null;
+  center_id: { id: number; name: string } | null;
   language_ids: { id: number; name: string }[];
   volunteer_type_ids: { id: number; name: string }[];
   sadhana_practice_ids: { id: number; name: string }[];
@@ -173,11 +174,13 @@ export interface GuestVisit {
   phone?: string;
   email?: string;
   address?: string;
+  guest_region?: string;
   accommodation_type?: string;
   reference_of?: string;
   poc_name?: string;
   poc_contact?: string;
   place_event_ids?: { id: number; name: string }[];
+  places_other?: string;
   accompanying_guest_count?: number;
   experience_rating?: string;
   experience_details?: string;

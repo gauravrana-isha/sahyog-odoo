@@ -24,6 +24,16 @@
                             <field name="name"/>
                         </group>
                     </group>
+                    <notebook>
+                        <page string="Places / Events" name="places">
+                            <field name="place_ids">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="sort_order"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

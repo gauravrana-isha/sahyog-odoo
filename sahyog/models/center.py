@@ -5,6 +5,14 @@ class Center(models.Model):
     _name = 'sahyog.center'
     _description = 'Center'
     _order = 'name'
-    _sql_constraints = [('name_unique', 'unique(name)', 'Center name must be unique.')]
+    _constraints = [
+        models.Constraint(
+            'unique(name)',
+            'Center name must be unique.',
+        ),
+    ]
 
     name = fields.Char(required=True)
+
+    # ── Reverse relations for center-specific config ──
+    place_ids = fields.One2many('sahyog.guest.place', 'center_id', string='Places / Events')

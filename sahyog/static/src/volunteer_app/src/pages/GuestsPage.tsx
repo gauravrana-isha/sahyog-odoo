@@ -126,7 +126,7 @@ export function GuestsPage() {
         </Stack>
       )}
 
-      <Affix position={{ bottom: 24, right: 24 }}>
+      <Affix position={{ bottom: isWide ? 24 : 88, right: 24 }}>
         <ActionIcon size="xl" radius="xl" variant="filled" color="blue" onClick={openModal} aria-label="Add guest">
           <IconPlus size={24} />
         </ActionIcon>

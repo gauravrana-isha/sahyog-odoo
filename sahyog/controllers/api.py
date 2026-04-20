@@ -142,6 +142,7 @@ class SahyogAPI(http.Controller):
                 'x_city': v.x_city or '',
                 'x_state': v.x_state or '',
                 'region_id': self._m2o(v, 'region_id'),
+                'center_id': self._m2o(v, 'center_id'),
                 'language_ids': self._m2m(v, 'language_ids'),
                 'volunteer_type_ids': self._m2m(v, 'volunteer_type_ids'),
                 'sadhana_practice_ids': self._m2m(v, 'sadhana_practice_ids'),
@@ -171,6 +172,8 @@ class SahyogAPI(http.Controller):
                 'work_phone', 'whatsapp_number', 'special_skills', 'health_conditions',
                 'emergency_contact_name', 'emergency_contact_phone',
                 'emergency_contact_relation', 'x_city', 'x_state', 'x_nationality',
+                'role_in_guest_care', 'current_assignment_area', 'reporting_to_name',
+                'work_mode', 'notes', 'base_status',
             )
             vals = {k: data[k] for k in editable_fields if k in data}
             # Handle Many2many fields: language_ids, volunteer_type_ids
@@ -178,6 +181,22 @@ class SahyogAPI(http.Controller):
                 vals['language_ids'] = [(6, 0, [int(i) for i in data['language_ids']])]
             if 'volunteer_type_ids' in data:
                 vals['volunteer_type_ids'] = [(6, 0, [int(i) for i in data['volunteer_type_ids']])]
+            if 'sadhana_practice_ids' in data:
+                vals['sadhana_practice_ids'] = [(6, 0, [int(i) for i in data['sadhana_practice_ids']])]
+            # Handle Many2one fields
+            for m2o_field in ('sub_team_id', 'region_id', 'center_id'):
+                if m2o_field in data:
+                    vals[m2o_field] = int(data[m2o_field]) if data[m2o_field] else False
+            # Handle date fields
+            for date_field in ('birthday', 'date_of_joining_isha', 'date_of_joining_guest_care'):
+                if date_field in data:
+                    vals[date_field] = data[date_field] if data[date_field] else False
+            # Handle name separately
+            if 'name' in data and data['name']:
+                vals['name'] = data['name']
+            # Handle sex/gender
+            if 'sex' in data:
+                vals['sex'] = data['sex'] if data['sex'] else False
             if vals:
                 volunteer.sudo().write(vals)
             return self._json_success({'success': True})
@@ -797,6 +816,26 @@ class SahyogAPI(http.Controller):
             _logger.exception('API error in get_languages')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/sahyog/api/regions', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def get_regions(self, **kw):
+        try:
+            regions = request.env['sahyog.region'].sudo().search([])
+            return self._json_success([{'id': r.id, 'name': r.name} for r in regions])
+        except Exception:
+            _logger.exception('API error in get_regions')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/sahyog/api/centers', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def get_centers(self, **kw):
+        try:
+            centers = request.env['sahyog.center'].sudo().search([])
+            return self._json_success([{'id': c.id, 'name': c.name} for c in centers])
+        except Exception:
+            _logger.exception('API error in get_centers')
+            return self._json_error('Internal server error', status=500)
+
     # ── Cancel Endpoints ────────────────────────────────────────────────
 
     @http.route('/sahyog/api/silence/cancel', type='http', auth='user',
@@ -1138,11 +1177,13 @@ class SahyogAPI(http.Controller):
                 'phone': v.phone or '',
                 'email': v.email or '',
                 'address': v.address or '',
+                'guest_region': v.guest_region or '',
                 'accommodation_type': v.accommodation_type or '',
                 'reference_of': v.reference_of or '',
                 'poc_name': v.poc_name or '',
                 'poc_contact': v.poc_contact or '',
                 'place_event_ids': self._m2m(v, 'place_event_ids'),
+                'places_other': v.places_other or '',
                 'accompanying_guest_count': v.accompanying_guest_count or 0,
                 'experience_rating': v.experience_rating or '',
                 'experience_details': v.experience_details or '',
@@ -1196,8 +1237,8 @@ class SahyogAPI(http.Controller):
             # Optional fields
             text_fields = (
                 'gender', 'designation_company', 'company_sector', 'phone',
-                'email', 'address', 'accommodation_type', 'reference_of',
-                'poc_name', 'poc_contact', 'experience_rating',
+                'email', 'address', 'guest_region', 'accommodation_type', 'reference_of',
+                'poc_name', 'poc_contact', 'places_other', 'experience_rating',
                 'experience_details', 'action_required', 'compliments_offered',
                 'other_remarks',
             )
@@ -1246,8 +1287,8 @@ class SahyogAPI(http.Controller):
 
             text_fields = (
                 'main_guest_name', 'gender', 'designation_company', 'company_sector',
-                'phone', 'email', 'address', 'accommodation_type', 'reference_of',
-                'poc_name', 'poc_contact', 'experience_rating',
+                'phone', 'email', 'address', 'guest_region', 'accommodation_type', 'reference_of',
+                'poc_name', 'poc_contact', 'places_other', 'experience_rating',
                 'experience_details', 'action_required', 'compliments_offered',
                 'other_remarks',
             )
@@ -1271,12 +1312,25 @@ class SahyogAPI(http.Controller):
                 visit.write(vals)
 
             # Check if all required fields are present for state transition
-            main_guest_name = vals.get('main_guest_name', visit.main_guest_name)
-            arrival_date = vals.get('arrival_date', visit.arrival_date)
-            departure_date = vals.get('departure_date', visit.departure_date)
-            experience_rating = vals.get('experience_rating', visit.experience_rating)
+            # Mandatory fields: main_guest_name, arrival_date, accommodation_type,
+            # gender, designation_company, company_sector, guest_region,
+            # place_event_ids, accompanying_guest_count, experience_rating, experience_details
+            v = visit  # shorthand after write
+            mandatory_filled = all([
+                v.main_guest_name,
+                v.arrival_date,
+                v.accommodation_type,
+                v.gender,
+                v.designation_company,
+                v.company_sector,
+                v.guest_region,
+                v.place_event_ids,
+                v.accompanying_guest_count is not None and v.accompanying_guest_count >= 0,
+                v.experience_rating,
+                v.experience_details,
+            ])
 
-            if main_guest_name and arrival_date and departure_date and experience_rating:
+            if mandatory_filled:
                 if visit.state != 'complete':
                     visit.write({'state': 'complete'})
                 # Trigger Google Sheets sync

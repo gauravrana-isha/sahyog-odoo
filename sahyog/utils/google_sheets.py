@@ -86,6 +86,14 @@ def _generate_uid():
     )
 
 
+def _build_places_string(v):
+    """Combine place_event_ids names with places_other free text."""
+    places = ', '.join(v.place_event_ids.mapped('name')) if v.place_event_ids else ''
+    if v.places_other:
+        places = (places + ', ' + v.places_other) if places else v.places_other
+    return places
+
+
 def _build_master_row(visit_record):
     """Build the master row array matching the Apps Script column order."""
     v = visit_record
@@ -105,11 +113,11 @@ def _build_master_row(visit_record):
         _get_selection_label(v, 'company_sector'),                          # Company Sector
         v.phone or '',                                                      # Phone
         v.email or '',                                                      # Email
-        v.region_id.name if v.region_id else '',                            # Region
+        _get_selection_label(v, 'guest_region'),                              # Region
         v.address or '',                                                    # Address
         v.poc_name or '',                                                   # POC Name
         v.poc_contact or '',                                                # POC Contact
-        ', '.join(v.place_event_ids.mapped('name')) if v.place_event_ids else '',  # Places/Events
+        _build_places_string(v),                                            # Places/Events
         str(v.accompanying_guest_count or 0),                               # Accompanying Guest Count
         v.experience_rating or '',                                          # Experience Rating
         v.experience_details or '',                                         # Experience Details

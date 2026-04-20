@@ -103,6 +103,23 @@ const EXPERIENCE_RATING_OPTIONS = [
   { value: '5', label: '5 — Excellent' },
 ];
 
+const GUEST_REGION_OPTIONS = [
+  { value: 'uk_europe', label: 'UK, Europe' },
+  { value: 'eastern_europe', label: 'Eastern Europe' },
+  { value: 'middle_east', label: 'Middle East' },
+  { value: 'africa', label: 'Africa' },
+  { value: 'apac', label: 'APAC' },
+  { value: 'india_up_delhi', label: 'India - UP & Delhi' },
+  { value: 'india_north', label: 'India - North' },
+  { value: 'india_east', label: 'India - East' },
+  { value: 'india_west', label: 'India - West' },
+  { value: 'india_ka', label: 'India - KA' },
+  { value: 'india_apt', label: 'India - APT' },
+  { value: 'india_tnk', label: 'India - TNK' },
+  { value: 'nepal', label: 'Nepal' },
+  { value: 'us', label: 'US' },
+];
+
 interface EditableFields {
   main_guest_name: string;
   gender: string | null;
@@ -111,6 +128,7 @@ interface EditableFields {
   phone: string;
   email: string;
   address: string;
+  guest_region: string | null;
   arrival_date: Date | null;
   departure_date: Date | null;
   accommodation_type: string | null;
@@ -118,6 +136,7 @@ interface EditableFields {
   poc_name: string;
   poc_contact: string;
   place_event_ids: string[];
+  places_other: string;
   accompanying_guest_count: number;
   experience_rating: string | null;
   experience_details: string;
@@ -135,6 +154,7 @@ function visitToEditable(v: GuestVisit): EditableFields {
     phone: v.phone || '',
     email: v.email || '',
     address: v.address || '',
+    guest_region: v.guest_region || null,
     arrival_date: v.arrival_date ? parseISO(v.arrival_date) : null,
     departure_date: v.departure_date ? parseISO(v.departure_date) : null,
     accommodation_type: v.accommodation_type || null,
@@ -142,6 +162,7 @@ function visitToEditable(v: GuestVisit): EditableFields {
     poc_name: v.poc_name || '',
     poc_contact: v.poc_contact || '',
     place_event_ids: v.place_event_ids ? v.place_event_ids.map((p) => String(p.id)) : [],
+    places_other: v.places_other || '',
     accompanying_guest_count: v.accompanying_guest_count || 0,
     experience_rating: v.experience_rating || null,
     experience_details: v.experience_details || '',
@@ -214,6 +235,30 @@ export function GuestVisitDetail() {
 
   const handleSave = async () => {
     if (!editable || !visitId) return;
+
+    // Validate mandatory fields
+    const missing: string[] = [];
+    if (!editable.main_guest_name.trim()) missing.push('Guest Name');
+    if (!editable.arrival_date) missing.push('Arrival Date');
+    if (!editable.accommodation_type) missing.push('Accommodation Type');
+    if (!editable.gender) missing.push('Gender');
+    if (!editable.designation_company.trim()) missing.push('Designation & Company');
+    if (!editable.company_sector) missing.push('Company Sector');
+    if (!editable.guest_region) missing.push('Region');
+    if (editable.place_event_ids.length === 0) missing.push('Places / Events Attended');
+    if (!editable.experience_rating) missing.push('Experience Rating');
+    if (!editable.experience_details.trim()) missing.push('Experience Details');
+
+    if (missing.length > 0) {
+      notifications.show({
+        title: 'Missing required fields',
+        message: missing.join(', '),
+        color: 'orange',
+      });
+      setSaving(false);
+      return;
+    }
+
     setSaving(true);
     try {
       const fmtD = (d: Date | null) => d ? format(d, 'yyyy-MM-dd') : false;
@@ -225,6 +270,7 @@ export function GuestVisitDetail() {
         phone: editable.phone,
         email: editable.email,
         address: editable.address,
+        guest_region: editable.guest_region || false,
         arrival_date: fmtD(editable.arrival_date),
         departure_date: fmtD(editable.departure_date),
         accommodation_type: editable.accommodation_type || false,
@@ -232,6 +278,7 @@ export function GuestVisitDetail() {
         poc_name: editable.poc_name,
         poc_contact: editable.poc_contact,
         place_event_ids: editable.place_event_ids.map(Number),
+        places_other: editable.places_other,
         accompanying_guest_count: editable.accompanying_guest_count,
         experience_rating: editable.experience_rating || false,
         experience_details: editable.experience_details,
@@ -282,6 +329,12 @@ export function GuestVisitDetail() {
   const sectorLabel = COMPANY_SECTOR_OPTIONS.find((o) => o.value === visit.company_sector)?.label || visit.company_sector;
   const accomLabel = ACCOMMODATION_OPTIONS.find((o) => o.value === visit.accommodation_type)?.label || visit.accommodation_type;
 
+  // Show simplified view for quick-created drafts with mostly empty fields
+  const isSimplifiedDraft = visit.state === 'draft'
+    && !visit.arrival_date
+    && !visit.departure_date
+    && !visit.experience_rating;
+
   return (
     <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined, paddingBottom: editing && isDirty ? 80 : 0 }}>
       {/* Header */}
@@ -304,8 +357,26 @@ export function GuestVisitDetail() {
         </Center>
       )}
 
-      {/* VIEW MODE */}
-      {!editing && (
+      {/* SIMPLIFIED VIEW for quick-created drafts */}
+      {!editing && isSimplifiedDraft && (
+        <Stack align="center" gap="md" mt="lg">
+          <Text size="xl" fw={700} ta="center">{visit.main_guest_name}</Text>
+          <Text size="sm" c="dimmed" ta="center">
+            This visit was just created. Add arrival dates, accommodation, and other details.
+          </Text>
+          <Button
+            size="lg"
+            leftSection={<IconEdit size={20} />}
+            fullWidth
+            onClick={() => setEditing(true)}
+          >
+            Fill Visit Details
+          </Button>
+        </Stack>
+      )}
+
+      {/* FULL VIEW MODE */}
+      {!editing && !isSimplifiedDraft && (
         <>
           <Accordion variant="separated" defaultValue="guest-details">
             <Accordion.Item value="guest-details">
@@ -318,6 +389,7 @@ export function GuestVisitDetail() {
                   <Field label="Phone" value={visit.phone} />
                   <Field label="Email" value={visit.email} />
                   <Field label="Address" value={visit.address} />
+                  <Field label="Region" value={visit.guest_region ? GUEST_REGION_OPTIONS.find((o) => o.value === visit.guest_region)?.label || visit.guest_region : undefined} />
                 </Stack>
               </Accordion.Panel>
             </Accordion.Item>
@@ -339,6 +411,9 @@ export function GuestVisitDetail() {
                         ? visit.place_event_ids.map((p) => <Badge key={p.id} variant="light" size="sm">{p.name}</Badge>)
                         : <Text size="sm" c="dimmed">—</Text>}
                     </Group>
+                    {visit.places_other && (
+                      <Text size="sm" mt={4} c="dimmed">Other: {visit.places_other}</Text>
+                    )}
                   </Box>
                   <Field label="Accompanying Guest Count" value={String(visit.accompanying_guest_count ?? 0)} />
                 </Stack>
@@ -402,29 +477,31 @@ export function GuestVisitDetail() {
           </Group>
 
           <Text size="sm" fw={500} c="dimmed">Guest Details</Text>
-          <TextInput label="Guest Name" value={editable.main_guest_name} onChange={(e) => set('main_guest_name', e.currentTarget.value)} size="md" />
-          <Select label="Gender" placeholder="Select" data={GENDER_OPTIONS} value={editable.gender} onChange={(v) => set('gender', v)} size="md" clearable />
-          <TextInput label="Designation & Company" value={editable.designation_company} onChange={(e) => set('designation_company', e.currentTarget.value)} size="md" />
-          <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" searchable clearable />
+          <TextInput label="Guest Name" value={editable.main_guest_name} onChange={(e) => set('main_guest_name', e.currentTarget.value)} size="md" required />
+          <Select label="Gender" placeholder="Select" data={GENDER_OPTIONS} value={editable.gender} onChange={(v) => set('gender', v)} size="md" required />
+          <TextInput label="Designation & Company" value={editable.designation_company} onChange={(e) => set('designation_company', e.currentTarget.value)} size="md" required />
+          <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" searchable required />
           <TextInput label="Phone" value={editable.phone} onChange={(e) => set('phone', e.currentTarget.value)} size="md" />
           <TextInput label="Email" value={editable.email} onChange={(e) => set('email', e.currentTarget.value)} size="md" />
           <Textarea label="Address" value={editable.address} onChange={(e) => set('address', e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Select label="Region" placeholder="Select region" data={GUEST_REGION_OPTIONS} value={editable.guest_region} onChange={(v) => set('guest_region', v)} size="md" searchable required />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Visit Details</Text>
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" />
+            <DateInput label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" required />
             <DateInput label="Departure Date" placeholder="Pick date" value={editable.departure_date} onChange={(v) => set('departure_date', v)} size="md" minDate={editable.arrival_date || undefined} />
           </SimpleGrid>
-          <Select label="Accommodation" placeholder="Select" data={ACCOMMODATION_OPTIONS} value={editable.accommodation_type} onChange={(v) => set('accommodation_type', v)} size="md" clearable />
+          <Select label="Accommodation" placeholder="Select" data={ACCOMMODATION_OPTIONS} value={editable.accommodation_type} onChange={(v) => set('accommodation_type', v)} size="md" required />
           <TextInput label="Reference Of" value={editable.reference_of} onChange={(e) => set('reference_of', e.currentTarget.value)} size="md" />
           <TextInput label="POC Name" value={editable.poc_name} onChange={(e) => set('poc_name', e.currentTarget.value)} size="md" />
           <TextInput label="POC Contact" value={editable.poc_contact} onChange={(e) => set('poc_contact', e.currentTarget.value)} size="md" />
-          <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} searchable size="md" />
+          <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} searchable size="md" required />
+          <TextInput label="Other places / events" value={editable.places_other} onChange={(e) => set('places_other', e.currentTarget.value)} size="md" placeholder="Places or events not in the list..." />
           <NumberInput label="Accompanying Guest Count" value={editable.accompanying_guest_count} onChange={(v) => set('accompanying_guest_count', typeof v === 'number' ? v : 0)} min={0} size="md" />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Experience</Text>
-          <Select label="Experience Rating" placeholder="Select" data={EXPERIENCE_RATING_OPTIONS} value={editable.experience_rating} onChange={(v) => set('experience_rating', v)} size="md" clearable />
-          <Textarea label="Experience Details" value={editable.experience_details} onChange={(e) => set('experience_details', e.currentTarget.value)} minRows={2} autosize size="md" />
+          <Select label="Experience Rating" placeholder="Select" data={EXPERIENCE_RATING_OPTIONS} value={editable.experience_rating} onChange={(v) => set('experience_rating', v)} size="md" required />
+          <Textarea label="Experience Details" value={editable.experience_details} onChange={(e) => set('experience_details', e.currentTarget.value)} minRows={2} autosize size="md" required />
           <Textarea label="Action Required" value={editable.action_required} onChange={(e) => set('action_required', e.currentTarget.value)} minRows={2} autosize size="md" />
           <Textarea label="Compliments Offered" value={editable.compliments_offered} onChange={(e) => set('compliments_offered', e.currentTarget.value)} minRows={2} autosize size="md" />
           <Textarea label="Other Remarks" value={editable.other_remarks} onChange={(e) => set('other_remarks', e.currentTarget.value)} minRows={2} autosize size="md" />

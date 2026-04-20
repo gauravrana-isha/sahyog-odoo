@@ -54,6 +54,7 @@
                                     <field name="birthday"/>
                                     <field name="x_nationality"/>
                                     <field name="region_id"/>
+                                    <field name="center_id"/>
                                 </group>
                                 <group string="Location">
                                     <field name="x_city"/>

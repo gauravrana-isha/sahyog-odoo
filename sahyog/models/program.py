@@ -7,7 +7,12 @@ class Program(models.Model):
     _name = 'sahyog.program'
     _description = 'Program'
     _order = 'name'
-    _sql_constraints = [('name_unique', 'unique(name)', 'Program name must be unique.')]
+    _constraints = [
+        models.Constraint(
+            'unique(name)',
+            'Program name must be unique.',
+        ),
+    ]
 
     name = fields.Char(required=True)
     description = fields.Text()

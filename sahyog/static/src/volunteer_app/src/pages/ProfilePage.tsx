@@ -19,6 +19,7 @@ import {
   Image,
   CloseButton,
   MultiSelect,
+  Select,
 } from '@mantine/core';
 import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -52,6 +53,8 @@ interface EditableFields {
   emergency_contact_relation: string;
   language_ids: string[];
   volunteer_type_ids: string[];
+  region_id: string | null;
+  center_id: string | null;
 }
 
 export function ProfilePage() {
@@ -68,12 +71,15 @@ export function ProfilePage() {
   // Dropdown options
   const [allLanguages, setAllLanguages] = useState<{ id: number; name: string }[]>([]);
   const [allVolunteerTypes, setAllVolunteerTypes] = useState<VolunteerType[]>([]);
+  const [allRegions, setAllRegions] = useState<{ id: number; name: string }[]>([]);
+  const [allCenters, setAllCenters] = useState<{ id: number; name: string }[]>([]);
 
   const [editable, setEditable] = useState<EditableFields>({
     work_phone: '', whatsapp_number: '', x_city: '', x_state: '', x_nationality: '',
     special_skills: '', health_conditions: '',
     emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relation: '',
     language_ids: [], volunteer_type_ids: [],
+    region_id: null, center_id: null,
   });
   const [initial, setInitial] = useState<EditableFields>({ ...editable });
 
@@ -84,11 +90,15 @@ export function ProfilePage() {
       apiGet<VolunteerProfile>('/profile'),
       apiGet<{ id: number; name: string }[]>('/languages'),
       apiGet<VolunteerType[]>('/volunteer-types'),
+      apiGet<{ id: number; name: string }[]>('/regions'),
+      apiGet<{ id: number; name: string }[]>('/centers'),
     ])
-      .then(([data, langs, vtypes]) => {
+      .then(([data, langs, vtypes, regions, centers]) => {
         setProfile(data);
         setAllLanguages(langs);
         setAllVolunteerTypes(vtypes);
+        setAllRegions(regions);
+        setAllCenters(centers);
         const f: EditableFields = {
           work_phone: data.work_phone || '',
           whatsapp_number: data.whatsapp_number || '',
@@ -102,6 +112,8 @@ export function ProfilePage() {
           emergency_contact_relation: data.emergency_contact_relation || '',
           language_ids: data.language_ids.map((l) => String(l.id)),
           volunteer_type_ids: data.volunteer_type_ids.map((v) => String(v.id)),
+          region_id: data.region_id ? String(data.region_id.id) : null,
+          center_id: data.center_id ? String(data.center_id.id) : null,
         };
         setEditable(f);
         setInitial(f);
@@ -122,7 +134,7 @@ export function ProfilePage() {
     });
   }, [editable, initial]);
 
-  const set = (field: keyof EditableFields, value: string | string[]) =>
+  const set = (field: keyof EditableFields, value: string | string[] | null) =>
     setEditable((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
@@ -141,6 +153,8 @@ export function ProfilePage() {
         emergency_contact_relation: editable.emergency_contact_relation,
         language_ids: editable.language_ids.map(Number),
         volunteer_type_ids: editable.volunteer_type_ids.map(Number),
+        region_id: editable.region_id ? Number(editable.region_id) : false,
+        center_id: editable.center_id ? Number(editable.center_id) : false,
       });
       setInitial({ ...editable });
       setEditing(false);
@@ -170,6 +184,8 @@ export function ProfilePage() {
 
   const langOptions = allLanguages.map((l) => ({ value: String(l.id), label: l.name }));
   const vtypeOptions = allVolunteerTypes.map((v) => ({ value: String(v.id), label: v.name }));
+  const regionOptions = allRegions.map((r) => ({ value: String(r.id), label: r.name }));
+  const centerOptions = allCenters.map((c) => ({ value: String(c.id), label: c.name }));
 
   if (loading) {
     return (
@@ -245,6 +261,7 @@ export function ProfilePage() {
                 <Field label="City" value={editable.x_city} />
                 <Field label="State" value={editable.x_state} />
                 <Field label="Region" value={profile.region_id?.name} />
+                <Field label="Center" value={profile.center_id?.name} />
               </Stack>
             </Accordion.Panel>
           </Accordion.Item>
@@ -322,6 +339,8 @@ export function ProfilePage() {
           <TextInput label="Nationality" value={editable.x_nationality} onChange={(e) => set('x_nationality', e.currentTarget.value)} size="md" />
           <TextInput label="City" value={editable.x_city} onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
           <TextInput label="State" value={editable.x_state} onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
+          <Select label="Region" placeholder="Select region" data={regionOptions} value={editable.region_id} onChange={(v) => set('region_id', v ?? null)} size="md" searchable clearable />
+          <Select label="Center" placeholder="Select center" data={centerOptions} value={editable.center_id} onChange={(v) => set('center_id', v ?? null)} size="md" searchable clearable />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Languages & Skills</Text>
           <MultiSelect label="Languages" placeholder="Select languages" data={langOptions} value={editable.language_ids}

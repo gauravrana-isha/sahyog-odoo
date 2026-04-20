@@ -72,9 +72,11 @@
                     <separator string="Address"/>
                     <field name="address" nolabel="1"
                            placeholder="Guest address..."/>
+                    <field name="guest_region"/>
                     <separator string="Places / Events Attended"/>
                     <field name="place_event_ids" widget="many2many_tags" nolabel="1"
                            domain="['|', ('center_id', '=', False), ('center_id', '=', center_id)]"/>
+                    <field name="places_other" placeholder="Other places or events not in the list..."/>
                     <separator string="Experience"/>
                     <group>
                         <group>
