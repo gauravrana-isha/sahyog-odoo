@@ -480,11 +480,11 @@ export function GuestVisitDetail() {
           <TextInput label="Guest Name" value={editable.main_guest_name} onChange={(e) => set('main_guest_name', e.currentTarget.value)} size="md" required />
           <Select label="Gender" placeholder="Select" data={GENDER_OPTIONS} value={editable.gender} onChange={(v) => set('gender', v)} size="md" required />
           <TextInput label="Designation & Company" value={editable.designation_company} onChange={(e) => set('designation_company', e.currentTarget.value)} size="md" required />
-          <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" searchable required />
+          <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" required />
           <TextInput label="Phone" value={editable.phone} onChange={(e) => set('phone', e.currentTarget.value)} size="md" />
           <TextInput label="Email" value={editable.email} onChange={(e) => set('email', e.currentTarget.value)} size="md" />
           <Textarea label="Address" value={editable.address} onChange={(e) => set('address', e.currentTarget.value)} minRows={2} autosize size="md" />
-          <Select label="Region" placeholder="Select region" data={GUEST_REGION_OPTIONS} value={editable.guest_region} onChange={(v) => set('guest_region', v)} size="md" searchable required />
+          <Select label="Region" placeholder="Select region" data={GUEST_REGION_OPTIONS} value={editable.guest_region} onChange={(v) => set('guest_region', v)} size="md" required />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Visit Details</Text>
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
@@ -495,7 +495,7 @@ export function GuestVisitDetail() {
           <TextInput label="Reference Of" value={editable.reference_of} onChange={(e) => set('reference_of', e.currentTarget.value)} size="md" />
           <TextInput label="POC Name" value={editable.poc_name} onChange={(e) => set('poc_name', e.currentTarget.value)} size="md" />
           <TextInput label="POC Contact" value={editable.poc_contact} onChange={(e) => set('poc_contact', e.currentTarget.value)} size="md" />
-          <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} searchable size="md" required />
+          <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} size="md" required />
           <TextInput label="Other places / events" value={editable.places_other} onChange={(e) => set('places_other', e.currentTarget.value)} size="md" placeholder="Places or events not in the list..." />
           <NumberInput label="Accompanying Guest Count" value={editable.accompanying_guest_count} onChange={(v) => set('accompanying_guest_count', typeof v === 'number' ? v : 0)} min={0} size="md" />
 

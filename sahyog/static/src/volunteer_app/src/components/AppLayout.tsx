@@ -93,6 +93,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [volunteerId, setVolunteerId] = useState<number | null>(null);
 
   const fetchUnread = useCallback(() => {
     apiGet<{ count: number }>('/notifications/unread-count')
@@ -105,6 +106,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     const interval = setInterval(fetchUnread, 60_000);
     return () => clearInterval(interval);
   }, [fetchUnread]);
+
+  // Fetch volunteer ID for profile photo
+  useEffect(() => {
+    apiGet<{ id: number }>('/profile')
+      .then((data) => setVolunteerId(data.id))
+      .catch(() => {});
+  }, []);
 
   const fetchNotifications = useCallback(() => {
     setNotifLoading(true);
@@ -218,7 +226,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Indicator>
               </ActionIcon>
               <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
-                <Avatar size={28} radius="xl" color="blue"><IconUser size={16} /></Avatar>
+                <Avatar size={28} radius="xl" color="blue" src={volunteerId ? `/web/image/hr.employee/${volunteerId}/avatar_128` : undefined}><IconUser size={16} /></Avatar>
               </ActionIcon>
             </>
           )}

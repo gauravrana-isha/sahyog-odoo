@@ -85,19 +85,7 @@ export function ProgramsPage() {
 
   return (
     <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined }}>
-      <Group justify="space-between" align="center" mb="sm">
-        <Text fw={600} size="lg">Upcoming Programs</Text>
-        <Button
-          component="a"
-          href="https://docs.google.com/spreadsheets/d/1lOk_LZ1BYDazrWh0ZZxmis3thv_dnbNI/edit"
-          target="_blank"
-          variant="subtle"
-          size="compact-sm"
-          leftSection={<IconCalendarEvent size={16} />}
-        >
-          Schedule Sheet
-        </Button>
-      </Group>
+      <Text fw={600} size="lg" mb="sm">Upcoming Programs</Text>
 
       <TextInput
         placeholder="Search programs..."

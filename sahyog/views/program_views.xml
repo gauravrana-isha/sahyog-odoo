@@ -6,7 +6,7 @@
         <field name="name">sahyog.program.list</field>
         <field name="model">sahyog.program</field>
         <field name="arch" type="xml">
-            <list>
+            <list js_class="program_list_with_sheet">
                 <field name="name" string="Program"/>
                 <field name="program_type" widget="badge"
                        decoration-info="program_type == 'main'"

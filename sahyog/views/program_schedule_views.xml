@@ -6,7 +6,7 @@
         <field name="name">sahyog.program.schedule.list</field>
         <field name="model">sahyog.program.schedule</field>
         <field name="arch" type="xml">
-            <list decoration-info="schedule_status == 'upcoming'"
+            <list js_class="program_list_with_sheet" decoration-info="schedule_status == 'upcoming'"
                   decoration-muted="schedule_status == 'completed'">
                 <field name="program_id"/>
                 <field name="location"/>

@@ -339,8 +339,8 @@ export function ProfilePage() {
           <TextInput label="Nationality" value={editable.x_nationality} onChange={(e) => set('x_nationality', e.currentTarget.value)} size="md" />
           <TextInput label="City" value={editable.x_city} onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
           <TextInput label="State" value={editable.x_state} onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
-          <Select label="Region" placeholder="Select region" data={regionOptions} value={editable.region_id} onChange={(v) => set('region_id', v ?? null)} size="md" searchable clearable />
-          <Select label="Center" placeholder="Select center" data={centerOptions} value={editable.center_id} onChange={(v) => set('center_id', v ?? null)} size="md" searchable clearable />
+          <Select label="Region" placeholder="Select region" data={regionOptions} value={editable.region_id} onChange={(v) => set('region_id', v ?? null)} size="md" clearable />
+          <Select label="Center" placeholder="Select center" data={centerOptions} value={editable.center_id} onChange={(v) => set('center_id', v ?? null)} size="md" clearable />
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Languages & Skills</Text>
           <MultiSelect label="Languages" placeholder="Select languages" data={langOptions} value={editable.language_ids}

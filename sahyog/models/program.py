@@ -43,3 +43,11 @@ class Program(models.Model):
                 visited.add(current_id)
                 current_prog = self.browse(current_id)
                 queue.extend(current_prog.prerequisite_ids.ids)
+
+    def action_open_schedule_sheet(self):
+        """Open the Google Sheets schedule spreadsheet in a new tab."""
+        return {
+            'type': 'ir.actions.act_url',
+            'url': 'https://docs.google.com/spreadsheets/d/1lOk_LZ1BYDazrWh0ZZxmis3thv_dnbNI/edit',
+            'target': 'new',
+        }

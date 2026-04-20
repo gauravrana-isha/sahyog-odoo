@@ -39,6 +39,14 @@ class ProgramSchedule(models.Model):
             if rec.end_date < rec.start_date:
                 raise ValidationError(_('End date must be >= start date.'))
 
+    def action_open_schedule_sheet(self):
+        """Open the Google Sheets schedule spreadsheet in a new tab."""
+        return {
+            'type': 'ir.actions.act_url',
+            'url': 'https://docs.google.com/spreadsheets/d/1lOk_LZ1BYDazrWh0ZZxmis3thv_dnbNI/edit',
+            'target': 'new',
+        }
+
     @api.constrains('start_time', 'end_time')
     def _check_times(self):
         import re
