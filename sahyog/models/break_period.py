@@ -66,37 +66,6 @@ class BreakPeriod(models.Model):
             if rec.end_date < rec.start_date:
                 raise ValidationError(_('End date must be >= start date.'))
 
-    @api.constrains('start_date', 'end_date', 'volunteer_id')
-    def _check_no_overlap(self):
-        NON_CANCELLED = ('requested', 'approved', 'on_going', 'pending_admin', 'pending_volunteer')
-        for rec in self:
-            # Check against silence periods (different model, use id != 0)
-            overlapping_silence = self.env['sahyog.silence.period'].search([
-                ('volunteer_id', '=', rec.volunteer_id.id),
-                ('id', '!=', 0),
-                ('status', 'in', NON_CANCELLED),
-                ('start_date', '<=', rec.end_date),
-                ('end_date', '>=', rec.start_date),
-            ], limit=1)
-            if overlapping_silence:
-                raise ValidationError(
-                    _('Overlaps with existing silence period: %s → %s') %
-                    (overlapping_silence.start_date, overlapping_silence.end_date)
-                )
-            # Check against break periods (exclude self)
-            overlapping_break = self.env['sahyog.break.period'].search([
-                ('volunteer_id', '=', rec.volunteer_id.id),
-                ('id', '!=', rec.id),
-                ('status', 'in', NON_CANCELLED),
-                ('start_date', '<=', rec.end_date),
-                ('end_date', '>=', rec.start_date),
-            ], limit=1)
-            if overlapping_break:
-                raise ValidationError(
-                    _('Overlaps with existing break period: %s → %s') %
-                    (overlapping_break.start_date, overlapping_break.end_date)
-                )
-
     def write(self, vals):
         res = super().write(vals)
         if 'status' in vals:

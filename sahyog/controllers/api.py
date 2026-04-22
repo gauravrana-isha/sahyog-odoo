@@ -42,6 +42,94 @@ class SahyogAPI(http.Controller):
         """Parse JSON body from the request."""
         return json.loads(request.httprequest.data)
 
+    def _check_overlaps(self, volunteer_id, start_date, end_date, start_time='', end_time='', exclude_model=None, exclude_id=None):
+        """Check for overlapping silence/break/program entries. Returns list of warning strings.
+
+        Time-aware: if both entries have start_time/end_time, checks time overlap too.
+        Cross-midnight times (e.g. 21:00-09:00) are handled correctly.
+        """
+        warnings = []
+        NON_CANCELLED = ('requested', 'approved', 'on_going', 'pending_admin', 'pending_volunteer')
+
+        def times_overlap(t1_start, t1_end, t2_start, t2_end):
+            """Check if two time ranges overlap. Handles cross-midnight."""
+            if not t1_start or not t1_end or not t2_start or not t2_end:
+                return True  # If either has no times, treat as all-day (overlap)
+
+            def time_to_minutes(t):
+                parts = t.split(':')
+                return int(parts[0]) * 60 + int(parts[1])
+
+            s1, e1 = time_to_minutes(t1_start), time_to_minutes(t1_end)
+            s2, e2 = time_to_minutes(t2_start), time_to_minutes(t2_end)
+
+            # Normalize cross-midnight ranges
+            def ranges(s, e):
+                if s <= e:
+                    return [(s, e)]
+                else:
+                    return [(s, 24*60), (0, e)]  # e.g. 21:00-09:00 -> [21:00-24:00, 00:00-09:00]
+
+            r1 = ranges(s1, e1)
+            r2 = ranges(s2, e2)
+
+            for a_start, a_end in r1:
+                for b_start, b_end in r2:
+                    if a_start < b_end and b_start < a_end:
+                        return True
+            return False
+
+        # Check silence periods
+        silence_domain = [
+            ('volunteer_id', '=', volunteer_id),
+            ('status', 'in', NON_CANCELLED),
+            ('start_date', '<=', end_date),
+            ('end_date', '>=', start_date),
+        ]
+        if exclude_model == 'sahyog.silence.period' and exclude_id:
+            silence_domain.append(('id', '!=', exclude_id))
+
+        for s in request.env['sahyog.silence.period'].sudo().search(silence_domain):
+            if times_overlap(start_time, end_time, s.start_time or '', s.end_time or ''):
+                stype = dict(s._fields['silence_type'].selection).get(s.silence_type, '') if s.silence_type else 'Silence'
+                warnings.append(
+                    'Overlaps with %s silence (%s to %s)' % (stype, s.start_date, s.end_date)
+                )
+
+        # Check break periods
+        break_domain = [
+            ('volunteer_id', '=', volunteer_id),
+            ('status', 'in', NON_CANCELLED),
+            ('start_date', '<=', end_date),
+            ('end_date', '>=', start_date),
+        ]
+        if exclude_model == 'sahyog.break.period' and exclude_id:
+            break_domain.append(('id', '!=', exclude_id))
+
+        for b in request.env['sahyog.break.period'].sudo().search(break_domain):
+            if times_overlap(start_time, end_time, b.start_time or '', b.end_time or ''):
+                btype = dict(b._fields['break_type'].selection).get(b.break_type, '') if b.break_type else 'Break'
+                warnings.append(
+                    'Overlaps with %s break (%s to %s)' % (btype, b.start_date, b.end_date)
+                )
+
+        # Check program enrollments
+        prog_domain = [
+            ('volunteer_id', '=', volunteer_id),
+            ('completion_status', 'in', ('upcoming', 'on_going', 'pending_admin', 'pending_volunteer')),
+            ('start_date', '<=', end_date),
+            ('end_date', '>=', start_date),
+        ]
+        if exclude_model == 'sahyog.volunteer.program' and exclude_id:
+            prog_domain.append(('id', '!=', exclude_id))
+
+        for p in request.env['sahyog.volunteer.program'].sudo().search(prog_domain):
+            warnings.append(
+                'Overlaps with program %s (%s to %s)' % (p.program_id.name or '', p.start_date, p.end_date)
+            )
+
+        return warnings
+
     # ── Dashboard ───────────────────────────────────────────────────────
 
     @http.route('/sahyog/api/dashboard', type='http', auth='user',
@@ -304,7 +392,17 @@ class SahyogAPI(http.Controller):
             except Exception:
                 _logger.exception('Error calculating silence limit warning')
 
-            return self._json_success({'id': record.id, 'warning': warning})
+            overlap_warnings = self._check_overlaps(
+                volunteer.id, data['start_date'], data['end_date'],
+                data.get('start_time', ''), data.get('end_time', ''),
+                exclude_model='sahyog.silence.period', exclude_id=record.id,
+            )
+            all_warnings = []
+            if warning:
+                all_warnings.append(warning)
+            all_warnings.extend(overlap_warnings)
+            combined_warning = ' | '.join(all_warnings) if all_warnings else None
+            return self._json_success({'id': record.id, 'warning': combined_warning})
         except ValidationError as e:
             return self._json_error(str(e))
         except Exception:
@@ -362,7 +460,12 @@ class SahyogAPI(http.Controller):
                 'status': status,
                 'created_by': request.env.uid,
             })
-            return self._json_success({'id': record.id})
+            overlap_warnings = self._check_overlaps(
+                volunteer.id, data['start_date'], data['end_date'],
+                exclude_model='sahyog.break.period', exclude_id=record.id,
+            )
+            warning = ' | '.join(overlap_warnings) if overlap_warnings else None
+            return self._json_success({'id': record.id, 'warning': warning})
         except ValidationError as e:
             return self._json_error(str(e))
         except Exception:
@@ -597,7 +700,12 @@ class SahyogAPI(http.Controller):
             if data.get('schedule_id'):
                 vals['schedule_id'] = int(data['schedule_id'])
             record = request.env['sahyog.volunteer.program'].sudo().create(vals)
-            return self._json_success({'id': record.id})
+            overlap_warnings = self._check_overlaps(
+                volunteer.id, data['start_date'], data['end_date'],
+                exclude_model='sahyog.volunteer.program', exclude_id=record.id,
+            )
+            warning = ' | '.join(overlap_warnings) if overlap_warnings else None
+            return self._json_success({'id': record.id, 'warning': warning})
         except ValidationError as e:
             return self._json_error(str(e))
         except Exception:

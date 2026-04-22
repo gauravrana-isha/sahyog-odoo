@@ -174,23 +174,29 @@ export function RequestPage() {
         if (!startDate || !endDate) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
         const dateErr = validateDateRange(startDate, endDate);
         if (dateErr) { setError(dateErr); setSubmitting(false); return; }
-        await apiPost('/programs/create', {
+        const result = await apiPost<{ id: number; warning?: string }>('/programs/create', {
           program_id: Number(programId), participation_type: participationType,
           start_date: fmtDate(startDate), end_date: fmtDate(endDate),
           location, notes, ...(scheduleId ? { schedule_id: Number(scheduleId) } : {}),
         });
         notifications.show({ title: 'Request Submitted', message: 'Your program enrollment has been submitted.', color: 'green' });
+        if (result.warning) {
+          notifications.show({ title: 'Overlap Warning', message: result.warning, color: 'orange', autoClose: 8000 });
+        }
         resetAll(); navigate('/history?filter=programs');
       } else if (requestType === 'break') {
         if (!breakType) { setError('Please select a break type'); setSubmitting(false); return; }
         if (!breakStart || !breakEnd) { setError('Please fill in start and end dates'); setSubmitting(false); return; }
         const dateErr = validateDateRange(breakStart, breakEnd);
         if (dateErr) { setError(dateErr); setSubmitting(false); return; }
-        await apiPost('/breaks/create', {
+        const result = await apiPost<{ id: number; warning?: string }>('/breaks/create', {
           break_type: breakType, start_date: fmtDate(breakStart), end_date: fmtDate(breakEnd),
           reason: breakReason, notes: breakNotes,
         });
         notifications.show({ title: 'Request Submitted', message: 'Your break request has been submitted.', color: 'green' });
+        if (result.warning) {
+          notifications.show({ title: 'Overlap Warning', message: result.warning, color: 'orange', autoClose: 8000 });
+        }
         resetAll(); navigate('/history?filter=breaks');
       } else if (requestType === 'silence') {
         if (!silenceType) { setError('Please select a silence type'); setSubmitting(false); return; }
@@ -205,13 +211,16 @@ export function RequestPage() {
           const etErr = validateTime(silenceEndTime);
           if (etErr) { setError('End time: ' + etErr); setSubmitting(false); return; }
         }
-        await apiPost('/silence/create', {
+        const result = await apiPost<{ id: number; warning?: string }>('/silence/create', {
           silence_type: silenceType, start_date: fmtDate(silenceStart), end_date: fmtDate(silenceEnd),
           notes: silenceNotes, is_recurring: isRecurring,
           start_time: silenceStartTime, end_time: silenceEndTime,
           ...(silenceProgramId ? { program_id: Number(silenceProgramId) } : {}),
         });
         notifications.show({ title: 'Request Submitted', message: 'Your silence request has been submitted.', color: 'green' });
+        if (result.warning) {
+          notifications.show({ title: 'Overlap Warning', message: result.warning, color: 'orange', autoClose: 8000 });
+        }
         resetAll(); navigate('/history?filter=silence');
       } else {
         if (!unavailDate) { setError('Please select a date'); setSubmitting(false); return; }
