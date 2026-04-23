@@ -61,6 +61,7 @@
         'data/program_data.xml',
         'data/cron_data.xml',
         'data/mail_template_data.xml',
+        'data/google_sheets_config.xml',
         'data/oauth_data.xml',
     ],
     'assets': {

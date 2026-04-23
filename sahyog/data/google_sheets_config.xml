@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="config_google_sheets_webapp_url" model="ir.config_parameter">
+            <field name="key">sahyog.google_sheets_webapp_url</field>
+            <field name="value">https://script.google.com/macros/s/AKfycbwiWzebX7mJcYWHag2GAHpO-51bt6FHzkdwALSd0eOMLM58FfP-wJzQOwPtvfiYDQei/exec</field>
+        </record>
+    </data>
+</odoo>
