@@ -127,6 +127,7 @@ class GuestVisit(models.Model):
     # ── Google Form sync ──
     google_form_synced = fields.Boolean('Google Form Synced', default=False)
     google_form_error = fields.Text('Google Form Error')
+    google_sheet_uid = fields.Char('Google Sheet UID', copy=False)
 
     # ── Feedback ──
     feedback_ids = fields.One2many('sahyog.guest.feedback', 'visit_id', string='Feedback')
@@ -190,8 +191,19 @@ class GuestVisit(models.Model):
     # ── Google Sheets sync ──
 
     def _trigger_google_sheets_sync(self):
-        """Trigger async Google Sheets sync for this visit record."""
-        from odoo.addons.sahyog.utils.google_sheets import trigger_async_sync
+        """Synchronous Google Sheets sync. Updates status on the same record."""
+        from odoo.addons.sahyog.utils.google_sheets import submit_to_google_sheets
         self.ensure_one()
-        trigger_async_sync(self)
+        success, result = submit_to_google_sheets(self)
+        if success:
+            self.write({
+                'google_form_synced': True,
+                'google_form_error': False,
+                'google_sheet_uid': result,  # result is the UID on success
+            })
+        else:
+            self.write({
+                'google_form_synced': False,
+                'google_form_error': result,  # result is the error message on failure
+            })
 
