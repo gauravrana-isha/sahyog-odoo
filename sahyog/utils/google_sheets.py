@@ -171,9 +171,10 @@ def _sync_in_thread(db_name, visit_id):
     Run the Google Sheets sync in a background thread with a new cursor.
     Updates google_form_synced and google_form_error on the visit record.
     """
+    from odoo.modules.registry import Registry
     import odoo
     try:
-        registry = odoo.registry(db_name)
+        registry = Registry(db_name)
         with registry.cursor() as cr:
             env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
             visit = env['sahyog.guest.visit'].browse(visit_id)
