@@ -1441,11 +1441,17 @@ class SahyogAPI(http.Controller):
             if mandatory_filled:
                 if visit.state != 'complete':
                     visit.write({'state': 'complete'})
-                # Trigger Google Sheets sync
-                try:
-                    visit._trigger_google_sheets_sync()
-                except Exception:
-                    _logger.exception('Google Sheets sync failed for visit %s', visit.id)
+                    # Trigger Google Sheets sync on first completion
+                    try:
+                        visit._trigger_google_sheets_sync()
+                    except Exception:
+                        _logger.exception('Google Sheets sync failed for visit %s', visit.id)
+                elif not visit.google_form_synced:
+                    # Retry sync if previous attempt failed
+                    try:
+                        visit._trigger_google_sheets_sync()
+                    except Exception:
+                        _logger.exception('Google Sheets sync retry failed for visit %s', visit.id)
 
             return self._json_success(self._serialize_visit(visit, full=True))
         except ValidationError as e:
