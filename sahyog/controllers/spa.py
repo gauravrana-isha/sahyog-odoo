@@ -8,6 +8,43 @@ _logger = logging.getLogger(__name__)
 
 class SahyogSPA(http.Controller):
 
+    def _blocked_page(self, status):
+        """Return an HTML page telling the volunteer their account is inactive."""
+        status_label = 'Away' if status == 'away' else 'Left'
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <title>Sahyog — Access Restricted</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        html, body {{ min-height: 100vh; min-height: 100dvh; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; align-items: center; justify-content: center; }}
+        .card {{ background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px 32px; max-width: 420px; width: 90%; text-align: center; }}
+        .icon {{ font-size: 48px; margin-bottom: 16px; }}
+        .title {{ font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }}
+        .message {{ color: #868e96; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }}
+        .status-badge {{ display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; background: #fff3bf; color: #e67700; }}
+        .logout-link {{ display: inline-block; margin-top: 16px; color: #868e96; font-size: 13px; text-decoration: none; }}
+        .logout-link:hover {{ color: #495057; text-decoration: underline; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🚫</div>
+        <div class="title">Access Restricted</div>
+        <div class="message">
+            Your volunteer status is currently <span class="status-badge">{status_label}</span>.
+            <br/><br/>
+            You cannot access the Sahyog portal while your status is {status_label.lower()}.
+            Please contact your admin if you believe this is an error.
+        </div>
+        <a href="/web/session/logout?redirect=/sahyog/login" class="logout-link">Logout</a>
+    </div>
+</body>
+</html>"""
+
     @http.route(
         ['/sahyog/app', '/sahyog/app/<path:subpath>'],
         type='http', auth='user', website=False,
@@ -17,6 +54,14 @@ class SahyogSPA(http.Controller):
         user = request.env.user
         if not user or user._is_public():
             return request.redirect('/sahyog/login')
+
+        # Block volunteers whose base_status is 'away' or 'left'
+        employee = request.env['hr.employee'].sudo().search(
+            [('user_id', '=', user.id)], limit=1)
+        if employee and employee.base_status in ('away', 'left'):
+            return request.make_response(self._blocked_page(employee.base_status), headers=[
+                ('Content-Type', 'text/html; charset=utf-8'),
+            ])
 
         csrf_token = request.csrf_token()
         html = f"""<!DOCTYPE html>
@@ -49,12 +94,19 @@ class SahyogSPA(http.Controller):
         is_admin = admin_group and admin_group in user.group_ids
 
         # Check if user has a linked volunteer (hr.employee)
-        has_employee = bool(request.env['hr.employee'].sudo().search(
-            [('user_id', '=', user.id)], limit=1))
+        employee = request.env['hr.employee'].sudo().search(
+            [('user_id', '=', user.id)], limit=1)
+        has_employee = bool(employee)
 
-        # Admin → backend, volunteer with employee → SPA, no employee → backend
+        # Admin → backend, no employee → backend
         if is_admin or not has_employee:
             return request.redirect('/web')
+
+        # Block volunteers whose base_status is 'away' or 'left'
+        if employee.base_status in ('away', 'left'):
+            return request.make_response(self._blocked_page(employee.base_status), headers=[
+                ('Content-Type', 'text/html; charset=utf-8'),
+            ])
 
         return request.redirect('/sahyog/app')
 

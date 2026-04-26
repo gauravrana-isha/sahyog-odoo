@@ -7,7 +7,8 @@
     <menuitem id="menu_sahyog_root"
               name="Sahyog"
               sequence="100"
-              web_icon="sahyog,static/description/icon.png"/>
+              web_icon="sahyog,static/description/icon.png"
+              groups="sahyog.group_sahyog_admin"/>
 
     <!-- Hide the Employees app (HR) — we use Sahyog's Volunteers instead -->
     <record id="hr.menu_hr_root" model="ir.ui.menu">

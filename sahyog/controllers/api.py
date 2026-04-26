@@ -19,6 +19,16 @@ class SahyogAPI(http.Controller):
             [('user_id', '=', request.env.uid)], limit=1,
         )
 
+    def _check_volunteer_active(self, volunteer):
+        """Return a JSON error response if volunteer status is away/left, else None."""
+        if volunteer and volunteer.base_status in ('away', 'left'):
+            status_label = 'Away' if volunteer.base_status == 'away' else 'Left'
+            return self._json_error(
+                'Your account is currently marked as %s. Access is restricted.' % status_label,
+                status=403,
+            )
+        return None
+
     def _json_success(self, data):
         return request.make_json_response({'success': True, 'data': data})
 
@@ -139,6 +149,10 @@ class SahyogAPI(http.Controller):
             volunteer = self._get_volunteer()
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
+
+            blocked = self._check_volunteer_active(volunteer)
+            if blocked:
+                return blocked
 
             today = fields.Date.context_today(request.env['hr.employee'])
 
