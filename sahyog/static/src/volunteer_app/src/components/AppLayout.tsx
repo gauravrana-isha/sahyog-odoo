@@ -37,6 +37,7 @@ import {
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import type { Notification } from '../types';
+import { InstallBanner } from './InstallBanner';
 
 function parseActionTokens(message: string): Array<{ type: 'text'; content: string } | { type: 'action'; path: string; entryType: string; id: string }> {
   const regex = /\[\[action:([^|]+)\|([^|]+)\|([^\]]+)\]\]/g;
@@ -312,6 +313,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           })}
         </Box>
       )}
+
+      {/* ── PWA Install Banner ── */}
+      <InstallBanner />
 
       {/* ── Notification Drawer ── */}
       <Drawer opened={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} position="right"

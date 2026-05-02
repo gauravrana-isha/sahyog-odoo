@@ -1579,6 +1579,14 @@ class SahyogAPI(http.Controller):
 
             entries = request.env['sahyog.calendar.entry'].sudo().search(domain)
 
+            # Exclude entries belonging to away/left volunteers
+            away_left_ids = set(
+                request.env['hr.employee'].sudo().search(
+                    [('base_status', 'in', ['away', 'left'])]
+                ).ids
+            )
+            entries = entries.filtered(lambda e: e.volunteer_id.id not in away_left_ids)
+
             # Collect unique volunteers from entries
             volunteer_ids = list(set(e.volunteer_id.id for e in entries if e.volunteer_id))
             volunteers = request.env['hr.employee'].sudo().browse(volunteer_ids)

@@ -1,0 +1,25 @@
+{
+  "name": "Sahyog Volunteer Portal",
+  "short_name": "Sahyog",
+  "description": "Volunteer management portal for Guest Care",
+  "start_url": "/sahyog/app",
+  "scope": "/sahyog/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#228be6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/sahyog/static/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/sahyog/static/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

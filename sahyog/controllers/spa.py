@@ -64,13 +64,33 @@ class SahyogSPA(http.Controller):
             ])
 
         csrf_token = request.csrf_token()
+        base_url = request.httprequest.url_root.rstrip('/')
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf_token" content="{csrf_token}" />
-    <title>Sahyog Volunteer Portal</title>
+    <meta name="description" content="Sahyog — Volunteer management portal for Isha Guest Care. Browse programs, request silence & breaks, view team calendar." />
+    <meta name="theme-color" content="#228be6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Sahyog" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sahyog — Volunteer Portal" />
+    <meta property="og:description" content="Volunteer management portal for Isha Guest Care. Browse programs, request silence & breaks, view team calendar." />
+    <meta property="og:image" content="{base_url}/sahyog/static/pwa/icon-512.png" />
+    <meta property="og:url" content="{base_url}/sahyog/app" />
+    <meta property="og:site_name" content="Sahyog" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sahyog — Volunteer Portal" />
+    <meta name="twitter:description" content="Volunteer management portal for Isha Guest Care." />
+    <meta name="twitter:image" content="{base_url}/sahyog/static/pwa/icon-512.png" />
+    <link rel="apple-touch-icon" href="/sahyog/static/pwa/icon-192.png" />
+    <link rel="manifest" href="/sahyog/static/dist/volunteer_app/manifest.json" />
+    <title>Sahyog — Volunteer Portal</title>
     <link rel="stylesheet" href="/sahyog/static/dist/volunteer_app/assets/index.css" />
 </head>
 <body>
@@ -155,11 +175,26 @@ class SahyogSPA(http.Controller):
         except Exception:
             _logger.exception('Failed to build Google OAuth URL')
 
+        base_url = request.httprequest.url_root.rstrip('/')
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <meta name="description" content="Sahyog — Volunteer management portal for Isha Guest Care. Login to access your programs, schedules, and team calendar." />
+    <meta name="theme-color" content="#228be6" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sahyog — Volunteer Portal" />
+    <meta property="og:description" content="Volunteer management portal for Isha Guest Care. Login to access your programs, schedules, and team calendar." />
+    <meta property="og:image" content="{base_url}/sahyog/static/pwa/icon-512.png" />
+    <meta property="og:url" content="{base_url}/sahyog/login" />
+    <meta property="og:site_name" content="Sahyog" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sahyog — Volunteer Portal" />
+    <meta name="twitter:description" content="Volunteer management portal for Isha Guest Care." />
+    <meta name="twitter:image" content="{base_url}/sahyog/static/pwa/icon-512.png" />
     <title>Sahyog — Login</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}

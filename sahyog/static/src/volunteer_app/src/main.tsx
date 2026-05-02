@@ -20,3 +20,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </MantineProvider>
   </React.StrictMode>,
 );
+
+// Register PWA service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sahyog/static/dist/volunteer_app/sw.js', {
+      scope: '/sahyog/',
+    }).catch(() => { /* silent */ });
+  });
+}

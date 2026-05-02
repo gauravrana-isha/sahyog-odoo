@@ -77,6 +77,7 @@
             'sahyog/static/src/sidebar_toggle/sidebar_toggle.scss',
             'sahyog/static/src/schedule_sheet_button/schedule_sheet_button.js',
             'sahyog/static/src/schedule_sheet_button/schedule_sheet_button.xml',
+            'sahyog/static/src/form_save_button/form_save_button.scss',
         ],
     },
     'installable': True,
