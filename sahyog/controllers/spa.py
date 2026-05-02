@@ -35,7 +35,7 @@ class SahyogSPA(http.Controller):
         <div class="icon">🚫</div>
         <div class="title">Access Restricted</div>
         <div class="message">
-            Your volunteer status is currently <span class="status-badge">{status_label}</span>.
+            Your volunteer status is currently <span class="status-badge">{status_label}</span>
             <br/><br/>
             You cannot access the Sahyog portal while your status is {status_label.lower()}.
             Please contact your admin if you believe this is an error.
