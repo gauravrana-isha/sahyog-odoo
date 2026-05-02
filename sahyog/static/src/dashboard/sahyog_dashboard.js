@@ -143,8 +143,14 @@ export class SahyogDashboard extends Component {
 
     // ---- Click handlers for daily entries ----
     onCardActive() {
-        this.action.doAction("sahyog.action_sahyog_volunteers", {
-            additionalContext: { search_default_filter_available: 0 },
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Active Volunteers",
+            res_model: "hr.employee",
+            view_mode: "list,form",
+            views: [[false, "list"], [false, "form"]],
+            domain: [["base_status", "not in", ["away", "left"]]],
+            target: "current",
         });
     }
 

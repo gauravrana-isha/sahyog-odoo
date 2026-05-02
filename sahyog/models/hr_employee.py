@@ -65,6 +65,15 @@ class HrEmployee(models.Model):
     break_summary = fields.Html('Break', compute='_compute_entry_summaries', store=True, sanitize=False)
     program_summary = fields.Html('Programs', compute='_compute_entry_summaries', store=True, sanitize=False)
 
+    # ── Statistics counters ──
+    silence_days_current_year = fields.Integer('Silence Days (This Year)', compute='_compute_statistics', store=True)
+    silence_days_total = fields.Integer('Silence Days (All Time)', compute='_compute_statistics', store=True)
+    break_days_current_year = fields.Integer('Break Days (This Year)', compute='_compute_statistics', store=True)
+    break_count_current_year = fields.Integer('Breaks (This Year)', compute='_compute_statistics', store=True)
+    break_days_total = fields.Integer('Break Days (All Time)', compute='_compute_statistics', store=True)
+    program_count_current_year = fields.Integer('Programs (This Year)', compute='_compute_statistics', store=True)
+    program_count_total = fields.Integer('Programs (All Time)', compute='_compute_statistics', store=True)
+
     def _is_in_time_window(self, entry, now_time):
         """Check if *now_time* falls within entry's start_time..end_time.
 
@@ -188,6 +197,57 @@ class HrEmployee(models.Model):
                 symbol = '●' if current_prog else '→'
                 parts.append(pill('%s %s' % (short, symbol), color))
             rec.program_summary = ' '.join(parts) if parts else '<span style="color:#adb5bd">–</span>'
+
+    @api.depends(
+        'silence_period_ids.status', 'silence_period_ids.start_date', 'silence_period_ids.end_date',
+        'break_period_ids.status', 'break_period_ids.start_date', 'break_period_ids.end_date',
+        'volunteer_program_ids.completion_status', 'volunteer_program_ids.start_date', 'volunteer_program_ids.end_date',
+    )
+    def _compute_statistics(self):
+        """Compute day/count statistics for silence, breaks, and programs."""
+        today = fields.Date.context_today(self)
+        year_start = today.replace(month=1, day=1)
+        year_end = today.replace(month=12, day=31)
+        COUNTED_STATUSES = ('approved', 'on_going', 'done')
+
+        for rec in self:
+            # ── Silence days ──
+            silence_all = rec.silence_period_ids.filtered(lambda s: s.status in COUNTED_STATUSES)
+            rec.silence_days_total = sum(
+                (s.end_date - s.start_date).days + 1 for s in silence_all
+                if s.start_date and s.end_date
+            )
+            silence_year = silence_all.filtered(
+                lambda s: s.start_date and s.end_date and s.end_date >= year_start and s.start_date <= year_end
+            )
+            rec.silence_days_current_year = sum(
+                (min(s.end_date, year_end) - max(s.start_date, year_start)).days + 1
+                for s in silence_year
+            )
+
+            # ── Break days & count ──
+            breaks_all = rec.break_period_ids.filtered(lambda b: b.status in COUNTED_STATUSES)
+            rec.break_days_total = sum(
+                (b.end_date - b.start_date).days + 1 for b in breaks_all
+                if b.start_date and b.end_date
+            )
+            breaks_year = breaks_all.filtered(
+                lambda b: b.start_date and b.end_date and b.end_date >= year_start and b.start_date <= year_end
+            )
+            rec.break_days_current_year = sum(
+                (min(b.end_date, year_end) - max(b.start_date, year_start)).days + 1
+                for b in breaks_year
+            )
+            rec.break_count_current_year = len(breaks_year)
+
+            # ── Program count ──
+            programs_all = rec.volunteer_program_ids.filtered(
+                lambda p: p.completion_status in ('upcoming', 'on_going', 'done')
+            )
+            rec.program_count_total = len(programs_all)
+            rec.program_count_current_year = len(programs_all.filtered(
+                lambda p: p.start_date and p.start_date >= year_start and p.start_date <= year_end
+            ))
 
     @api.depends(
         'base_status',

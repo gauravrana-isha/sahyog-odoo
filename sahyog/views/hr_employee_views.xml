@@ -91,6 +91,21 @@
                                 <field name="notes" nolabel="1"
                                        placeholder="Additional notes..."/>
                             </group>
+                            <group string="Statistics">
+                                <group string="Silence">
+                                    <field name="silence_days_current_year"/>
+                                    <field name="silence_days_total"/>
+                                </group>
+                                <group string="Breaks">
+                                    <field name="break_count_current_year"/>
+                                    <field name="break_days_current_year"/>
+                                    <field name="break_days_total"/>
+                                </group>
+                                <group string="Programs">
+                                    <field name="program_count_current_year"/>
+                                    <field name="program_count_total"/>
+                                </group>
+                            </group>
                         </page>
 
                         <!-- Tab 3: Silence / Break / Programs (popup forms, no inline editing) -->
