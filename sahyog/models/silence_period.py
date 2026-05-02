@@ -521,49 +521,12 @@ class SilencePeriod(models.Model):
                     "Cron: failed auto-dropping expired volunteer.program %s", rec.id
                 )
 
-        # ── 6. Cadence alert evaluation ──
-        try:
-            from dateutil.relativedelta import relativedelta
-            current_year = today.year
-            three_months_ago = today - relativedelta(months=3)
-
-            # Find all volunteers that have a type with min_days > 0
-            all_volunteers = self.env['hr.employee'].search([
-                ('volunteer_type_ids', '!=', False),
-            ])
-            for volunteer in all_volunteers:
-                min_days, _max_days = silence_rules.get_volunteer_limits(volunteer)
-                if min_days <= 0:
-                    # LTV or no minimum — skip
-                    continue
-
-                annual_total = silence_rules.calculate_annual_silence_days(
-                    self.env, volunteer.id, current_year,
-                )
-                if annual_total >= min_days:
-                    continue
-
-                # Check if last silence ended 3+ months ago (or never had one)
-                last_silence = self.search([
-                    ('volunteer_id', '=', volunteer.id),
-                    ('status', 'in', ('done', 'on_going', 'approved')),
-                ], order='end_date desc', limit=1)
-
-                if last_silence and last_silence.end_date > three_months_ago:
-                    # Last silence ended less than 3 months ago — skip
-                    continue
-
-                # Both conditions met: below minimum AND 3+ months since last silence
-                self._notify_admins(
-                    'cadence_alert',
-                    'Silence Cadence Alert',
-                    'Volunteer %s has only %d silence days this year (minimum %d) '
-                    'and has not taken silence in 3+ months.' % (
-                        volunteer.name, annual_total, min_days,
-                    ),
-                )
-        except Exception:
-            _logger.exception("Cron: failed evaluating cadence alerts")
+        # ── 6. Cadence alert evaluation — disabled for now ──
+        # try:
+        #     from dateutil.relativedelta import relativedelta
+        #     ...
+        # except Exception:
+        #     _logger.exception("Cron: failed evaluating cadence alerts")
 
         # ── Recompute computed_status on affected volunteers ──
         if affected_volunteer_ids:
