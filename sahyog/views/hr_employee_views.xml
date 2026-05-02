@@ -91,32 +91,30 @@
                                 <field name="notes" nolabel="1"
                                        placeholder="Additional notes..."/>
                             </group>
-                            <group string="Statistics">
-                                <group string="Silence">
-                                    <field name="silence_days_current_year"/>
-                                    <field name="silence_days_total"/>
-                                </group>
-                                <group string="Breaks">
-                                    <field name="break_count_current_year"/>
-                                    <field name="break_days_current_year"/>
-                                    <field name="break_days_total"/>
-                                </group>
-                                <group string="Programs">
-                                    <field name="program_count_current_year"/>
-                                    <field name="program_count_total"/>
-                                </group>
-                            </group>
                         </page>
 
                         <!-- Tab 3: Silence / Break / Programs (popup forms, no inline editing) -->
                         <page string="Entries" name="entries">
                             <group string="Silence Periods">
+                                <group>
+                                    <field name="silence_days_current_year" string="Days This Year"/>
+                                    <field name="silence_days_total" string="Days All Time"/>
+                                </group>
                                 <field name="silence_period_ids" nolabel="1"/>
                             </group>
                             <group string="Break Periods">
+                                <group>
+                                    <field name="break_count_current_year" string="Breaks This Year"/>
+                                    <field name="break_days_current_year" string="Days This Year"/>
+                                    <field name="break_days_total" string="Days All Time"/>
+                                </group>
                                 <field name="break_period_ids" nolabel="1"/>
                             </group>
                             <group string="Program Enrollments">
+                                <group>
+                                    <field name="program_count_current_year" string="Programs This Year"/>
+                                    <field name="program_count_total" string="Programs All Time"/>
+                                </group>
                                 <field name="volunteer_program_ids" nolabel="1"/>
                             </group>
                         </page>
