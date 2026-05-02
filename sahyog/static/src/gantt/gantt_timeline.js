@@ -72,6 +72,8 @@ export class SahyogGanttTimeline extends Component {
         this._onMouseUp = this.onDragEnd.bind(this);
         this._onKeyDown = this._handleKeyDown.bind(this);
         this._onClickOutside = this._handleClickOutside.bind(this);
+        this._dragJustEnded = false;
+        this._preventSelect = (e) => e.preventDefault();
 
         onWillStart(async () => {
             await this.loadData();
@@ -365,7 +367,10 @@ export class SahyogGanttTimeline extends Component {
     // ---- Bar click → Popover ----
     onBarClick(entry, ev) {
         ev.stopPropagation();
-        if (this.state.drag.active) return;
+        if (this.state.drag.active || this._dragJustEnded) {
+            this._dragJustEnded = false;
+            return;
+        }
         this.state.popover = {
             visible: true,
             entry,
@@ -432,7 +437,10 @@ export class SahyogGanttTimeline extends Component {
 
     // ---- Cell click → Dialog ----
     onCellClick(volunteerId, date, ev) {
-        if (this.state.drag.active) return;
+        if (this.state.drag.active || this._dragJustEnded) {
+            this._dragJustEnded = false;
+            return;
+        }
         ev.stopPropagation();
         this.state.dialog = {
             visible: true,
@@ -482,8 +490,6 @@ export class SahyogGanttTimeline extends Component {
     _resolveColumnFromX(clientX) {
         const gridEl = this.gridRef.el;
         if (!gridEl) return -1;
-        const gridRect = gridEl.querySelector(".gantt-grid");
-        if (!gridRect) return -1;
         const cells = gridEl.querySelectorAll(".gantt-day-header");
         if (!cells.length) return -1;
         for (let i = 0; i < cells.length; i++) {
@@ -513,6 +519,8 @@ export class SahyogGanttTimeline extends Component {
     onDragStart(entry, edge, ev) {
         ev.preventDefault();
         ev.stopPropagation();
+        document.addEventListener("selectstart", this._preventSelect);
+        document.body.style.cursor = edge === "right" ? "ew-resize" : "grabbing";
         const dates = this.dateRange;
         const pos = computeBarPosition(entry, dates);
         if (!pos) return;
@@ -540,6 +548,8 @@ export class SahyogGanttTimeline extends Component {
     onCellDragStart(volunteerId, date, ev) {
         if (ev.button !== 0) return; // left click only
         ev.preventDefault();
+        document.addEventListener("selectstart", this._preventSelect);
+        document.body.style.cursor = "crosshair";
         this.state.drag = {
             active: true,
             type: "create",
@@ -568,11 +578,17 @@ export class SahyogGanttTimeline extends Component {
         const drag = { ...this.state.drag };
         const dates = this.dateRange;
 
-        // Reset drag state first
-        this._resetDrag();
-
         const colDelta = drag.currentCol - drag.startCol;
         const movedSignificantly = Math.abs(drag.currentX - drag.startX) > 15;
+
+        // Flag to prevent click from firing after a real drag
+        if (movedSignificantly) {
+            this._dragJustEnded = true;
+            setTimeout(() => { this._dragJustEnded = false; }, 50);
+        }
+
+        // Reset drag state
+        this._resetDrag();
 
         if (drag.type === "create") {
             if (movedSignificantly && colDelta !== 0) {
@@ -587,15 +603,8 @@ export class SahyogGanttTimeline extends Component {
                     startDate: startDate.toISODate(),
                     endDate: endDate.toISODate(),
                 };
-            } else {
-                // Single click — open dialog for single date
-                this.state.dialog = {
-                    visible: true,
-                    volunteerId: drag.volunteerId,
-                    startDate: drag.startDate,
-                    endDate: drag.startDate,
-                };
             }
+            // Single click on cell — handled by onCellClick, not here
             return;
         }
 
@@ -606,15 +615,7 @@ export class SahyogGanttTimeline extends Component {
 
         if (drag.type === "move") {
             const { newStart, newEnd } = computeDragMoveDates(entry.start_date, entry.end_date, colDelta);
-            // Check if row changed → new volunteer
-            let newVolunteerId = null;
-            if (drag.currentRow >= 0 && drag.currentRow !== drag.startRow) {
-                const vols = this.visibleVolunteers;
-                if (drag.currentRow < vols.length) {
-                    newVolunteerId = vols[drag.currentRow].id;
-                }
-            }
-            await this.updateEntryDates(entry, newStart, newEnd, newVolunteerId);
+            await this.updateEntryDates(entry, newStart, newEnd, null);
         } else if (drag.type === "resize") {
             // Resize: change end date
             const entryStart = luxon.DateTime.fromISO(entry.start_date).startOf("day");
@@ -631,6 +632,8 @@ export class SahyogGanttTimeline extends Component {
     }
 
     _resetDrag() {
+        document.removeEventListener("selectstart", this._preventSelect);
+        document.body.style.cursor = "";
         this.state.drag = {
             active: false, type: null, entryId: null,
             startCol: null, currentCol: null, startRow: null, currentRow: null,
@@ -700,12 +703,30 @@ export class SahyogGanttTimeline extends Component {
         const totalDays = this.dateRange.length;
         const color = ENTRY_COLORS[bar.entry.entry_type] || "#999";
         const dayIndex = bar.startCol - 2; // convert from 2-based to 0-based
-        const leftPct = (dayIndex / totalDays) * 100;
-        const widthPct = (bar.spanCols / totalDays) * 100;
         const top = bar.laneIndex * 26 + 4;
-        const isDragging = this.state.drag.active && this.state.drag.entryId === bar.entry.id;
-        const opacity = isDragging ? "opacity:0.5;" : "";
-        return `left:${leftPct}%;width:${Math.max(widthPct, (1 / totalDays) * 100)}%;top:${top}px;background:${color};${opacity}`;
+        const drag = this.state.drag;
+        const isDragging = drag.active && drag.entryId === bar.entry.id;
+
+        let leftPct, widthPct;
+
+        if (isDragging && drag.type === "move") {
+            const colDelta = drag.currentCol - drag.startCol;
+            const newDayIndex = Math.max(0, Math.min(dayIndex + colDelta, totalDays - bar.spanCols));
+            leftPct = (newDayIndex / totalDays) * 100;
+            widthPct = (bar.spanCols / totalDays) * 100;
+        } else if (isDragging && drag.type === "resize") {
+            const colDelta = drag.currentCol - drag.startCol;
+            const newSpan = Math.max(1, bar.spanCols + colDelta);
+            leftPct = (dayIndex / totalDays) * 100;
+            widthPct = (Math.min(newSpan, totalDays - dayIndex) / totalDays) * 100;
+        } else {
+            leftPct = (dayIndex / totalDays) * 100;
+            widthPct = (bar.spanCols / totalDays) * 100;
+        }
+
+        const opacity = isDragging ? "opacity:0.7;" : "";
+        const outline = isDragging ? "outline:2px dashed rgba(0,0,0,0.3);outline-offset:-1px;" : "";
+        return `left:${leftPct}%;width:${Math.max(widthPct, (1 / totalDays) * 100)}%;top:${top}px;background:${color};${opacity}${outline}`;
     }
 
     getRowMinHeight(row) {
