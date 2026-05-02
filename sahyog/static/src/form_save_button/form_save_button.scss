@@ -1,22 +1,59 @@
 /* ── Enhanced Save / Discard buttons for desktop ── */
-/* Adds text labels next to the default Odoo icons on larger screens */
+/* Replaces default icon with floppy disk + text label, properly aligned */
 
 @media (min-width: 768px) {
     .o_form_button_save {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px;
+        font-size: 0 !important;
+        padding: 6px 16px !important;
+        border-radius: 4px;
+
+        /* Hide the original icon */
+        .fa, .oi, i {
+            display: none !important;
+        }
+
+        &::before {
+            font-family: "FontAwesome";
+            content: "\f0c7"; /* fa-floppy-o */
+            font-size: 14px;
+            line-height: 1;
+        }
+
         &::after {
-            content: " Save";
+            content: "Save";
             font-size: 14px;
             font-weight: 500;
+            line-height: 1;
         }
-        padding: 6px 16px !important;
     }
 
     .o_form_button_cancel {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px;
+        font-size: 0 !important;
+        padding: 6px 16px !important;
+        border-radius: 4px;
+
+        .fa, .oi, i {
+            display: none !important;
+        }
+
+        &::before {
+            font-family: "FontAwesome";
+            content: "\f00d"; /* fa-times */
+            font-size: 14px;
+            line-height: 1;
+        }
+
         &::after {
-            content: " Discard";
+            content: "Discard";
             font-size: 14px;
             font-weight: 500;
+            line-height: 1;
         }
-        padding: 6px 16px !important;
     }
 }
