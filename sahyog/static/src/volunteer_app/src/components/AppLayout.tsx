@@ -26,8 +26,8 @@ import {
   IconUser,
   IconBell,
   IconCheck,
-  IconMenu2,
   IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
   IconBooks,
   IconSun,
   IconMoon,
@@ -79,6 +79,7 @@ const SIDEBAR_NAV = [
 const HEADER_H = 56;
 const BOTTOM_H = 64;
 const SIDEBAR_W = 280;
+const SIDEBAR_COLLAPSED_W = 64;
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -163,7 +164,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const activePath = location.pathname;
   const isProfileOpen = activePath === '/profile';
-  const showSidebar = isDesktop && sidebarOpen;
+  const showSidebar = isDesktop;
+  const sidebarWidth = sidebarOpen ? SIDEBAR_W : SIDEBAR_COLLAPSED_W;
   const showBottomNav = !isDesktop && !isProfileOpen;
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme('light');
@@ -190,38 +192,36 @@ export function AppLayout({ children }: AppLayoutProps) {
           height: HEADER_H,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingLeft: 16,
+          justifyContent: isDesktop ? 'flex-end' : 'space-between',
+          paddingLeft: isDesktop ? 0 : 16,
           paddingRight: 12,
+          marginLeft: showSidebar ? sidebarWidth : 0,
           backgroundColor: 'var(--mantine-color-body)',
           borderBottom: '1px solid var(--mantine-color-default-border)',
           position: 'sticky',
           top: 0,
           zIndex: 100,
+          transition: 'margin-left 0.2s ease',
         }}
       >
-        <Group gap="xs">
-          {isDesktop && (
-            <ActionIcon variant="subtle" size="lg" onClick={toggleSidebar} aria-label="Toggle sidebar">
-              {sidebarOpen ? <IconLayoutSidebarLeftCollapse size={22} /> : <IconMenu2 size={22} />}
-            </ActionIcon>
-          )}
-          {!isDesktop && isProfileOpen ? (
-            <Text fw={600} size="lg">Profile</Text>
-          ) : (
-            <Group gap={8} align="center">
-              <img
-                src="/sahyog/static/pwa/icon-192.png"
-                alt="Sahyog"
-                style={{ width: 28, height: 28, borderRadius: 6 }}
-              />
-              <Text fw={700} size="lg" c="blue">Sahyog</Text>
-            </Group>
-          )}
-        </Group>
+        {!isDesktop && (
+          <Group gap="xs">
+            {isProfileOpen ? (
+              <Text fw={600} size="lg">Profile</Text>
+            ) : (
+              <Group gap={8} align="center">
+                <img
+                  src="/sahyog/static/pwa/icon-192.png"
+                  alt="Sahyog"
+                  style={{ width: 28, height: 28, borderRadius: 6 }}
+                />
+                <Text fw={700} size="lg" c="blue">Sahyog</Text>
+              </Group>
+            )}
+          </Group>
+        )}
         <Group gap={6}>
           {!isDesktop && isProfileOpen ? (
-            /* Close button for profile — navigates back */
             <ActionIcon variant="subtle" size="lg" aria-label="Close profile" onClick={() => navigate(-1)}>
               <IconX size={22} />
             </ActionIcon>
@@ -245,31 +245,94 @@ export function AppLayout({ children }: AppLayoutProps) {
       </Box>
 
       <Box style={{ display: 'flex', flex: 1 }}>
-        {/* ── Desktop Sidebar ── */}
+        {/* ── Desktop Sidebar (Notion-style) ── */}
         {showSidebar && (
           <Box component="nav" style={{
-            width: SIDEBAR_W, flexShrink: 0,
+            width: sidebarWidth, flexShrink: 0,
             borderRight: '1px solid var(--mantine-color-default-border)',
             backgroundColor: 'var(--mantine-color-body)',
-            position: 'fixed', top: HEADER_H, bottom: 0, left: 0, paddingTop: 8, zIndex: 99,
+            position: 'fixed', top: 0, bottom: 0, left: 0, zIndex: 101,
+            display: 'flex', flexDirection: 'column',
+            transition: 'width 0.2s ease',
+            overflow: 'hidden',
           }}>
-            {SIDEBAR_NAV.map((item) => (
-              <NavLink key={item.path} label={item.label} leftSection={<item.icon size={20} />}
-                active={activePath === item.path} onClick={() => navigate(item.path)}
-                variant="filled" style={{ borderRadius: 0 }} />
-            ))}
+            {/* Sidebar header: logo + collapse toggle */}
+            <Box style={{
+              height: HEADER_H,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarOpen ? 'space-between' : 'center',
+              padding: sidebarOpen ? '0 12px 0 16px' : '0',
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}>
+              <Group gap={8} align="center" wrap="nowrap" style={{
+                opacity: sidebarOpen ? 1 : 0,
+                width: sidebarOpen ? 'auto' : 0,
+                transition: 'opacity 0.2s ease, width 0.2s ease',
+                overflow: 'hidden',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+              }}>
+                <img
+                  src="/sahyog/static/pwa/icon-192.png"
+                  alt="Sahyog"
+                  style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }}
+                />
+                <Text fw={700} size="lg" c="blue">Sahyog</Text>
+              </Group>
+              <ActionIcon variant="subtle" size={sidebarOpen ? 'sm' : 'lg'} onClick={toggleSidebar}
+                aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'} color="gray">
+                {sidebarOpen
+                  ? <IconLayoutSidebarLeftCollapse size={18} />
+                  : <IconLayoutSidebarLeftExpand size={22} />
+                }
+              </ActionIcon>
+            </Box>
+
+            {/* Nav items */}
+            <Box style={{ flex: 1, paddingTop: 8, overflow: 'hidden' }}>
+              {SIDEBAR_NAV.map((item) => {
+                const active = activePath === item.path;
+                const Icon = item.icon;
+                return sidebarOpen ? (
+                  <NavLink key={item.path} label={item.label} leftSection={<Icon size={20} />}
+                    active={active} onClick={() => navigate(item.path)}
+                    variant="filled" style={{ borderRadius: 0 }} />
+                ) : (
+                  <UnstyledButton
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    aria-label={item.label}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: 40,
+                      backgroundColor: active ? 'var(--mantine-color-blue-light)' : undefined,
+                      color: active ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-dimmed)',
+                    }}
+                  >
+                    <Icon size={20} />
+                  </UnstyledButton>
+                );
+              })}
+            </Box>
           </Box>
         )}
 
         {/* ── Main Content ── */}
         <Box component="main" style={{
           flex: 1,
-          marginLeft: showSidebar ? SIDEBAR_W : 0,
+          marginLeft: showSidebar ? sidebarWidth : 0,
           paddingBottom: isDesktop ? 16 : (isProfileOpen ? 16 : BOTTOM_H + 16),
           paddingTop: 16, paddingLeft: 16, paddingRight: 16,
           maxWidth: isDesktop ? undefined : 1024,
           marginInline: isDesktop ? undefined : 'auto',
           width: '100%', boxSizing: 'border-box',
+          transition: 'margin-left 0.2s ease',
         }}>
           {children}
         </Box>
