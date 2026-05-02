@@ -20,7 +20,9 @@ class Notification(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        # Email sending disabled — notifications are in-app only for now
+        for rec in records:
+            if not rec.email_sent:
+                rec._send_email()
         return records
 
     def action_mark_read(self):
