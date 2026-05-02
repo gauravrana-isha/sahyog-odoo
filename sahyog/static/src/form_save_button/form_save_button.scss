@@ -1,64 +1,22 @@
 /* ── Enhanced Save / Discard buttons for desktop ── */
+/* Adds text labels next to the default Odoo icons on larger screens */
 
-/* On screens wider than 768px, show text labels next to the icons */
 @media (min-width: 768px) {
-    /* Save button: icon + "Save" label */
     .o_form_button_save {
-        font-size: 0 !important; /* hide any existing text */
-
-        &::before {
-            font-family: "FontAwesome";
-            content: "\f0c7"; /* fa-floppy-o (save icon) */
-            font-size: 14px;
-            margin-right: 6px;
-        }
-
         &::after {
-            content: "Save";
+            content: " Save";
             font-size: 14px;
             font-weight: 500;
         }
-
-        /* Hide the original icon inside the button so we don't double up */
-        .fa, .oi, i {
-            display: none;
-        }
-
-        /* Make it look more prominent */
         padding: 6px 16px !important;
-        border-radius: 4px;
     }
 
-    /* Discard button: icon + "Discard" label */
     .o_form_button_cancel {
-        font-size: 0 !important;
-
-        &::before {
-            font-family: "FontAwesome";
-            content: "\f00d"; /* fa-times */
-            font-size: 14px;
-            margin-right: 6px;
-        }
-
         &::after {
-            content: "Discard";
+            content: " Discard";
             font-size: 14px;
             font-weight: 500;
         }
-
-        .fa, .oi, i {
-            display: none;
-        }
-
         padding: 6px 16px !important;
-        border-radius: 4px;
-    }
-}
-
-/* On mobile (< 768px), keep the default icon-only behavior */
-@media (max-width: 767px) {
-    .o_form_button_save,
-    .o_form_button_cancel {
-        /* Default Odoo styling — icon only */
     }
 }
