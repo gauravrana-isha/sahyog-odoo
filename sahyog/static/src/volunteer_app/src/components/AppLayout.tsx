@@ -77,6 +77,7 @@ const SIDEBAR_NAV = [
 ] as const;
 
 const HEADER_H = 56;
+const MOBILE_HEADER_H = 60;
 const BOTTOM_H = 64;
 const SIDEBAR_W = 280;
 const SIDEBAR_COLLAPSED_W = 64;
@@ -189,7 +190,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Box
         component="header"
         style={{
-          height: HEADER_H,
+          height: isDesktop ? HEADER_H : MOBILE_HEADER_H,
           display: 'flex',
           alignItems: 'center',
           justifyContent: isDesktop ? 'flex-end' : 'space-between',
@@ -207,15 +208,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         {!isDesktop && (
           <Group gap="xs">
             {isProfileOpen ? (
-              <Text fw={600} size="lg">Profile</Text>
+              <Text fw={600} size="xl">Profile</Text>
             ) : (
-              <Group gap={8} align="center">
+              <Group gap={10} align="center">
                 <img
                   src="/sahyog/static/pwa/icon-192.png"
                   alt="Sahyog"
-                  style={{ width: 28, height: 28, borderRadius: 6 }}
+                  style={{ width: 32, height: 32, borderRadius: 6 }}
                 />
-                <Text fw={700} size="lg" c="blue">Sahyog</Text>
+                <Text fw={700} size="xl" c="blue">Sahyog</Text>
               </Group>
             )}
           </Group>
@@ -237,7 +238,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Indicator>
               </ActionIcon>
               <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
-                <Avatar size={28} radius="xl" color="blue" src={volunteerId ? `/web/image/hr.employee/${volunteerId}/avatar_128` : undefined}><IconUser size={16} /></Avatar>
+                <Avatar size={32} radius="xl" color="blue" src={volunteerId ? `/web/image/hr.employee/${volunteerId}/avatar_128` : undefined}><IconUser size={18} /></Avatar>
               </ActionIcon>
             </>
           )}
