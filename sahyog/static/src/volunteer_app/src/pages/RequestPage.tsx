@@ -12,7 +12,7 @@ import {
   Card,
   SimpleGrid,
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+import { DatePickerInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -288,8 +288,8 @@ export function RequestPage() {
           {progIsRecurring ? (
             <>
               <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-                <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
-                <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
+                <DatePickerInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
+                <DatePickerInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
               </SimpleGrid>
               <SimpleGrid cols={2} spacing="sm">
                 <TextInput label="Start Time" type="time" value={progStartTime} onChange={(e) => setProgStartTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
@@ -300,13 +300,13 @@ export function RequestPage() {
             <>
               {/* Non-recurring: start date, start time, then end date, end time */}
               <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-                <DateInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
+                <DatePickerInput label="Start Date" placeholder="Pick start date" value={startDate} onChange={setStartDate} size="md" error={programDateErr && startDate && endDate ? programDateErr : undefined} />
                 {(progStartTime || !scheduleId) && (
                   <TextInput label="Start Time" type="time" value={progStartTime} onChange={(e) => setProgStartTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
                 )}
               </SimpleGrid>
               <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-                <DateInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
+                <DatePickerInput label="End Date" placeholder="Pick end date" value={endDate} onChange={setEndDate} size="md" minDate={startDate || undefined} />
                 {(progEndTime || !scheduleId) && (
                   <TextInput label="End Time" type="time" value={progEndTime} onChange={(e) => setProgEndTime(e.currentTarget.value)} size="md" readOnly={!!scheduleId} />
                 )}
@@ -323,8 +323,8 @@ export function RequestPage() {
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Select label="Break Type" placeholder="Select type" data={[{ value: 'personal', label: 'Personal' }, { value: 'health', label: 'Health' }, { value: 'family_emergency', label: 'Family Emergency' }]} value={breakType} onChange={setBreakType} size="md" />
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput label="Start Date" placeholder="Pick start date" value={breakStart} onChange={setBreakStart} size="md" error={breakDateErr && breakStart && breakEnd ? breakDateErr : undefined} />
-            <DateInput label="End Date" placeholder="Pick end date" value={breakEnd} onChange={setBreakEnd} size="md" minDate={breakStart || undefined} />
+            <DatePickerInput label="Start Date" placeholder="Pick start date" value={breakStart} onChange={setBreakStart} size="md" error={breakDateErr && breakStart && breakEnd ? breakDateErr : undefined} />
+            <DatePickerInput label="End Date" placeholder="Pick end date" value={breakEnd} onChange={setBreakEnd} size="md" minDate={breakStart || undefined} />
           </SimpleGrid>
           <TextInput label="Reason" placeholder="Optional" value={breakReason} onChange={(e) => setBreakReason(e.currentTarget.value)} size="md" />
           <Textarea label="Notes" placeholder="Optional" value={breakNotes} onChange={(e) => setBreakNotes(e.currentTarget.value)} minRows={2} autosize size="md" />
@@ -342,8 +342,8 @@ export function RequestPage() {
           )}
 
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput label="Start Date" placeholder="Pick start date" value={silenceStart} onChange={setSilenceStart} size="md" error={silenceDateErr && silenceStart && silenceEnd ? silenceDateErr : undefined} />
-            <DateInput label="End Date" placeholder="Pick end date" value={silenceEnd} onChange={setSilenceEnd} size="md" minDate={silenceStart || undefined} />
+            <DatePickerInput label="Start Date" placeholder="Pick start date" value={silenceStart} onChange={setSilenceStart} size="md" error={silenceDateErr && silenceStart && silenceEnd ? silenceDateErr : undefined} />
+            <DatePickerInput label="End Date" placeholder="Pick end date" value={silenceEnd} onChange={setSilenceEnd} size="md" minDate={silenceStart || undefined} />
           </SimpleGrid>
 
           {/* Recurring checkbox — auto-checked and disabled for 9pm-9am */}
@@ -364,7 +364,7 @@ export function RequestPage() {
 
       {requestType === 'unavailability' && (
         <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <DateInput label="Date" placeholder="Pick date" value={unavailDate} onChange={setUnavailDate} size="md" />
+          <DatePickerInput label="Date" placeholder="Pick date" value={unavailDate} onChange={setUnavailDate} size="md" />
           <SimpleGrid cols={2} spacing="sm">
             <TextInput label="Start Time" type="time" value={unavailStartTime} onChange={(e) => setUnavailStartTime(e.currentTarget.value)} size="md" error={unavailStartTimeErr} />
             <TextInput label="End Time" type="time" value={unavailEndTime} onChange={(e) => setUnavailEndTime(e.currentTarget.value)} size="md" error={unavailEndTimeErr || unavailTimeRangeErr} />

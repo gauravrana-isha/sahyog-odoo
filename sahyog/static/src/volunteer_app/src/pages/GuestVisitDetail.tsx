@@ -20,7 +20,7 @@ import {
   Center,
   ActionIcon,
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+import { DatePickerInput } from '@mantine/dates';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
@@ -488,8 +488,8 @@ export function GuestVisitDetail() {
 
           <Text size="sm" fw={500} c="dimmed" mt="sm">Visit Details</Text>
           <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DateInput label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" required />
-            <DateInput label="Departure Date" placeholder="Pick date" value={editable.departure_date} onChange={(v) => set('departure_date', v)} size="md" minDate={editable.arrival_date || undefined} />
+            <DatePickerInput label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" required />
+            <DatePickerInput label="Departure Date" placeholder="Pick date" value={editable.departure_date} onChange={(v) => set('departure_date', v)} size="md" minDate={editable.arrival_date || undefined} />
           </SimpleGrid>
           <Select label="Accommodation" placeholder="Select" data={ACCOMMODATION_OPTIONS} value={editable.accommodation_type} onChange={(v) => set('accommodation_type', v)} size="md" required />
           <TextInput label="Reference Of" value={editable.reference_of} onChange={(e) => set('reference_of', e.currentTarget.value)} size="md" />
