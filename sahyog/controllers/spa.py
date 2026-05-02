@@ -45,6 +45,40 @@ class SahyogSPA(http.Controller):
 </body>
 </html>"""
 
+    def _no_account_page(self):
+        """Return an HTML page for users who don't have a volunteer account."""
+        return """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <title>Sahyog — No Account</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { min-height: 100vh; min-height: 100dvh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; align-items: center; justify-content: center; }
+        .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px 32px; max-width: 420px; width: 90%; text-align: center; }
+        .icon { font-size: 48px; margin-bottom: 16px; }
+        .title { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .message { color: #868e96; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+        .logout-link { display: inline-block; margin-top: 16px; color: #868e96; font-size: 13px; text-decoration: none; }
+        .logout-link:hover { color: #495057; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🔒</div>
+        <div class="title">No Account Found</div>
+        <div class="message">
+            Your email is not registered as a volunteer in Sahyog.
+            <br/><br/>
+            Please contact your admin to get added to the system.
+        </div>
+        <a href="/web/session/logout?redirect=/sahyog/login" class="logout-link">Logout</a>
+    </div>
+</body>
+</html>"""
+
     @http.route(
         ['/sahyog/app', '/sahyog/app/<path:subpath>'],
         type='http', auth='user', website=False,
@@ -118,9 +152,14 @@ class SahyogSPA(http.Controller):
             [('user_id', '=', user.id)], limit=1)
         has_employee = bool(employee)
 
-        # Admin → backend, no employee → backend
-        if is_admin or not has_employee:
+        # Admin → backend, no employee → access denied
+        if is_admin:
             return request.redirect('/web')
+
+        if not has_employee:
+            return request.make_response(self._no_account_page(), headers=[
+                ('Content-Type', 'text/html; charset=utf-8'),
+            ])
 
         # Block volunteers whose base_status is 'away' or 'left'
         if employee.base_status in ('away', 'left'):
