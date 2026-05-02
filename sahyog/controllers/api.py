@@ -256,6 +256,10 @@ class SahyogAPI(http.Controller):
                 'emergency_contact_name': v.emergency_contact_name or '',
                 'emergency_contact_phone': v.emergency_contact_phone or '',
                 'emergency_contact_relation': v.emergency_contact_relation or '',
+                'silence_days_current_year': v.silence_days_current_year or 0,
+                'silence_days_total': v.silence_days_total or 0,
+                'break_days_current_year': v.break_days_current_year or 0,
+                'break_days_total': v.break_days_total or 0,
             })
         except Exception:
             _logger.exception('API error in get_profile')

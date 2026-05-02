@@ -71,8 +71,6 @@ class HrEmployee(models.Model):
     break_days_current_year = fields.Integer('Break Days (This Year)', compute='_compute_statistics', store=True)
     break_count_current_year = fields.Integer('Breaks (This Year)', compute='_compute_statistics', store=True)
     break_days_total = fields.Integer('Break Days (All Time)', compute='_compute_statistics', store=True)
-    program_count_current_year = fields.Integer('Programs (This Year)', compute='_compute_statistics', store=True)
-    program_count_total = fields.Integer('Programs (All Time)', compute='_compute_statistics', store=True)
 
     def _is_in_time_window(self, entry, now_time):
         """Check if *now_time* falls within entry's start_time..end_time.
@@ -201,10 +199,9 @@ class HrEmployee(models.Model):
     @api.depends(
         'silence_period_ids.status', 'silence_period_ids.start_date', 'silence_period_ids.end_date',
         'break_period_ids.status', 'break_period_ids.start_date', 'break_period_ids.end_date',
-        'volunteer_program_ids.completion_status', 'volunteer_program_ids.start_date', 'volunteer_program_ids.end_date',
     )
     def _compute_statistics(self):
-        """Compute day/count statistics for silence, breaks, and programs."""
+        """Compute day/count statistics for silence and breaks."""
         today = fields.Date.context_today(self)
         year_start = today.replace(month=1, day=1)
         year_end = today.replace(month=12, day=31)
@@ -239,15 +236,6 @@ class HrEmployee(models.Model):
                 for b in breaks_year
             )
             rec.break_count_current_year = len(breaks_year)
-
-            # ── Program count ──
-            programs_all = rec.volunteer_program_ids.filtered(
-                lambda p: p.completion_status in ('upcoming', 'on_going', 'done')
-            )
-            rec.program_count_total = len(programs_all)
-            rec.program_count_current_year = len(programs_all.filtered(
-                lambda p: p.start_date and p.start_date >= year_start and p.start_date <= year_end
-            ))
 
     @api.depends(
         'base_status',

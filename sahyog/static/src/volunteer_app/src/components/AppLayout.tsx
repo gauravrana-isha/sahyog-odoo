@@ -180,6 +180,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* ── PWA Install Banner (top of screen) ── */}
+      <InstallBanner />
+
       {/* ── Header ── */}
       <Box
         component="header"
@@ -206,7 +209,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           {!isDesktop && isProfileOpen ? (
             <Text fw={600} size="lg">Profile</Text>
           ) : (
-            <Text fw={700} size="lg" c="blue">Sahyog</Text>
+            <Group gap={8} align="center">
+              <img
+                src="/sahyog/static/pwa/icon-192.png"
+                alt="Sahyog"
+                style={{ width: 28, height: 28, borderRadius: 6 }}
+              />
+              <Text fw={700} size="lg" c="blue">Sahyog</Text>
+            </Group>
           )}
         </Group>
         <Group gap={6}>
@@ -313,9 +323,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           })}
         </Box>
       )}
-
-      {/* ── PWA Install Banner ── */}
-      <InstallBanner />
 
       {/* ── Notification Drawer ── */}
       <Drawer opened={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} position="right"

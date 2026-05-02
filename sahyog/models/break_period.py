@@ -35,6 +35,15 @@ class BreakPeriod(models.Model):
     ], required=True, default='approved')
     notes = fields.Text()
     created_by = fields.Many2one('res.users', default=lambda self: self.env.uid)
+    duration_days = fields.Integer('Days', compute='_compute_duration_days', store=True)
+
+    @api.depends('start_date', 'end_date')
+    def _compute_duration_days(self):
+        for rec in self:
+            if rec.start_date and rec.end_date:
+                rec.duration_days = (rec.end_date - rec.start_date).days + 1
+            else:
+                rec.duration_days = 0
 
     @api.depends('volunteer_id', 'break_type', 'start_date', 'end_date')
     def _compute_display_name(self):
