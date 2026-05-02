@@ -35,7 +35,7 @@ export function QRCodeDisplay({ feedbackLink, qrExpiry }: QRCodeDisplayProps) {
             alt="QR Code"
             width={200}
             height={200}
-            style={{ opacity: isExpired ? 0.3 : 1, borderRadius: 8 }}
+            style={{ opacity: isExpired ? 0.3 : 1, borderRadius: 0 }}
           />
           {isExpired && (
             <Text

@@ -83,6 +83,8 @@ export function ProfilePage() {
   });
   const [initial, setInitial] = useState<EditableFields>({ ...editable });
 
+  const [activeAccordion, setActiveAccordion] = useState<string | null>('contact');
+
   const fetchProfile = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -239,7 +241,7 @@ export function ProfilePage() {
 
       {/* ── VIEW MODE ── */}
       {!editing && (
-        <Accordion variant="separated" defaultValue="contact">
+        <Accordion variant="separated" value={activeAccordion} onChange={setActiveAccordion}>
           <Accordion.Item value="contact">
             <Accordion.Control>Contact</Accordion.Control>
             <Accordion.Panel>
@@ -323,43 +325,61 @@ export function ProfilePage() {
       )}
 
       {/* ── EDIT MODE ── */}
-      {editing && (
-        <Stack gap="md">
-          <Group justify="space-between">
-            <Text fw={600}>Editing Profile</Text>
-            <Button variant="subtle" color="gray" size="xs" leftSection={<IconX size={14} />}
-              onClick={() => { setEditing(false); setEditable({ ...initial }); }}>Cancel</Button>
-          </Group>
+      {editing && (() => {
+        const active = typeof activeAccordion === 'string' ? activeAccordion : null;
+        const showAll = !active;
+        const showSection = (name: string) => showAll || active === name;
+        return (
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text fw={600}>Editing {showAll ? 'Profile' : active === 'contact' ? 'Contact' : active === 'personal' ? 'Personal' : active === 'languages' ? 'Languages & Skills' : active === 'health' ? 'Health' : active === 'volunteer-info' ? 'Volunteer Info' : active === 'emergency' ? 'Emergency Contact' : 'Profile'}</Text>
+              <Button variant="subtle" color="gray" size="xs" leftSection={<IconX size={14} />}
+                onClick={() => { setEditing(false); setEditable({ ...initial }); }}>Cancel</Button>
+            </Group>
 
-          <Text size="sm" fw={500} c="dimmed">Contact</Text>
-          <TextInput label="Phone" value={editable.work_phone} onChange={(e) => set('work_phone', e.currentTarget.value)} size="md" />
-          <TextInput label="WhatsApp" value={editable.whatsapp_number} onChange={(e) => set('whatsapp_number', e.currentTarget.value)} size="md" />
+            {showSection('contact') && (<>
+              {!showAll && <Text size="sm" fw={500} c="dimmed">Contact</Text>}
+              {showAll && <Text size="sm" fw={500} c="dimmed">Contact</Text>}
+              <TextInput label="Phone" value={editable.work_phone} onChange={(e) => set('work_phone', e.currentTarget.value)} size="md" />
+              <TextInput label="WhatsApp" value={editable.whatsapp_number} onChange={(e) => set('whatsapp_number', e.currentTarget.value)} size="md" />
+            </>)}
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Personal</Text>
-          <TextInput label="Nationality" value={editable.x_nationality} onChange={(e) => set('x_nationality', e.currentTarget.value)} size="md" />
-          <TextInput label="City" value={editable.x_city} onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
-          <TextInput label="State" value={editable.x_state} onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
-          <Select label="Region" placeholder="Select region" data={regionOptions} value={editable.region_id} onChange={(v) => set('region_id', v ?? null)} size="md" clearable />
-          <Select label="Center" placeholder="Select center" data={centerOptions} value={editable.center_id} onChange={(v) => set('center_id', v ?? null)} size="md" clearable />
+            {showSection('personal') && (<>
+              <Text size="sm" fw={500} c="dimmed" mt="sm">Personal</Text>
+              <TextInput label="Nationality" value={editable.x_nationality} onChange={(e) => set('x_nationality', e.currentTarget.value)} size="md" />
+              <TextInput label="City" value={editable.x_city} onChange={(e) => set('x_city', e.currentTarget.value)} size="md" />
+              <TextInput label="State" value={editable.x_state} onChange={(e) => set('x_state', e.currentTarget.value)} size="md" />
+              <Select label="Region" placeholder="Select region" data={regionOptions} value={editable.region_id} onChange={(v) => set('region_id', v ?? null)} size="md" clearable />
+              <Select label="Center" placeholder="Select center" data={centerOptions} value={editable.center_id} onChange={(v) => set('center_id', v ?? null)} size="md" clearable />
+            </>)}
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Languages & Skills</Text>
-          <MultiSelect label="Languages" placeholder="Select languages" data={langOptions} value={editable.language_ids}
-            onChange={(val) => set('language_ids', val)} searchable size="md" />
-          <Textarea label="Special Skills" value={editable.special_skills} onChange={(e) => set('special_skills', e.currentTarget.value)} minRows={2} autosize size="md" />
+            {showSection('languages') && (<>
+              <Text size="sm" fw={500} c="dimmed" mt="sm">Languages & Skills</Text>
+              <MultiSelect label="Languages" placeholder="Select languages" data={langOptions} value={editable.language_ids}
+                onChange={(val) => set('language_ids', val)} searchable size="md" />
+              <Textarea label="Special Skills" value={editable.special_skills} onChange={(e) => set('special_skills', e.currentTarget.value)} minRows={2} autosize size="md" />
+            </>)}
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Health</Text>
-          <Textarea label="Health Conditions" value={editable.health_conditions} onChange={(e) => set('health_conditions', e.currentTarget.value)} minRows={2} autosize size="md" />
+            {showSection('health') && (<>
+              <Text size="sm" fw={500} c="dimmed" mt="sm">Health</Text>
+              <Textarea label="Health Conditions" value={editable.health_conditions} onChange={(e) => set('health_conditions', e.currentTarget.value)} minRows={2} autosize size="md" />
+            </>)}
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Volunteer Info</Text>
-          <MultiSelect label="Volunteer Types" placeholder="Select types" data={vtypeOptions} value={editable.volunteer_type_ids}
-            onChange={(val) => set('volunteer_type_ids', val)} searchable size="md" />
+            {showSection('volunteer-info') && (<>
+              <Text size="sm" fw={500} c="dimmed" mt="sm">Volunteer Info</Text>
+              <MultiSelect label="Volunteer Types" placeholder="Select types" data={vtypeOptions} value={editable.volunteer_type_ids}
+                onChange={(val) => set('volunteer_type_ids', val)} searchable size="md" />
+            </>)}
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Emergency Contact</Text>
-          <TextInput label="Name" value={editable.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.currentTarget.value)} size="md" />
-          <TextInput label="Phone" value={editable.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.currentTarget.value)} size="md" />
-          <TextInput label="Relation" value={editable.emergency_contact_relation} onChange={(e) => set('emergency_contact_relation', e.currentTarget.value)} size="md" />
-        </Stack>
-      )}
+            {showSection('emergency') && (<>
+              <Text size="sm" fw={500} c="dimmed" mt="sm">Emergency Contact</Text>
+              <TextInput label="Name" value={editable.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.currentTarget.value)} size="md" />
+              <TextInput label="Phone" value={editable.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.currentTarget.value)} size="md" />
+              <TextInput label="Relation" value={editable.emergency_contact_relation} onChange={(e) => set('emergency_contact_relation', e.currentTarget.value)} size="md" />
+            </>)}
+          </Stack>
+        );
+      })()}
 
       {!editing && (
         <Affix position={{ bottom: 24, right: 24 }}>
