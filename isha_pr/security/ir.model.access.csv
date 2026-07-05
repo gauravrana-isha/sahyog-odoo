@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pr_interaction_pr,access_pr_interaction_pr,model_pr_interaction,group_isha_pr,1,1,1,0
+access_pr_interaction_admin,access_pr_interaction_admin,model_pr_interaction,group_isha_pr_admin,1,1,1,1
+access_res_partner_pr,access_res_partner_pr,base.model_res_partner,group_isha_pr,1,1,1,0
+access_pr_program_pr,access_pr_program_pr,model_pr_program,group_isha_pr,1,1,1,0
+access_pr_program_admin,access_pr_program_admin,model_pr_program,group_isha_pr_admin,1,1,1,1
+access_pr_campaign_pr,access_pr_campaign_pr,model_pr_campaign,group_isha_pr,1,1,1,0
+access_pr_campaign_admin,access_pr_campaign_admin,model_pr_campaign,group_isha_pr_admin,1,1,1,1
+access_pr_contact_image_pr,access_pr_contact_image_pr,model_pr_contact_image,group_isha_pr,1,1,1,1
+access_pr_contact_image_admin,access_pr_contact_image_admin,model_pr_contact_image,group_isha_pr_admin,1,1,1,1
