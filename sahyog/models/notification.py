@@ -28,8 +28,23 @@ class Notification(models.Model):
     def action_mark_read(self):
         self.write({'is_read': True})
 
+    def to_spa_dict(self):
+        """Serialize for the volunteer SPA (contract for /sahyog/api/notifications)."""
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'type': self.type or '',
+            'title': self.title or '',
+            'message': self.message or '',
+            'is_read': self.is_read,
+            'create_date': str(self.create_date) if self.create_date else '',
+        }
+
     def _send_email(self):
         import re
+        # Sending mail is a system action — run privileged so it never depends
+        # on the permissions of whoever triggered the originating write.
+        self = self.sudo()
         template = self.env.ref('sahyog.mail_template_notification', raise_if_not_found=False)
         if not template:
             _logger.warning('Notification %s: mail template not found', self.id)

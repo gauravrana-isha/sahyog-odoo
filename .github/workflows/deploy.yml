@@ -15,9 +15,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build SPA
+      - name: Check generated types are in sync
+        run: python3 sahyog/scripts/gen_ts_types.py --check
+
+      - name: Build volunteer SPA
         run: |
           cd sahyog/static/src/volunteer_app
+          npm ci
+          npm test          # Vitest unit tests (fast, no Odoo needed)
+          npm run build
+
+      - name: Build PR SPA
+        run: |
+          cd isha_pr/static/src/pr_app
           npm ci
           npm run build
 
@@ -40,16 +50,22 @@ jobs:
             git reset --hard origin/main
           '"
 
-          # Copy the built SPA dist (not in git)
+          # Copy the built SPA dists (not in git)
           rsync -avz --chmod=D755,F644 \
             sahyog/static/dist/ \
             $SERVER_USER@$SERVER_IP:/tmp/sahyog-dist/
+          rsync -avz --chmod=D755,F644 \
+            isha_pr/static/dist/ \
+            $SERVER_USER@$SERVER_IP:/tmp/pr-dist/
 
-          # Move built files into place and restart
+          # Move built files into place, upgrade both modules, restart
           ssh $SERVER_USER@$SERVER_IP "sudo bash -c '
+            mkdir -p /home/gauravrana/sahyog-odoo/sahyog/static/dist
+            mkdir -p /home/gauravrana/sahyog-odoo/isha_pr/static/dist
             cp -r /tmp/sahyog-dist/* /home/gauravrana/sahyog-odoo/sahyog/static/dist/
-            rm -rf /tmp/sahyog-dist
+            cp -r /tmp/pr-dist/* /home/gauravrana/sahyog-odoo/isha_pr/static/dist/
+            rm -rf /tmp/sahyog-dist /tmp/pr-dist
             cd /home/gauravrana/sahyog-odoo
-            docker compose run --rm odoo odoo -d sahyog -u sahyog --stop-after-init
+            docker compose run --rm odoo odoo -d sahyog -u sahyog,isha_pr --stop-after-init
             docker compose restart odoo
           '"

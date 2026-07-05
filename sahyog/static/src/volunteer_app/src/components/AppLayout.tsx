@@ -38,6 +38,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import type { Notification } from '../types';
 import { InstallBanner } from './InstallBanner';
+import { useCan } from '../hooks/useCapabilities';
 
 function parseActionTokens(message: string): Array<{ type: 'text'; content: string } | { type: 'action'; path: string; entryType: string; id: string }> {
   const regex = /\[\[action:([^|]+)\|([^|]+)\|([^\]]+)\]\]/g;
@@ -57,23 +58,23 @@ function parseActionTokens(message: string): Array<{ type: 'text'; content: stri
   return parts;
 }
 
-// Bottom nav: 5 items (no Profile)
+// Bottom nav: 5 items (no Profile). `cap` gates visibility via /api/me.
 const BOTTOM_NAV = [
-  { label: 'Programs', icon: IconBooks, path: '/programs' },
-  { label: 'History', icon: IconHistory, path: '/history' },
-  { label: 'Guests', icon: IconUsers, path: '/guests' },
-  { label: 'Request', icon: IconSend, path: '/request' },
-  { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
+  { label: 'Programs', icon: IconBooks, path: '/programs', cap: 'view_programs' },
+  { label: 'History', icon: IconHistory, path: '/history', cap: 'view_history' },
+  { label: 'Guests', icon: IconUsers, path: '/guests', cap: 'view_guests' },
+  { label: 'Request', icon: IconSend, path: '/request', cap: 'submit_requests' },
+  { label: 'Calendar', icon: IconCalendar, path: '/calendar', cap: 'view_calendar' },
 ] as const;
 
-// Sidebar nav: all 6 items
+// Sidebar nav: all 6 items.
 const SIDEBAR_NAV = [
-  { label: 'Programs', icon: IconBooks, path: '/programs' },
-  { label: 'History', icon: IconHistory, path: '/history' },
-  { label: 'Guests', icon: IconUsers, path: '/guests' },
-  { label: 'Request', icon: IconSend, path: '/request' },
-  { label: 'Calendar', icon: IconCalendar, path: '/calendar' },
-  { label: 'Profile', icon: IconUser, path: '/profile' },
+  { label: 'Programs', icon: IconBooks, path: '/programs', cap: 'view_programs' },
+  { label: 'History', icon: IconHistory, path: '/history', cap: 'view_history' },
+  { label: 'Guests', icon: IconUsers, path: '/guests', cap: 'view_guests' },
+  { label: 'Request', icon: IconSend, path: '/request', cap: 'submit_requests' },
+  { label: 'Calendar', icon: IconCalendar, path: '/calendar', cap: 'view_calendar' },
+  { label: 'Profile', icon: IconUser, path: '/profile', cap: 'view_profile' },
 ] as const;
 
 const HEADER_H = 56;
@@ -91,6 +92,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [sidebarOpen, { toggle: toggleSidebar }] = useDisclosure(true);
+  const can = useCan();
+  const sidebarNav = SIDEBAR_NAV.filter((item) => can(item.cap));
+  const bottomNav = BOTTOM_NAV.filter((item) => can(item.cap));
 
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -294,7 +298,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             {/* Nav items */}
             <Box style={{ flex: 1, paddingTop: 8, overflow: 'hidden' }}>
-              {SIDEBAR_NAV.map((item) => {
+              {sidebarNav.map((item) => {
                 const active = activePath === item.path;
                 const Icon = item.icon;
                 return sidebarOpen ? (
@@ -350,7 +354,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           zIndex: 100,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}>
-          {BOTTOM_NAV.map((item) => {
+          {bottomNav.map((item) => {
             const active = activePath === item.path || (item.path === '/programs' && activePath === '/');
             const Icon = item.icon;
             return (

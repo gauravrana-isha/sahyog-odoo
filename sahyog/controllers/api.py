@@ -1,56 +1,20 @@
-import json
 import logging
 
 from odoo import http, fields
 from odoo.http import request
 from odoo.exceptions import ValidationError
 from odoo.addons.sahyog.models import silence_rules
+from odoo.addons.sahyog.controllers.base import SahyogControllerBase, json_endpoint
+from odoo.addons.sahyog import api_contract
 
 _logger = logging.getLogger(__name__)
 
 
-class SahyogAPI(http.Controller):
+class SahyogAPI(SahyogControllerBase, http.Controller):
 
-    # ── Helpers ─────────────────────────────────────────────────────────
-
-    def _get_volunteer(self):
-        """Return the hr.employee linked to the current user."""
-        return request.env['hr.employee'].sudo().search(
-            [('user_id', '=', request.env.uid)], limit=1,
-        )
-
-    def _check_volunteer_active(self, volunteer):
-        """Return a JSON error response if volunteer status is away/left, else None."""
-        if volunteer and volunteer.base_status in ('away', 'left'):
-            status_label = 'Away' if volunteer.base_status == 'away' else 'Left'
-            return self._json_error(
-                'Your account is currently marked as %s. Access is restricted.' % status_label,
-                status=403,
-            )
-        return None
-
-    def _json_success(self, data):
-        return request.make_json_response({'success': True, 'data': data})
-
-    def _json_error(self, message, status=200):
-        return request.make_json_response(
-            {'success': False, 'error': message}, status=status,
-        )
-
-    def _m2o(self, record, field_name):
-        """Return {id, name} for a Many2one field, or None."""
-        val = record[field_name]
-        if val:
-            return {'id': val.id, 'name': val.name}
-        return None
-
-    def _m2m(self, record, field_name):
-        """Return [{id, name}, ...] for a Many2many field."""
-        return [{'id': r.id, 'name': r.name} for r in record[field_name]]
-
-    def _parse_json(self):
-        """Parse JSON body from the request."""
-        return json.loads(request.httprequest.data)
+    # Request/response helpers (_get_volunteer, _self_employee_write,
+    # _check_volunteer_active, _json_success/_error, _m2o/_m2m, _parse_json)
+    # live in SahyogControllerBase. Only domain-specific helpers stay here.
 
     def _check_overlaps(self, volunteer_id, start_date, end_date, start_time='', end_time='', exclude_model=None, exclude_id=None):
         """Check for overlapping silence/break/program entries. Returns list of warning strings.
@@ -99,7 +63,7 @@ class SahyogAPI(http.Controller):
         if exclude_model == 'sahyog.silence.period' and exclude_id:
             silence_domain.append(('id', '!=', exclude_id))
 
-        for s in request.env['sahyog.silence.period'].sudo().search(silence_domain):
+        for s in request.env['sahyog.silence.period'].search(silence_domain):
             if times_overlap(start_time, end_time, s.start_time or '', s.end_time or ''):
                 stype = dict(s._fields['silence_type'].selection).get(s.silence_type, '') if s.silence_type else 'Silence'
                 warnings.append(
@@ -116,7 +80,7 @@ class SahyogAPI(http.Controller):
         if exclude_model == 'sahyog.break.period' and exclude_id:
             break_domain.append(('id', '!=', exclude_id))
 
-        for b in request.env['sahyog.break.period'].sudo().search(break_domain):
+        for b in request.env['sahyog.break.period'].search(break_domain):
             if times_overlap(start_time, end_time, b.start_time or '', b.end_time or ''):
                 btype = dict(b._fields['break_type'].selection).get(b.break_type, '') if b.break_type else 'Break'
                 warnings.append(
@@ -133,12 +97,50 @@ class SahyogAPI(http.Controller):
         if exclude_model == 'sahyog.volunteer.program' and exclude_id:
             prog_domain.append(('id', '!=', exclude_id))
 
-        for p in request.env['sahyog.volunteer.program'].sudo().search(prog_domain):
+        for p in request.env['sahyog.volunteer.program'].search(prog_domain):
             warnings.append(
                 'Overlaps with program %s (%s to %s)' % (p.program_id.name or '', p.start_date, p.end_date)
             )
 
         return warnings
+
+    # ── Identity & capabilities ─────────────────────────────────────────
+
+    @http.route('/sahyog/api/me', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    @json_endpoint
+    def get_me(self, **kw):
+        """Identity + capability flags for the current user.
+
+        Single source of truth for SPA navigation/routing. IMPORTANT: the
+        ``can`` flags are cosmetic UX gating ONLY — every endpoint independently
+        enforces access through ACLs + record rules, so hiding a nav item never
+        substitutes for backend authorization. See SECURITY_REFACTOR.md.
+
+        Uses the ``json_endpoint`` decorator: it returns raw data (auto-wrapped
+        in the success envelope) and lets the decorator map errors uniformly.
+        """
+        user = request.env.user
+        volunteer = self._get_volunteer()
+        is_admin = user.has_group('sahyog.group_sahyog_admin')
+        is_volunteer = user.has_group('sahyog.group_sahyog_volunteer')
+        # Away/left volunteers keep identity but lose feature access.
+        active = bool(volunteer) and volunteer.base_status not in ('away', 'left')
+        # Built from api_contract so the backend and SPA cannot drift (P2.3).
+        can = {k: (is_volunteer and active) for k in api_contract.FEATURE_CAPABILITIES}
+        can['view_profile'] = is_volunteer
+        can['admin'] = is_admin
+        return {
+            'user': {'id': user.id, 'name': user.name, 'login': user.login},
+            'volunteer': {
+                'id': volunteer.id,
+                'name': volunteer.name or '',
+                'base_status': volunteer.base_status or '',
+                'computed_status': volunteer.computed_status or '',
+            } if volunteer else None,
+            'groups': {'admin': is_admin, 'volunteer': is_volunteer},
+            'can': can,
+        }
 
     # ── Dashboard ───────────────────────────────────────────────────────
 
@@ -156,24 +158,24 @@ class SahyogAPI(http.Controller):
 
             today = fields.Date.context_today(request.env['hr.employee'])
 
-            completed_programs = request.env['sahyog.volunteer.program'].sudo().search_count([
+            completed_programs = request.env['sahyog.volunteer.program'].search_count([
                 ('volunteer_id', '=', volunteer.id),
                 ('completion_status', '=', 'done'),
             ])
 
-            upcoming_silences = request.env['sahyog.silence.period'].sudo().search([
+            upcoming_silences = request.env['sahyog.silence.period'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('end_date', '>=', today),
                 ('status', 'in', ('approved', 'on_going')),
             ], order='start_date asc')
 
-            upcoming_breaks = request.env['sahyog.break.period'].sudo().search([
+            upcoming_breaks = request.env['sahyog.break.period'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('end_date', '>=', today),
                 ('status', 'in', ('approved', 'on_going')),
             ], order='start_date asc')
 
-            upcoming_programs = request.env['sahyog.volunteer.program'].sudo().search([
+            upcoming_programs = request.env['sahyog.volunteer.program'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('end_date', '>=', today),
                 ('completion_status', '=', 'upcoming'),
@@ -304,7 +306,7 @@ class SahyogAPI(http.Controller):
             if 'sex' in data:
                 vals['sex'] = data['sex'] if data['sex'] else False
             if vals:
-                volunteer.sudo().write(vals)
+                self._self_employee_write(volunteer, vals)
             return self._json_success({'success': True})
         except ValidationError as e:
             return self._json_error(str(e))
@@ -325,7 +327,7 @@ class SahyogAPI(http.Controller):
             if not image_b64:
                 return self._json_error('No image data provided')
 
-            volunteer.sudo().write({'image_1920': image_b64})
+            self._self_employee_write(volunteer, {'image_1920': image_b64})
             return self._json_success({'success': True})
         except ValidationError as e:
             return self._json_error(str(e))
@@ -343,20 +345,10 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            silences = request.env['sahyog.silence.period'].sudo().search(
+            silences = request.env['sahyog.silence.period'].search(
                 [('volunteer_id', '=', volunteer.id)], order='start_date desc',
             )
-            return self._json_success([{
-                'id': s.id,
-                'start_date': str(s.start_date),
-                'end_date': str(s.end_date),
-                'silence_type': s.silence_type or '',
-                'status': s.status,
-                'notes': s.notes or '',
-                'is_recurring': s.is_recurring,
-                'start_time': s.start_time or '',
-                'end_time': s.end_time or '',
-            } for s in silences])
+            return self._json_success([s.to_spa_dict() for s in silences])
         except Exception:
             _logger.exception('API error in get_silence')
             return self._json_error('Internal server error', status=500)
@@ -391,7 +383,7 @@ class SahyogAPI(http.Controller):
             }
             if data.get('program_id'):
                 vals['program_id'] = int(data['program_id'])
-            record = request.env['sahyog.silence.period'].sudo().create(vals)
+            record = request.env['sahyog.silence.period'].create(vals)
 
             # Advisory silence limit warning
             warning = None
@@ -399,7 +391,7 @@ class SahyogAPI(http.Controller):
                 start_date = fields.Date.from_string(data['start_date'])
                 year = start_date.year
                 annual_total = silence_rules.calculate_annual_silence_days(
-                    request.env.sudo(), volunteer.id, year,
+                    request.env, volunteer.id, year,
                 )
                 _min_days, max_days = silence_rules.get_volunteer_limits(volunteer)
                 if max_days is not None and annual_total > max_days:
@@ -437,21 +429,10 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            breaks = request.env['sahyog.break.period'].sudo().search(
+            breaks = request.env['sahyog.break.period'].search(
                 [('volunteer_id', '=', volunteer.id)], order='start_date desc',
             )
-            return self._json_success([{
-                'id': b.id,
-                'start_date': str(b.start_date),
-                'end_date': str(b.end_date),
-                'break_type': b.break_type or '',
-                'status': b.status,
-                'reason': b.reason or '',
-                'notes': b.notes or '',
-                'is_recurring': b.is_recurring,
-                'start_time': b.start_time or '',
-                'end_time': b.end_time or '',
-            } for b in breaks])
+            return self._json_success([b.to_spa_dict() for b in breaks])
         except Exception:
             _logger.exception('API error in get_breaks')
             return self._json_error('Internal server error', status=500)
@@ -468,7 +449,7 @@ class SahyogAPI(http.Controller):
             today = fields.Date.context_today(request.env['hr.employee'])
             end_date = fields.Date.from_string(data['end_date'])
             status = 'done' if end_date < today else 'pending_admin'
-            record = request.env['sahyog.break.period'].sudo().create({
+            record = request.env['sahyog.break.period'].create({
                 'volunteer_id': volunteer.id,
                 'break_type': data.get('break_type', 'personal'),
                 'start_date': data['start_date'],
@@ -500,7 +481,7 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            enrollments = request.env['sahyog.volunteer.program'].sudo().search(
+            enrollments = request.env['sahyog.volunteer.program'].search(
                 [('volunteer_id', '=', volunteer.id)], order='start_date desc',
             )
             return self._json_success([{
@@ -521,7 +502,7 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_available_programs(self, **kw):
         try:
-            programs = request.env['sahyog.program'].sudo().search([])
+            programs = request.env['sahyog.program'].search([])
             return self._json_success([{
                 'id': p.id,
                 'name': p.name or '',
@@ -543,21 +524,21 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             # Completed program IDs (done enrollments)
-            completed_enrollments = request.env['sahyog.volunteer.program'].sudo().search([
+            completed_enrollments = request.env['sahyog.volunteer.program'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('completion_status', '=', 'done'),
             ])
             completed_program_ids = set(completed_enrollments.mapped('program_id.id'))
 
             # Current enrollment program IDs (any non-dropped enrollment)
-            current_enrollments = request.env['sahyog.volunteer.program'].sudo().search([
+            current_enrollments = request.env['sahyog.volunteer.program'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('completion_status', 'not in', ['dropped']),
             ])
             current_program_ids = set(current_enrollments.mapped('program_id.id'))
 
             # All programs
-            all_programs = request.env['sahyog.program'].sudo().search([])
+            all_programs = request.env['sahyog.program'].search([])
 
             suggested = []
             for prog in all_programs:
@@ -592,7 +573,7 @@ class SahyogAPI(http.Controller):
             volunteer = self._get_volunteer()
 
             # Only show main and hatha program types
-            eligible_programs = request.env['sahyog.program'].sudo().search([
+            eligible_programs = request.env['sahyog.program'].search([
                 ('program_type', 'in', ('main', 'hatha')),
             ])
             eligible_program_ids = eligible_programs.ids
@@ -601,7 +582,7 @@ class SahyogAPI(http.Controller):
             completed_program_ids = set()
             completed_base_names = set()
             if volunteer:
-                completed_enrollments = request.env['sahyog.volunteer.program'].sudo().search([
+                completed_enrollments = request.env['sahyog.volunteer.program'].search([
                     ('volunteer_id', '=', volunteer.id),
                     ('completion_status', '=', 'done'),
                 ])
@@ -617,10 +598,10 @@ class SahyogAPI(http.Controller):
             # Also exclude prerequisites of completed programs
             completed_prereq_ids = set()
             if completed_program_ids:
-                for prog in request.env['sahyog.program'].sudo().browse(list(completed_program_ids)):
+                for prog in request.env['sahyog.program'].browse(list(completed_program_ids)):
                     completed_prereq_ids.update(prog.prerequisite_ids.ids)
 
-            schedules = request.env['sahyog.program.schedule'].sudo().search([
+            schedules = request.env['sahyog.program.schedule'].search([
                 ('schedule_status', '=', 'upcoming'),
                 ('program_id', 'in', eligible_program_ids),
             ], order='start_date asc')
@@ -669,7 +650,7 @@ class SahyogAPI(http.Controller):
                 auth='user', methods=['GET'], csrf=False)
     def get_program_schedules(self, program_id, **kw):
         try:
-            schedules = request.env['sahyog.program.schedule'].sudo().search([
+            schedules = request.env['sahyog.program.schedule'].search([
                 ('program_id', '=', program_id),
                 ('schedule_status', '=', 'upcoming'),
             ])
@@ -717,7 +698,7 @@ class SahyogAPI(http.Controller):
             }
             if data.get('schedule_id'):
                 vals['schedule_id'] = int(data['schedule_id'])
-            record = request.env['sahyog.volunteer.program'].sudo().create(vals)
+            record = request.env['sahyog.volunteer.program'].create(vals)
             overlap_warnings = self._check_overlaps(
                 volunteer.id, data['start_date'], data['end_date'],
                 exclude_model='sahyog.volunteer.program', exclude_id=record.id,
@@ -740,17 +721,10 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            notifications = request.env['sahyog.notification'].sudo().search(
+            notifications = request.env['sahyog.notification'].search(
                 [('volunteer_id', '=', volunteer.id)], order='create_date desc',
             )
-            return self._json_success([{
-                'id': n.id,
-                'type': n.type or '',
-                'title': n.title or '',
-                'message': n.message or '',
-                'is_read': n.is_read,
-                'create_date': str(n.create_date) if n.create_date else '',
-            } for n in notifications])
+            return self._json_success([n.to_spa_dict() for n in notifications])
         except Exception:
             _logger.exception('API error in get_notifications')
             return self._json_error('Internal server error', status=500)
@@ -763,7 +737,7 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            count = request.env['sahyog.notification'].sudo().search_count([
+            count = request.env['sahyog.notification'].search_count([
                 ('volunteer_id', '=', volunteer.id),
                 ('is_read', '=', False),
             ])
@@ -782,7 +756,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             notif_id = int(data.get('notification_id', 0))
-            notif = request.env['sahyog.notification'].sudo().browse(notif_id)
+            notif = request.env['sahyog.notification'].browse(notif_id)
             if not notif.exists():
                 return self._json_error('Notification not found')
             if notif.volunteer_id.id != volunteer.id:
@@ -803,7 +777,7 @@ class SahyogAPI(http.Controller):
             volunteer = self._get_volunteer()
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
-            notifs = request.env['sahyog.notification'].sudo().search([
+            notifs = request.env['sahyog.notification'].search([
                 ('volunteer_id', '=', volunteer.id),
                 ('is_read', '=', False),
             ])
@@ -820,7 +794,7 @@ class SahyogAPI(http.Controller):
             volunteer = self._get_volunteer()
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
-            notifs = request.env['sahyog.notification'].sudo().search([
+            notifs = request.env['sahyog.notification'].search([
                 ('volunteer_id', '=', volunteer.id),
             ])
             notifs.unlink()
@@ -838,7 +812,7 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
             data = self._parse_json()
             notif_id = int(data.get('notification_id', 0))
-            notif = request.env['sahyog.notification'].sudo().browse(notif_id)
+            notif = request.env['sahyog.notification'].browse(notif_id)
             if not notif.exists():
                 return self._json_error('Notification not found')
             if notif.volunteer_id.id != volunteer.id:
@@ -859,7 +833,7 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            slots = request.env['sahyog.unavailability.slot'].sudo().search(
+            slots = request.env['sahyog.unavailability.slot'].search(
                 [('volunteer_id', '=', volunteer.id)], order='date desc',
             )
             return self._json_success([{
@@ -882,7 +856,7 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             data = self._parse_json()
-            record = request.env['sahyog.unavailability.slot'].sudo().create({
+            record = request.env['sahyog.unavailability.slot'].create({
                 'volunteer_id': volunteer.id,
                 'date': data['date'],
                 'start_time': data['start_time'],
@@ -906,7 +880,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             slot_id = int(data.get('slot_id', 0))
-            slot = request.env['sahyog.unavailability.slot'].sudo().browse(slot_id)
+            slot = request.env['sahyog.unavailability.slot'].browse(slot_id)
             if not slot.exists():
                 return self._json_error('Unavailability slot not found')
             if slot.volunteer_id.id != volunteer.id:
@@ -926,7 +900,7 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_volunteer_types(self, **kw):
         try:
-            types = request.env['sahyog.volunteer.type'].sudo().search([])
+            types = request.env['sahyog.volunteer.type'].search([])
             return self._json_success([{'id': t.id, 'name': t.name} for t in types])
         except Exception:
             _logger.exception('API error in get_volunteer_types')
@@ -936,7 +910,7 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_languages(self, **kw):
         try:
-            langs = request.env['sahyog.language'].sudo().search([])
+            langs = request.env['sahyog.language'].search([])
             return self._json_success([{'id': l.id, 'name': l.name} for l in langs])
         except Exception:
             _logger.exception('API error in get_languages')
@@ -946,7 +920,7 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_regions(self, **kw):
         try:
-            regions = request.env['sahyog.region'].sudo().search([])
+            regions = request.env['sahyog.region'].search([])
             return self._json_success([{'id': r.id, 'name': r.name} for r in regions])
         except Exception:
             _logger.exception('API error in get_regions')
@@ -956,7 +930,7 @@ class SahyogAPI(http.Controller):
                 methods=['GET'], csrf=False)
     def get_centers(self, **kw):
         try:
-            centers = request.env['sahyog.center'].sudo().search([])
+            centers = request.env['sahyog.center'].search([])
             return self._json_success([{'id': c.id, 'name': c.name} for c in centers])
         except Exception:
             _logger.exception('API error in get_centers')
@@ -974,7 +948,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             record_id = int(data.get('id', 0))
-            record = request.env['sahyog.silence.period'].sudo().browse(record_id)
+            record = request.env['sahyog.silence.period'].browse(record_id)
             if not record.exists():
                 return self._json_error('Silence period not found')
             if record.volunteer_id.id != volunteer.id:
@@ -998,7 +972,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             record_id = int(data.get('id', 0))
-            record = request.env['sahyog.break.period'].sudo().browse(record_id)
+            record = request.env['sahyog.break.period'].browse(record_id)
             if not record.exists():
                 return self._json_error('Break period not found')
             if record.volunteer_id.id != volunteer.id:
@@ -1022,7 +996,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             record_id = int(data.get('id', 0))
-            record = request.env['sahyog.volunteer.program'].sudo().browse(record_id)
+            record = request.env['sahyog.volunteer.program'].browse(record_id)
             if not record.exists():
                 return self._json_error('Program enrollment not found')
             if record.volunteer_id.id != volunteer.id:
@@ -1047,7 +1021,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             record_id = int(data.get('id', 0))
-            record = request.env[model].sudo().browse(record_id)
+            record = request.env[model].browse(record_id)
             if not record.exists():
                 return self._json_error('Record not found')
             if record.volunteer_id.id != volunteer.id:
@@ -1108,7 +1082,7 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            meetings = request.env['sahyog.meeting'].sudo().search([
+            meetings = request.env['sahyog.meeting'].search([
                 '|',
                 ('volunteer_id', '=', volunteer.id),
                 ('meeting_with_id', '=', volunteer.id),
@@ -1138,7 +1112,7 @@ class SahyogAPI(http.Controller):
             if not volunteer:
                 return self._json_error('No volunteer record linked to your account')
 
-            meeting = request.env['sahyog.meeting'].sudo().browse(meeting_id)
+            meeting = request.env['sahyog.meeting'].browse(meeting_id)
             if not meeting.exists():
                 return self._json_error('Meeting not found')
             if meeting.volunteer_id.id != volunteer.id and meeting.meeting_with_id.id != volunteer.id:
@@ -1169,7 +1143,7 @@ class SahyogAPI(http.Controller):
                 return self._json_error('No volunteer record linked to your account')
 
             data = self._parse_json()
-            record = request.env['sahyog.meeting'].sudo().create({
+            record = request.env['sahyog.meeting'].create({
                 'title': data['title'],
                 'volunteer_id': volunteer.id,
                 'meeting_with_id': int(data['meeting_with_id']),
@@ -1190,12 +1164,18 @@ class SahyogAPI(http.Controller):
 
             ACTIVE_STATUSES = ('approved', 'on_going', 'upcoming')
 
+            # Conflict detection must read BOTH participants' private silence/
+            # break/program/unavailability records. A volunteer cannot see the
+            # OTHER participant's rows through record rules, so this scan is a
+            # deliberate, read-only superuser escalation. See SECURITY_REFACTOR.md.
+            conflict_env = request.env.sudo()
+
             for pid in participant_ids:
-                participant = request.env['hr.employee'].sudo().browse(pid)
+                participant = conflict_env['hr.employee'].browse(pid)
                 pname = participant.name or 'Unknown'
 
                 # Check silence periods
-                silences = request.env['sahyog.silence.period'].sudo().search([
+                silences = conflict_env['sahyog.silence.period'].search([
                     ('volunteer_id', '=', pid),
                     ('status', 'in', ACTIVE_STATUSES),
                     ('start_date', '<=', meeting_date),
@@ -1208,7 +1188,7 @@ class SahyogAPI(http.Controller):
                     )
 
                 # Check break periods
-                breaks = request.env['sahyog.break.period'].sudo().search([
+                breaks = conflict_env['sahyog.break.period'].search([
                     ('volunteer_id', '=', pid),
                     ('status', 'in', ACTIVE_STATUSES),
                     ('start_date', '<=', meeting_date),
@@ -1221,7 +1201,7 @@ class SahyogAPI(http.Controller):
                     )
 
                 # Check program periods
-                programs = request.env['sahyog.volunteer.program'].sudo().search([
+                programs = conflict_env['sahyog.volunteer.program'].search([
                     ('volunteer_id', '=', pid),
                     ('completion_status', 'in', ACTIVE_STATUSES),
                     ('start_date', '<=', meeting_date),
@@ -1234,7 +1214,7 @@ class SahyogAPI(http.Controller):
                     )
 
                 # Check unavailability slot time overlap
-                slots = request.env['sahyog.unavailability.slot'].sudo().search([
+                slots = conflict_env['sahyog.unavailability.slot'].search([
                     ('volunteer_id', '=', pid),
                     ('date', '=', meeting_date),
                 ])
@@ -1262,7 +1242,7 @@ class SahyogAPI(http.Controller):
 
             data = self._parse_json()
             record_id = int(data.get('id', 0))
-            record = request.env['sahyog.meeting'].sudo().browse(record_id)
+            record = request.env['sahyog.meeting'].browse(record_id)
             if not record.exists():
                 return self._json_error('Meeting not found')
             if record.volunteer_id.id != volunteer.id and record.meeting_with_id.id != volunteer.id:
@@ -1274,292 +1254,6 @@ class SahyogAPI(http.Controller):
             return self._json_error(str(e))
         except Exception:
             _logger.exception('API error in cancel_meeting')
-            return self._json_error('Internal server error', status=500)
-
-    # ── Guest Visits ────────────────────────────────────────────────────
-
-    def _serialize_visit(self, v, full=False):
-        """Serialize a guest visit record. If full=True, include all fields."""
-        data = {
-            'id': v.id,
-            'main_guest_name': v.main_guest_name or '',
-            'arrival_date': str(v.arrival_date) if v.arrival_date else '',
-            'departure_date': str(v.departure_date) if v.departure_date else '',
-            'state': v.state or 'draft',
-            'feedback_count': v.feedback_count or 0,
-            'qr_token': v.qr_token or '',
-            'feedback_link': v.feedback_link or '',
-            'qr_expiry': str(v.qr_expiry) if v.qr_expiry else '',
-            'google_form_synced': v.google_form_synced,
-            'volunteer_id': self._m2o(v, 'volunteer_id'),
-            'region_id': self._m2o(v, 'region_id'),
-            'center_id': self._m2o(v, 'center_id'),
-        }
-        if full:
-            data.update({
-                'gender': v.gender or '',
-                'designation_company': v.designation_company or '',
-                'company_sector': v.company_sector or '',
-                'phone': v.phone or '',
-                'email': v.email or '',
-                'address': v.address or '',
-                'guest_region': v.guest_region or '',
-                'accommodation_type': v.accommodation_type or '',
-                'reference_of': v.reference_of or '',
-                'poc_name': v.poc_name or '',
-                'poc_contact': v.poc_contact or '',
-                'place_event_ids': self._m2m(v, 'place_event_ids'),
-                'places_other': v.places_other or '',
-                'accompanying_guest_count': v.accompanying_guest_count or 0,
-                'experience_rating': v.experience_rating or '',
-                'experience_details': v.experience_details or '',
-                'action_required': v.action_required or '',
-                'compliments_offered': v.compliments_offered or '',
-                'other_remarks': v.other_remarks or '',
-                'submitter_email': v.submitter_email or '',
-                'google_form_error': v.google_form_error or '',
-            })
-        return data
-
-    @http.route('/sahyog/api/guest-visits', type='http', auth='user',
-                methods=['GET'], csrf=False)
-    def get_guest_visits(self, **kw):
-        """Return current volunteer's visits (own + same region)."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            domain = ['|',
-                ('volunteer_id', '=', volunteer.id),
-                ('region_id', '=', volunteer.region_id.id),
-            ]
-            visits = request.env['sahyog.guest.visit'].sudo().search(
-                domain, order='create_date desc',
-            )
-            return self._json_success([self._serialize_visit(v) for v in visits])
-        except Exception:
-            _logger.exception('API error in get_guest_visits')
-            return self._json_error('Internal server error', status=500)
-
-    @http.route('/sahyog/api/guest-visits/create', type='http', auth='user',
-                methods=['POST'], csrf=False)
-    def create_guest_visit(self, **kw):
-        """Create a Guest Visit. Supports Quick Create (just main_guest_name) or full field set."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            data = self._parse_json()
-            if not data.get('main_guest_name'):
-                return self._json_error('main_guest_name is required')
-
-            vals = {
-                'volunteer_id': volunteer.id,
-                'main_guest_name': data['main_guest_name'],
-            }
-
-            # Optional fields
-            text_fields = (
-                'gender', 'designation_company', 'company_sector', 'phone',
-                'email', 'address', 'guest_region', 'accommodation_type', 'reference_of',
-                'poc_name', 'poc_contact', 'places_other', 'experience_rating',
-                'experience_details', 'action_required', 'compliments_offered',
-                'other_remarks',
-            )
-            for f in text_fields:
-                if f in data:
-                    vals[f] = data[f]
-
-            date_fields = ('arrival_date', 'departure_date')
-            for f in date_fields:
-                if data.get(f):
-                    vals[f] = data[f]
-
-            if 'accompanying_guest_count' in data:
-                vals['accompanying_guest_count'] = int(data['accompanying_guest_count'])
-
-            if 'place_event_ids' in data:
-                ids = [int(i) for i in data['place_event_ids']]
-                vals['place_event_ids'] = [(6, 0, ids)]
-
-            record = request.env['sahyog.guest.visit'].sudo().create(vals)
-            return self._json_success(self._serialize_visit(record, full=True))
-        except ValidationError as e:
-            return self._json_error(str(e))
-        except Exception:
-            _logger.exception('API error in create_guest_visit')
-            return self._json_error('Internal server error', status=500)
-
-    @http.route('/sahyog/api/guest-visits/<int:visit_id>/update', type='http',
-                auth='user', methods=['POST'], csrf=False)
-    def update_guest_visit(self, visit_id, **kw):
-        """Update a Guest Visit. Transitions state to complete when all required fields are present."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            visit = request.env['sahyog.guest.visit'].sudo().browse(visit_id)
-            if not visit.exists():
-                return self._json_error('Guest visit not found')
-            # Check ownership or same region
-            if visit.volunteer_id.id != volunteer.id and visit.region_id.id != volunteer.region_id.id:
-                return self._json_error('Access denied', status=403)
-
-            data = self._parse_json()
-            vals = {}
-
-            text_fields = (
-                'main_guest_name', 'gender', 'designation_company', 'company_sector',
-                'phone', 'email', 'address', 'guest_region', 'accommodation_type', 'reference_of',
-                'poc_name', 'poc_contact', 'places_other', 'experience_rating',
-                'experience_details', 'action_required', 'compliments_offered',
-                'other_remarks',
-            )
-            for f in text_fields:
-                if f in data:
-                    vals[f] = data[f]
-
-            date_fields = ('arrival_date', 'departure_date')
-            for f in date_fields:
-                if f in data:
-                    vals[f] = data[f] if data[f] else False
-
-            if 'accompanying_guest_count' in data:
-                vals['accompanying_guest_count'] = int(data['accompanying_guest_count'])
-
-            if 'place_event_ids' in data:
-                ids = [int(i) for i in data['place_event_ids']]
-                vals['place_event_ids'] = [(6, 0, ids)]
-
-            if vals:
-                visit.write(vals)
-
-            # Check if all required fields are present for state transition
-            # Mandatory fields: main_guest_name, arrival_date, accommodation_type,
-            # gender, designation_company, company_sector, guest_region,
-            # place_event_ids, accompanying_guest_count, experience_rating, experience_details
-            v = visit  # shorthand after write
-            mandatory_filled = all([
-                v.main_guest_name,
-                v.arrival_date,
-                v.accommodation_type,
-                v.gender,
-                v.designation_company,
-                v.company_sector,
-                v.guest_region,
-                v.place_event_ids,
-                v.accompanying_guest_count is not None and v.accompanying_guest_count >= 0,
-                v.experience_rating,
-                v.experience_details,
-            ])
-
-            if mandatory_filled:
-                if visit.state != 'complete':
-                    visit.write({'state': 'complete'})
-                    # Trigger Google Sheets sync on first completion
-                    try:
-                        visit._trigger_google_sheets_sync()
-                    except Exception:
-                        _logger.exception('Google Sheets sync failed for visit %s', visit.id)
-                elif not visit.google_form_synced:
-                    # Retry sync if previous attempt failed
-                    try:
-                        visit._trigger_google_sheets_sync()
-                    except Exception:
-                        _logger.exception('Google Sheets sync retry failed for visit %s', visit.id)
-
-            return self._json_success(self._serialize_visit(visit, full=True))
-        except ValidationError as e:
-            return self._json_error(str(e))
-        except Exception:
-            _logger.exception('API error in update_guest_visit')
-            return self._json_error('Internal server error', status=500)
-
-    @http.route('/sahyog/api/guest-visits/<int:visit_id>', type='http',
-                auth='user', methods=['GET'], csrf=False)
-    def get_guest_visit(self, visit_id, **kw):
-        """Return a single visit with ALL fields."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            visit = request.env['sahyog.guest.visit'].sudo().browse(visit_id)
-            if not visit.exists():
-                return self._json_error('Guest visit not found')
-            # Check ownership or same region
-            if visit.volunteer_id.id != volunteer.id and visit.region_id.id != volunteer.region_id.id:
-                return self._json_error('Access denied', status=403)
-
-            return self._json_success(self._serialize_visit(visit, full=True))
-        except Exception:
-            _logger.exception('API error in get_guest_visit')
-            return self._json_error('Internal server error', status=500)
-
-    @http.route('/sahyog/api/guest-visits/<int:visit_id>/feedback', type='http',
-                auth='user', methods=['GET'], csrf=False)
-    def get_guest_visit_feedback(self, visit_id, **kw):
-        """Return feedback submissions for a visit."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            visit = request.env['sahyog.guest.visit'].sudo().browse(visit_id)
-            if not visit.exists():
-                return self._json_error('Guest visit not found')
-            if visit.volunteer_id.id != volunteer.id and visit.region_id.id != volunteer.region_id.id:
-                return self._json_error('Access denied', status=403)
-
-            feedbacks = visit.feedback_ids
-            return self._json_success([{
-                'id': fb.id,
-                'guest_name': fb.guest_name or '',
-                'contact_phone': fb.contact_phone or '',
-                'contact_email': fb.contact_email or '',
-                'overall_rating': fb.overall_rating or '',
-                'enjoyed_most': fb.enjoyed_most or '',
-                'could_be_improved': fb.could_be_improved or '',
-                'interested_in_programs': fb.interested_in_programs,
-                'want_to_know_initiatives': fb.want_to_know_initiatives,
-                'would_visit_again': fb.would_visit_again or '',
-                'additional_comments': fb.additional_comments or '',
-                'create_date': str(fb.create_date) if fb.create_date else '',
-            } for fb in feedbacks])
-        except Exception:
-            _logger.exception('API error in get_guest_visit_feedback')
-            return self._json_error('Internal server error', status=500)
-
-    @http.route('/sahyog/api/guest-places', type='http', auth='user',
-                methods=['GET'], csrf=False)
-    def get_guest_places(self, **kw):
-        """Return guest places filtered by volunteer's center_id."""
-        try:
-            volunteer = self._get_volunteer()
-            if not volunteer:
-                return self._json_error('No volunteer record linked to your account')
-
-            center_id = volunteer.center_id.id if volunteer.center_id else False
-            if center_id:
-                domain = ['|',
-                    ('center_id', '=', center_id),
-                    ('center_id', '=', False),
-                ]
-            else:
-                domain = [('center_id', '=', False)]
-
-            places = request.env['sahyog.guest.place'].sudo().search(
-                domain, order='sort_order, name',
-            )
-            return self._json_success([{
-                'id': p.id,
-                'name': p.name or '',
-            } for p in places])
-        except Exception:
-            _logger.exception('API error in get_guest_places')
             return self._json_error('Internal server error', status=500)
 
     # ── Calendar ────────────────────────────────────────────────────────
@@ -1581,11 +1275,11 @@ class SahyogAPI(http.Controller):
             if date_end:
                 domain.append(('start_date', '<=', date_end))
 
-            entries = request.env['sahyog.calendar.entry'].sudo().search(domain)
+            entries = request.env['sahyog.calendar.entry'].search(domain)
 
             # Exclude entries belonging to away/left volunteers
             away_left_ids = set(
-                request.env['hr.employee'].sudo().search(
+                request.env['hr.employee'].search(
                     [('base_status', 'in', ['away', 'left'])]
                 ).ids
             )
@@ -1593,7 +1287,7 @@ class SahyogAPI(http.Controller):
 
             # Collect unique volunteers from entries
             volunteer_ids = list(set(e.volunteer_id.id for e in entries if e.volunteer_id))
-            volunteers = request.env['hr.employee'].sudo().browse(volunteer_ids)
+            volunteers = request.env['hr.employee'].browse(volunteer_ids)
 
             return self._json_success({
                 'volunteers': [{'id': v.id, 'name': v.name or '', 'volunteer_type_ids': [t.id for t in v.volunteer_type_ids]} for v in volunteers],

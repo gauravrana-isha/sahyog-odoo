@@ -50,6 +50,21 @@ class SilencePeriod(models.Model):
             else:
                 rec.duration_days = 0
 
+    def to_spa_dict(self):
+        """Serialize for the volunteer SPA (contract for /sahyog/api/silence)."""
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'start_date': str(self.start_date),
+            'end_date': str(self.end_date),
+            'silence_type': self.silence_type or '',
+            'status': self.status,
+            'notes': self.notes or '',
+            'is_recurring': self.is_recurring,
+            'start_time': self.start_time or '',
+            'end_time': self.end_time or '',
+        }
+
     @api.depends('volunteer_id', 'silence_type', 'start_date', 'end_date')
     def _compute_display_name(self):
         for rec in self:
@@ -116,7 +131,7 @@ class SilencePeriod(models.Model):
     def write(self, vals):
         res = super().write(vals)
         if 'status' in vals:
-            Notification = self.env['sahyog.notification']
+            Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
             new_status = vals['status']
             for rec in self:
                 if new_status == 'approved':
@@ -167,7 +182,7 @@ class SilencePeriod(models.Model):
         employees = self.env['hr.employee'].search([
             ('user_id', 'in', admin_users.ids),
         ])
-        Notification = self.env['sahyog.notification']
+        Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
         for emp in employees:
             Notification.create({
                 'volunteer_id': emp.id,
@@ -428,7 +443,7 @@ class SilencePeriod(models.Model):
                 )
 
         # ── 5. Expired pending auto-cancellation ──
-        Notification = self.env['sahyog.notification']
+        Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
         PENDING_STATUSES = ('pending_admin', 'pending_volunteer')
 
         # Silence periods: pending + expired → cancelled

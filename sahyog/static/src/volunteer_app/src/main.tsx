@@ -5,6 +5,7 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { theme } from './theme';
 import { App } from './App';
+import { CapabilitiesProvider } from './hooks/useCapabilities';
 
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <MantineProvider theme={theme} defaultColorScheme="auto">
       <Notifications position="top-right" />
       <BrowserRouter basename="/sahyog/app">
-        <App />
+        <CapabilitiesProvider>
+          <App />
+        </CapabilitiesProvider>
       </BrowserRouter>
     </MantineProvider>
   </React.StrictMode>,

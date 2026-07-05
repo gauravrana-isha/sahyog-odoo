@@ -43,7 +43,7 @@ class Meeting(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        Notification = self.env['sahyog.notification']
+        Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
         for rec in records:
             # Notify both participants
             Notification.create({

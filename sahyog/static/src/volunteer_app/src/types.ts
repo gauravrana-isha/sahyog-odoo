@@ -4,6 +4,25 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+/** Capability flags from /api/me. UX gating only — the backend independently
+ *  enforces access via ACLs + record rules (see SECURITY_REFACTOR.md).
+ *  The Capabilities shape is generated from sahyog/api_contract.py — regenerate
+ *  with `python3 sahyog/scripts/gen_ts_types.py`. */
+import type { Capabilities } from './generated/capabilities';
+export type { Capabilities };
+
+export interface Me {
+  user: { id: number; name: string; login: string };
+  volunteer: {
+    id: number;
+    name: string;
+    base_status: string;
+    computed_status: string;
+  } | null;
+  groups: { admin: boolean; volunteer: boolean };
+  can: Capabilities;
+}
+
 export interface VolunteerProfile {
   id: number;
   name: string;

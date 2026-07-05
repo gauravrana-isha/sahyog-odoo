@@ -21,6 +21,7 @@ services:
       - odoo-filestore:/var/lib/odoo
       - ./odoo.conf:/etc/odoo/odoo.conf:ro
       - ./sahyog:/mnt/extra-addons/sahyog:ro
+      - ./isha_pr:/mnt/extra-addons/isha_pr:ro
       - ./muk_backend_theme/muk_web_theme:/mnt/extra-addons/muk_web_theme:ro
       - ./muk_backend_theme/muk_web_appsbar:/mnt/extra-addons/muk_web_appsbar:ro
       - ./muk_backend_theme/muk_web_chatter:/mnt/extra-addons/muk_web_chatter:ro

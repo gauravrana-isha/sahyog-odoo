@@ -1,9 +1,72 @@
+import json
 import logging
+import os
 
 from odoo import http
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
+
+_ASSET_BASE = '/sahyog/static/dist/volunteer_app'
+_MANIFEST_PATH = os.path.join(
+    os.path.dirname(__file__), '..', 'static', 'dist', 'volunteer_app',
+    '.vite', 'manifest.json',
+)
+# In-memory cache of the resolved asset URLs, refreshed when the manifest
+# file's mtime changes (so a rebuild is reflected without an Odoo restart).
+_manifest_cache = {'mtime': None, 'assets': None}
+
+
+def _spa_assets():
+    """Return {'js': url, 'css': [urls]} for the built SPA.
+
+    Reads the Vite manifest so content-hashed filenames (cache-busting) are
+    picked up automatically. Falls back to legacy fixed filenames if the
+    manifest is missing (e.g. an older build).
+    """
+    fallback = {
+        'js': _ASSET_BASE + '/assets/index.js',
+        'css': [_ASSET_BASE + '/assets/index.css'],
+    }
+    try:
+        mtime = os.path.getmtime(_MANIFEST_PATH)
+    except OSError:
+        return fallback
+    if _manifest_cache['mtime'] != mtime:
+        try:
+            with open(_MANIFEST_PATH, 'r') as fh:
+                manifest = json.load(fh)
+            entry_key = next(
+                (k for k, v in manifest.items() if v.get('isEntry')),
+                'index.html',
+            )
+            entry = manifest.get(entry_key, {})
+            # Collect CSS from the entry AND its transitive imports — with
+            # vendor/mantine code-splitting the stylesheet is attached to an
+            # imported chunk, not the entry itself.
+            css, seen = [], set()
+
+            def _collect(key):
+                if key in seen:
+                    return
+                seen.add(key)
+                node = manifest.get(key, {})
+                for href in node.get('css', []):
+                    if href not in css:
+                        css.append(href)
+                for imp in node.get('imports', []):
+                    _collect(imp)
+
+            _collect(entry_key)
+            _manifest_cache['assets'] = {
+                'js': _ASSET_BASE + '/' + entry['file'],
+                'css': [_ASSET_BASE + '/' + c for c in css],
+            }
+            _manifest_cache['mtime'] = mtime
+        except (OSError, ValueError, KeyError):
+            _logger.exception('Failed to read SPA Vite manifest')
+            return fallback
+    return _manifest_cache['assets'] or fallback
 
 
 class SahyogSPA(http.Controller):
@@ -99,6 +162,11 @@ class SahyogSPA(http.Controller):
 
         csrf_token = request.csrf_token()
         base_url = request.httprequest.url_root.rstrip('/')
+        assets = _spa_assets()
+        css_links = '\n    '.join(
+            f'<link rel="stylesheet" href="{href}" />' for href in assets['css']
+        )
+        js_script = f'<script type="module" src="{assets["js"]}"></script>'
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,11 +193,11 @@ class SahyogSPA(http.Controller):
     <link rel="apple-touch-icon" href="/sahyog/static/pwa/icon-192.png" />
     <link rel="manifest" href="/sahyog/static/dist/volunteer_app/manifest.json" />
     <title>Sahyog — Volunteer Portal</title>
-    <link rel="stylesheet" href="/sahyog/static/dist/volunteer_app/assets/index.css" />
+    {css_links}
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="/sahyog/static/dist/volunteer_app/assets/index.js"></script>
+    {js_script}
 </body>
 </html>"""
         return request.make_response(html, headers=[

@@ -64,6 +64,12 @@ class GuestVisit(models.Model):
         ),
     ]
 
+    # ── Shared person (the one global "guest" identity) ──
+    # Anchors the visit to a res.partner so other departments (e.g. PR) see the
+    # same human without re-keying. Snapshot fields below stay as recorded.
+    partner_id = fields.Many2one('res.partner', string='Guest Contact',
+                                 ondelete='set null', index=True)
+
     # ── Volunteer / origin ──
     volunteer_id = fields.Many2one('hr.employee', string='Volunteer',
                                    required=True, ondelete='cascade')
@@ -167,6 +173,30 @@ class GuestVisit(models.Model):
             if rec.arrival_date and rec.departure_date and rec.departure_date < rec.arrival_date:
                 raise ValidationError('Departure date must be on or after arrival date.')
 
+    # ── Shared-person linkage ──
+
+    @api.model
+    def _find_or_create_partner(self, vals):
+        """Return a res.partner id for the guest in *vals*, deduped by email
+        then phone. Linking guests to the shared person model is a system
+        action (a volunteer need not own res.partner), so it runs sudo.
+        """
+        Partner = self.env['res.partner'].sudo()
+        email = (vals.get('email') or '').strip()
+        phone = (vals.get('phone') or '').strip()
+        partner = Partner.browse()
+        if email:
+            partner = Partner.search([('email', '=ilike', email)], limit=1)
+        if not partner and phone:
+            partner = Partner.search([('phone', '=', phone)], limit=1)
+        if not partner:
+            partner = Partner.create({
+                'name': vals.get('main_guest_name') or 'Guest',
+                'email': email or False,
+                'phone': phone or False,
+            })
+        return partner.id
+
     # ── Create override ──
 
     @api.model_create_multi
@@ -175,6 +205,9 @@ class GuestVisit(models.Model):
             # Auto-generate QR token
             if not vals.get('qr_token'):
                 vals['qr_token'] = secrets.token_urlsafe(32)
+            # Anchor to the shared person (create-or-find, deduped).
+            if not vals.get('partner_id'):
+                vals['partner_id'] = self._find_or_create_partner(vals)
             # Auto-populate from current user's employee
             if not vals.get('volunteer_id'):
                 employee = self.env.user.employee_id

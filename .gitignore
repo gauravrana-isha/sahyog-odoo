@@ -12,6 +12,10 @@ __pycache__/
 # Node
 node_modules/
 
+# Built SPA bundles (produced by CI / `npm run build`, not committed)
+sahyog/static/dist/
+isha_pr/static/dist/
+
 # OS
 .DS_Store
 Thumbs.db

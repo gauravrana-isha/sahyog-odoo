@@ -56,7 +56,7 @@ class VolunteerProgram(models.Model):
     def write(self, vals):
         res = super().write(vals)
         if 'completion_status' in vals:
-            Notification = self.env['sahyog.notification']
+            Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
             new_status = vals['completion_status']
             for rec in self:
                 if new_status in ('upcoming', 'on_going'):
@@ -101,7 +101,7 @@ class VolunteerProgram(models.Model):
             elif status == 'pending_volunteer' and start_date and start_date <= today:
                 vals['completion_status'] = 'upcoming'
         records = super().create(vals_list)
-        Notification = self.env['sahyog.notification']
+        Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
         for rec in records:
             if rec.completion_status == 'pending_admin':
                 # Volunteer requested enrollment — notify admins
@@ -136,7 +136,7 @@ class VolunteerProgram(models.Model):
         employees = self.env['hr.employee'].search([
             ('user_id', 'in', admin_users.ids),
         ])
-        Notification = self.env['sahyog.notification']
+        Notification = self.env['sahyog.notification'].sudo()  # system-generated side effect
         for emp in employees:
             Notification.create({
                 'volunteer_id': emp.id,
