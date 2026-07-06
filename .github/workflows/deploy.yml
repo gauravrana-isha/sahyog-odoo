@@ -68,5 +68,6 @@ jobs:
             cd /home/gauravrana/sahyog-odoo
             # -i installs isha_pr on first deploy (no-op once installed); -u upgrades both thereafter
             docker compose run --rm odoo odoo -d sahyog -i isha_pr -u sahyog,isha_pr --stop-after-init
-            docker compose restart odoo
+            # up -d (not restart) so the serving container picks up new volume mounts (isha_pr)
+            docker compose up -d odoo
           '"
