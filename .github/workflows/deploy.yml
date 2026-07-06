@@ -66,6 +66,7 @@ jobs:
             cp -r /tmp/pr-dist/* /home/gauravrana/sahyog-odoo/isha_pr/static/dist/
             rm -rf /tmp/sahyog-dist /tmp/pr-dist
             cd /home/gauravrana/sahyog-odoo
-            docker compose run --rm odoo odoo -d sahyog -u sahyog,isha_pr --stop-after-init
+            # -i installs isha_pr on first deploy (no-op once installed); -u upgrades both thereafter
+            docker compose run --rm odoo odoo -d sahyog -i isha_pr -u sahyog,isha_pr --stop-after-init
             docker compose restart odoo
           '"
