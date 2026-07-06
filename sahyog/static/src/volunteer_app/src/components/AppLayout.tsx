@@ -17,7 +17,7 @@ import {
   useMantineColorScheme,
   useComputedColorScheme,
 } from '@mantine/core';
-import { useMediaQuery, useDisclosure } from '@mantine/hooks';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   IconSend,
   IconHistory,
@@ -90,7 +90,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const [sidebarOpen, { toggle: toggleSidebar }] = useDisclosure(true);
+  // Sidebar open/collapsed state survives reloads (per browser).
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('sahyog_sidebar') !== 'collapsed'; }
+    catch { return true; }
+  });
+  const toggleSidebar = () => setSidebarOpen((open) => {
+    const next = !open;
+    try { localStorage.setItem('sahyog_sidebar', next ? 'open' : 'collapsed'); }
+    catch { /* ignore */ }
+    return next;
+  });
   const can = useCan();
   const sidebarNav = SIDEBAR_NAV.filter((item) => can(item.cap));
   const bottomNav = BOTTOM_NAV.filter((item) => can(item.cap));
