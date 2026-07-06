@@ -339,8 +339,11 @@ Assess and return:
 - tier + tier_confidence per the criteria above
 - role, organization, website, linkedin, instagram
 - social_following: reach as a short scalar (e.g. "2.79M YouTube", "480K X / Twitter")
-- controversies: SPECIFIC scandals / legal issues / polarizing associations, each cited [n];
-  write "None found" ONLY if genuine web search surfaces nothing
+- controversies: SPECIFIC scandals / legal issues / polarizing associations, each cited [n].
+  For EACH one give concrete specifics — the amount ($ figure), date/year, parties, and the
+  OUTCOME (verdict, settlement, resignation, ruling), e.g. "$11.5M jury verdict, 2023" or
+  "settled for $X, 2021" — never just "there is a lawsuit". Write "None found" ONLY if genuine
+  web search surfaces nothing
 - reputational_risk: low | medium | high — risk to Isha/Sadhguru of publicly engaging them
 - follows_sadhguru
 A nominee with strong influence BUT serious unresolved controversy should be Tier 2 at most

@@ -234,6 +234,10 @@ CRITICAL RULES:
   by name, give real subscriber / attendee / member counts, describe the real audience
   demographic (age, political or religious leaning, geography), quote real controversies.
   Generic prose ("a large engaged audience") is useless — give names and numbers.
+- For EVERY controversy, lawsuit, scandal or dispute you cite, give the CONCRETE specifics:
+  the amount ($ figure), the date/year, the parties, and the OUTCOME (jury verdict, settlement,
+  resignation, ruling) — e.g. "$11.5M jury verdict, 2023" or "settled for $X in 2021". Never
+  write only "there is an ongoing lawsuit" without the figure, date and outcome.
 - Cite sources inline as [1], [2] … inside each field, where the number is the position in
   the ordered "sources" array you return. The "sources" array is REQUIRED and must list
   EVERY page you cited, in citation order, each with its real title and URL — never leave
