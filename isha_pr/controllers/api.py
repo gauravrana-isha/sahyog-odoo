@@ -7,6 +7,7 @@ cross-department reads (the summary-only guest history) and reading the user's
 own center list.
 """
 
+import functools
 import logging
 
 from odoo import http
@@ -15,6 +16,21 @@ from odoo.exceptions import ValidationError, AccessError, UserError
 from odoo.addons.sahyog.controllers.base import SahyogControllerBase, json_endpoint
 
 _logger = logging.getLogger(__name__)
+
+
+def require_pr(func):
+    """Gate a PR API endpoint on isha_pr.group_isha_pr membership.
+
+    res.partner is readable by every internal Odoo user, so without this the
+    contact endpoints would leak the PR contact base to non-PR staff. Applied to
+    all data endpoints; returns a 403 envelope before the handler runs. (pr_me and
+    pr_quote stay open — capability discovery / harmless.)"""
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not request.env.user.has_group('isha_pr.group_isha_pr'):
+            return self._json_error('PR access required', status=403)
+        return func(self, *args, **kwargs)
+    return wrapper
 
 PR_CAPABILITIES = ['pr_view_dashboard', 'pr_view_contacts', 'pr_log_interaction',
                    'pr_view_nominations', 'pr_view_followups', 'pr_view_collabs']
@@ -246,6 +262,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/dashboard', type='http', auth='user', methods=['GET'], csrf=False)
     @json_endpoint
+    @require_pr
     def pr_dashboard(self, **kw):
         Nom = request.env['pr.nomination']
 
@@ -323,6 +340,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     # ── Master data for pickers ─────────────────────────────────────────
 
     @http.route('/pr/api/programs', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_programs(self, **kw):
         try:
             recs = request.env['pr.program'].search([])
@@ -332,6 +350,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/campaigns', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_campaigns(self, **kw):
         try:
             recs = request.env['pr.campaign'].search([])
@@ -388,6 +407,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     _CONTACT_DESC_DEFAULTS = ('newest', 'vip')
 
     @http.route('/pr/api/contacts', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_contacts(self, **kw):
         try:
             search = (kw.get('q') or '').strip()
@@ -421,10 +441,13 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/contacts/<int:partner_id>', type='http', auth='user',
                 methods=['GET'], csrf=False)
+    @require_pr
     def pr_contact_detail(self, partner_id, **kw):
         try:
             partner = request.env['res.partner'].browse(partner_id)
-            if not partner.exists():
+            # Scope to PR contacts — don't expose arbitrary partners (employees,
+            # guests, vendors) or their guest history through this endpoint.
+            if not partner.exists() or not partner.is_pr_contact:
                 return self._json_error('Contact not found')
             return self._json_success(self._contact_dict(partner, full=True))
         except Exception:
@@ -433,6 +456,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/contacts/create', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_contact_create(self, **kw):
         try:
             data = self._parse_json()
@@ -462,10 +486,13 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/contacts/<int:partner_id>/update', type='http',
                 auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_contact_update(self, partner_id, **kw):
         try:
             partner = request.env['res.partner'].browse(partner_id)
-            if not partner.exists():
+            # Only PR contacts are editable here — never let a PR user modify an
+            # arbitrary partner (employee/guest/vendor) by supplying its id.
+            if not partner.exists() or not partner.is_pr_contact:
                 return self._json_error('Contact not found')
             data = self._parse_json()
             vals = self._apply_vals(data)
@@ -482,8 +509,12 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/contacts/<int:partner_id>/images', type='http',
                 auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_add_image(self, partner_id, **kw):
         try:
+            partner = request.env['res.partner'].browse(partner_id)
+            if not partner.exists() or not partner.is_pr_contact:
+                return self._json_error('Contact not found')
             data = self._parse_json()
             image = data.get('image')
             if not image:
@@ -506,6 +537,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/images/<int:image_id>/delete', type='http',
                 auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_delete_image(self, image_id, **kw):
         try:
             record = request.env['pr.contact.image'].browse(image_id)
@@ -561,6 +593,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     _NOMINATION_DESC_DEFAULTS = ('newest', 'submitted')
 
     @http.route('/pr/api/nominations', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_nominations(self, **kw):
         try:
             domain = []
@@ -600,6 +633,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/nominations/<int:nid>', type='http', auth='user',
                 methods=['GET'], csrf=False)
+    @require_pr
     def pr_nomination_detail(self, nid, **kw):
         try:
             rec = request.env['pr.nomination'].browse(nid)
@@ -612,6 +646,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/nominations/<int:nid>/update', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_nomination_update(self, nid, **kw):
         try:
             rec = request.env['pr.nomination'].browse(nid)
@@ -630,6 +665,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/nominations/bulk-action', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_nomination_bulk_action(self, **kw):
         """Run a stage action on many nominations. The model's gates apply
         per record (approve/reject stay admin-only)."""
@@ -652,6 +688,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/nominations/<int:nid>/action', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_nomination_action(self, nid, **kw):
         try:
             rec = request.env['pr.nomination'].browse(nid)
@@ -687,6 +724,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/nominations/export', type='http', auth='user',
                 methods=['GET'], csrf=False)
+    @require_pr
     def pr_nominations_export(self, **kw):
         try:
             domain = []
@@ -741,6 +779,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     }
 
     @http.route('/pr/api/collabs', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_collabs(self, **kw):
         try:
             domain = []
@@ -768,6 +807,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/collabs/<int:cid>', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_collab_detail(self, cid, **kw):
         try:
             rec = request.env['pr.collab.request'].browse(cid)
@@ -779,6 +819,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/collabs/<int:cid>/update', type='http', auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_collab_update(self, cid, **kw):
         try:
             rec = request.env['pr.collab.request'].browse(cid)
@@ -794,6 +835,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/collabs/create', type='http', auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_collab_create(self, **kw):
         try:
             data = self._parse_json()
@@ -808,6 +850,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/collabs/<int:cid>/action', type='http', auth='user', methods=['POST'], csrf=False)
+    @require_pr
     def pr_collab_action(self, cid, **kw):
         try:
             rec = request.env['pr.collab.request'].browse(cid)
@@ -827,6 +870,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/contacts/export', type='http', auth='user',
                 methods=['GET'], csrf=False)
+    @require_pr
     def pr_contacts_export(self, **kw):
         try:
             domain = [('is_pr_contact', '=', True)]
@@ -859,6 +903,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     # ── Follow-ups (interactions with a follow_up_date, center-scoped) ──
 
     @http.route('/pr/api/followups', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_followups(self, **kw):
         try:
             recs = request.env['pr.interaction'].search(
@@ -872,6 +917,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
     # ── Notifications (record rule limits everything to the own user) ──
 
     @http.route('/pr/api/notifications', type='http', auth='user', methods=['GET'], csrf=False)
+    @require_pr
     def pr_notifications(self, **kw):
         try:
             recs = request.env['pr.notification'].search([], limit=50)
@@ -882,6 +928,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/notifications/unread-count', type='http', auth='user',
                 methods=['GET'], csrf=False)
+    @require_pr
     def pr_notifications_unread(self, **kw):
         try:
             count = request.env['pr.notification'].search_count([('is_read', '=', False)])
@@ -892,6 +939,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/notifications/read', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_notification_read(self, **kw):
         try:
             data = self._parse_json()
@@ -905,6 +953,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/notifications/read-all', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_notifications_read_all(self, **kw):
         try:
             request.env['pr.notification'].search([('is_read', '=', False)]).write({'is_read': True})
@@ -915,6 +964,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/notifications/clear', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_notifications_clear(self, **kw):
         try:
             request.env['pr.notification'].search([]).unlink()
@@ -925,6 +975,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/notifications/delete', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_notification_delete(self, **kw):
         try:
             data = self._parse_json()
@@ -940,6 +991,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     @http.route('/pr/api/interactions/create', type='http', auth='user',
                 methods=['POST'], csrf=False)
+    @require_pr
     def pr_interaction_create(self, **kw):
         try:
             data = self._parse_json()

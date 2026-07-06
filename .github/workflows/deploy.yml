@@ -69,6 +69,8 @@ jobs:
             cd /home/gauravrana/sahyog-odoo
             # -i installs new modules on first deploy (no-op once installed); -u upgrades all thereafter
             docker compose run --rm odoo odoo -d sahyog -i isha_pr,web_column_width_local -u sahyog,isha_pr,web_column_width_local --stop-after-init
-            # up -d (not restart) so the serving container picks up new volume mounts (isha_pr)
+            # up -d (not restart) so the serving container picks up new volume mounts + port/conf changes
             docker compose up -d odoo
+            # reload nginx so security/config changes to nginx/sahyog.conf take effect
+            docker compose restart nginx
           '"
