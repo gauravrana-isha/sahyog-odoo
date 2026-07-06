@@ -22,6 +22,7 @@ services:
       - ./odoo.conf:/etc/odoo/odoo.conf:ro
       - ./sahyog:/mnt/extra-addons/sahyog:ro
       - ./isha_pr:/mnt/extra-addons/isha_pr:ro
+      - ./web_column_width_local:/mnt/extra-addons/web_column_width_local:ro
       - ./muk_backend_theme/muk_web_theme:/mnt/extra-addons/muk_web_theme:ro
       - ./muk_backend_theme/muk_web_appsbar:/mnt/extra-addons/muk_web_appsbar:ro
       - ./muk_backend_theme/muk_web_chatter:/mnt/extra-addons/muk_web_chatter:ro

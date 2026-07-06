@@ -66,8 +66,8 @@ jobs:
             cp -r /tmp/pr-dist/* /home/gauravrana/sahyog-odoo/isha_pr/static/dist/
             rm -rf /tmp/sahyog-dist /tmp/pr-dist
             cd /home/gauravrana/sahyog-odoo
-            # -i installs isha_pr on first deploy (no-op once installed); -u upgrades both thereafter
-            docker compose run --rm odoo odoo -d sahyog -i isha_pr -u sahyog,isha_pr --stop-after-init
+            # -i installs new modules on first deploy (no-op once installed); -u upgrades all thereafter
+            docker compose run --rm odoo odoo -d sahyog -i isha_pr,web_column_width_local -u sahyog,isha_pr,web_column_width_local --stop-after-init
             # up -d (not restart) so the serving container picks up new volume mounts (isha_pr)
             docker compose up -d odoo
           '"
