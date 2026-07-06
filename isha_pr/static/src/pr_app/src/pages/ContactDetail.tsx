@@ -2,12 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Stack, Card, Text, Group, Badge, Button, Select, Textarea, TextInput,
-  Divider, Loader, Center, Timeline, Alert, Switch, Avatar, ActionIcon,
+  Checkbox, Divider, Loader, Center, Timeline, Alert, Switch, Avatar, ActionIcon,
   TagsInput, Image, SimpleGrid, Box, FileButton, Accordion,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
-  IconArrowLeft, IconHome, IconMessagePlus, IconCamera, IconTrash, IconDeviceFloppy,
+  IconArrowLeft, IconHome, IconMessagePlus, IconCamera, IconStar, IconTrash, IconDeviceFloppy,
   IconUserOff, IconMessageCircle,
 } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
@@ -180,30 +180,74 @@ export function ContactDetail() {
           loading={saving} onClick={save}>Save</Button>
       </Group>
 
-      {/* Portrait + name */}
-      <Group>
-        <Stack gap={4} align="center">
-          <Avatar src={data.portrait_url} size={72} radius="xl" color="clay">
-            {data.name.slice(0, 1)}
+      {/* ── Hero: centered portrait, name and status chips (mirrors the
+             volunteer app's profile header) ── */}
+      <Stack align="center" gap={6} mb="xs">
+        <Box pos="relative">
+          <Avatar src={data.portrait_url} size={96} radius={999} color="clay">
+            {data.name.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
           </Avatar>
           <FileButton onChange={uploadPortrait} accept="image/*">
             {(props) => (
-              <Button {...props} size="compact-xs" variant="subtle"
-                leftSection={<IconCamera size={12} />}>Photo</Button>
+              <ActionIcon {...props} size={30} radius="xl" variant="filled" color="gray"
+                style={{ position: 'absolute', bottom: -2, right: -2, border: '2px solid var(--mantine-color-body)' }}
+                aria-label="Upload photo">
+                <IconCamera size={15} />
+              </ActionIcon>
             )}
           </FileButton>
-        </Stack>
-        <Stack gap={4} flex={1}>
-          <TextInput value={f.name} onChange={(e) => set('name', e.currentTarget.value)}
-            placeholder="Name" />
-          <Group gap="xs">
-            <Switch label="VIP" checked={f.pr_vip}
-              onChange={(e) => set('pr_vip', e.currentTarget.checked)} />
-            {data.guest_summary.visit_count > 0 &&
-              <Badge color={GUEST_LINK_COLOR} variant="light">Guest ×{data.guest_summary.visit_count}</Badge>}
-          </Group>
-        </Stack>
-      </Group>
+        </Box>
+        <TextInput
+          value={f.name}
+          onChange={(e) => set('name', e.currentTarget.value)}
+          placeholder="Name"
+          variant="unstyled"
+          aria-label="Name"
+          w="100%"
+          maw={420}
+          styles={{
+            input: {
+              textAlign: 'center',
+              fontFamily: 'var(--mantine-font-family-headings)',
+              fontSize: 26,
+              fontWeight: 600,
+              height: 'auto',
+            },
+          }}
+        />
+        <Group gap="xs" justify="center">
+          <Box
+            className="sahyog-hoverable"
+            px="sm"
+            py={5}
+            style={{
+              borderRadius: 999,
+              border: '1px solid var(--mantine-color-default-border)',
+              backgroundColor: f.pr_vip ? 'var(--mantine-color-ochre-light)' : undefined,
+            }}
+          >
+            <Checkbox
+              size="xs"
+              color="ochre"
+              checked={f.pr_vip}
+              onChange={(e) => set('pr_vip', e.currentTarget.checked)}
+              label={
+                <Group gap={4} wrap="nowrap">
+                  <IconStar size={13} />
+                  VIP
+                </Group>
+              }
+              styles={{
+                label: { cursor: 'pointer', fontWeight: 600 },
+                input: { cursor: 'pointer' },
+                body: { alignItems: 'center' },
+              }}
+            />
+          </Box>
+          {data.guest_summary.visit_count > 0 &&
+            <Badge color={GUEST_LINK_COLOR} variant="light">Guest ×{data.guest_summary.visit_count}</Badge>}
+        </Group>
+      </Stack>
 
       {/* Guest Care history (summary-only, via shared person) */}
       {data.guest_summary.visit_count > 0 && (

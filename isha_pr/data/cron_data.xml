@@ -14,4 +14,15 @@
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>
+
+    <!-- Daily reminder to interaction owners whose follow-up is due today -->
+    <record id="cron_followup_reminders" model="ir.cron">
+        <field name="name">PR: Follow-up due reminders</field>
+        <field name="model_id" ref="model_pr_notification"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_followup_reminders()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
 </odoo>

@@ -9,6 +9,7 @@ import { PRProvider } from './hooks/usePR';
 
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/charts/styles.css';
 import '@fontsource-variable/fraunces';
 import '@fontsource-variable/karla';
 import './styles/global.css';

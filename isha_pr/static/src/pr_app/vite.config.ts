@@ -15,6 +15,12 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash][extname]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // Charting stack is heavy and only used by the (lazy) dashboard —
+            // its own chunk loads with that route, not on first paint.
+            if (id.includes('recharts') || id.includes('@mantine/charts')
+                || id.includes('d3-') || id.includes('victory-vendor')) {
+              return 'charts';
+            }
             if (id.includes('@mantine')) return 'mantine';
             if (id.includes('@tabler')) return 'icons';
             return 'vendor';

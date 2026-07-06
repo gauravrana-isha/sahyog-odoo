@@ -199,6 +199,20 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             ({'vertical': k, 'label': v, 'count': c([('vertical', '=', k)])}
              for k, v in verts.items() if k not in ('uncategorized', 'review')),
             key=lambda x: -x['count'])[:6]
+        # Submissions per month (last 12 months, oldest first) for the trend
+        # chart. `key` (YYYY-MM) drives chart→list drill-down; `month` is the
+        # display label.
+        monthly = Nom._read_group(
+            [('submission_date', '!=', False)],
+            groupby=['submission_date:month'],
+            aggregates=['__count'],
+        )
+        by_month = [{
+            'month': month.strftime('%b %Y') if month else '',
+            'key': month.strftime('%Y-%m') if month else '',
+            'count': count,
+        } for month, count in monthly][-12:]
+
         return {
             'total': c([]),
             'priority_leads': c(['&', ('stage', '!=', 'rejected'),
@@ -210,6 +224,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             'by_stage': by_stage,
             'by_tier': by_tier,
             'top_verticals': [x for x in top_verticals if x['count']],
+            'by_month': by_month,
         }
 
     # ── Master data for pickers ─────────────────────────────────────────
@@ -234,9 +249,14 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
 
     # ── Pagination helper ───────────────────────────────────────────────
 
-    def _list_params(self, kw, order_map, default_order, max_limit=100):
-        """Parse offset/limit/order query params. `order` values come from a
-        whitelist map — never raw SQL from the client."""
+    def _list_params(self, kw, field_map, default_order, desc_defaults=(), max_limit=100):
+        """Parse offset/limit/order query params.
+
+        `order` accepts a comma-separated list of `field` or `field.asc` /
+        `field.desc` tokens (multi-column sort from the table headers). Field
+        names resolve through a whitelist map — never raw SQL from the client.
+        Unknown tokens are dropped; an empty result falls back to the default.
+        """
         try:
             offset = max(0, int(kw.get('offset', 0)))
         except (TypeError, ValueError):
@@ -246,16 +266,33 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         except (TypeError, ValueError):
             limit = 50
         limit = max(1, min(limit, max_limit))
-        order = order_map.get(kw.get('order'), default_order)
+
+        parts = []
+        for token in (kw.get('order') or '').split(','):
+            token = token.strip()
+            if not token:
+                continue
+            field, _, direction = token.partition('.')
+            column = field_map.get(field)
+            if not column:
+                continue
+            if direction not in ('asc', 'desc'):
+                direction = 'desc' if field in desc_defaults else 'asc'
+            parts.append(f'{column} {direction}')
+        order = ', '.join(parts) if parts else default_order
+        if 'id' not in order:
+            order += ', id desc'  # stable tiebreaker
         return offset, limit, order
 
     # ── Contacts ────────────────────────────────────────────────────────
 
-    _CONTACT_ORDERS = {
-        'name': 'name asc',
-        'newest': 'id desc',
-        'vip': 'pr_vip desc, name asc',
+    _CONTACT_SORT_FIELDS = {
+        'name': 'name',
+        'newest': 'id',
+        'vip': 'pr_vip',
+        'involvement': 'pr_involvement',
     }
+    _CONTACT_DESC_DEFAULTS = ('newest', 'vip')
 
     @http.route('/pr/api/contacts', type='http', auth='user', methods=['GET'], csrf=False)
     def pr_contacts(self, **kw):
@@ -270,7 +307,12 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             region_id = kw.get('region_id')
             if region_id:
                 domain.append(('pr_region_id', '=', int(region_id)))
-            offset, limit, order = self._list_params(kw, self._CONTACT_ORDERS, 'name asc')
+            involvement = kw.get('involvement')
+            if involvement in ('low', 'moderate', 'high'):
+                domain.append(('pr_involvement', '=', involvement))
+            offset, limit, order = self._list_params(
+                kw, self._CONTACT_SORT_FIELDS, 'name asc',
+                desc_defaults=self._CONTACT_DESC_DEFAULTS)
             Partner = request.env['res.partner']
             total = Partner.search_count(domain)
             partners = Partner.search(domain, offset=offset, limit=limit, order=order)
@@ -400,11 +442,30 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         'reset': 'action_reset_nominated',
     }
 
-    _NOMINATION_ORDERS = {
-        'tier': 'tier asc, id desc',
-        'newest': 'id desc',
-        'name': 'nominee_id asc',
+    @staticmethod
+    def _month_domain(month):
+        """'YYYY-MM' → submission_date within that month (chart drill-down)."""
+        if not month:
+            return []
+        try:
+            from datetime import date
+            year, mon = (int(x) for x in month.split('-'))
+            start = date(year, mon, 1)
+            end = date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1)
+            return [('submission_date', '>=', start), ('submission_date', '<', end)]
+        except (TypeError, ValueError):
+            return []
+
+    _NOMINATION_SORT_FIELDS = {
+        'tier': 'tier',
+        'newest': 'id',
+        'name': 'nominee_id',
+        'stage': 'stage',
+        'vertical': 'vertical',
+        'organization': 'organization',
+        'submitted': 'submission_date',
     }
+    _NOMINATION_DESC_DEFAULTS = ('newest', 'submitted')
 
     @http.route('/pr/api/nominations', type='http', auth='user', methods=['GET'], csrf=False)
     def pr_nominations(self, **kw):
@@ -416,12 +477,21 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
                 domain.append(('tier', '=', kw['tier']))
             if kw.get('vertical'):
                 domain.append(('vertical', '=', kw['vertical']))
+            # Dashboard drill-downs (must mirror pr_dashboard's metric domains)
+            if kw.get('priority'):
+                domain += ['&', ('stage', '!=', 'rejected'),
+                           '|', ('tier', '=', '1'), ('high_priority', '=', True)]
+            if kw.get('flag') == 'review':
+                domain.append(('research_status', 'in',
+                               ('needs_review', 'more_info_required')))
+            domain += self._month_domain(kw.get('month'))
             q = (kw.get('q') or '').strip()
             if q:
                 domain += ['|', ('nominee_id.name', 'ilike', q),
                            ('organization', 'ilike', q)]
-            offset, limit, order = self._list_params(kw, self._NOMINATION_ORDERS,
-                                                     'tier asc, id desc')
+            offset, limit, order = self._list_params(
+                kw, self._NOMINATION_SORT_FIELDS, 'tier asc, id desc',
+                desc_defaults=self._NOMINATION_DESC_DEFAULTS)
             Nomination = request.env['pr.nomination']
             total = Nomination.search_count(domain)
             recs = Nomination.search(domain, offset=offset, limit=limit, order=order)
@@ -465,6 +535,28 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             _logger.exception('PR API error in pr_nomination_update')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/pr/api/nominations/bulk-action', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_nomination_bulk_action(self, **kw):
+        """Run a stage action on many nominations. The model's gates apply
+        per record (approve/reject stay admin-only)."""
+        try:
+            data = self._parse_json()
+            method = self._NOMINATION_ACTIONS.get(data.get('action'))
+            ids = [int(i) for i in (data.get('ids') or [])]
+            if not method or not ids:
+                return self._json_error('Unknown action or empty selection')
+            recs = request.env['pr.nomination'].browse(ids).exists()
+            getattr(recs, method)()
+            return self._json_success({'updated': len(recs)})
+        except UserError as e:
+            return self._json_error(str(e))
+        except ValidationError as e:
+            return self._json_error(str(e))
+        except Exception:
+            _logger.exception('PR API error in pr_nomination_bulk_action')
+            return self._json_error('Internal server error', status=500)
+
     @http.route('/pr/api/nominations/<int:nid>/action', type='http', auth='user',
                 methods=['POST'], csrf=False)
     def pr_nomination_action(self, nid, **kw):
@@ -486,6 +578,90 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             _logger.exception('PR API error in pr_nomination_action')
             return self._json_error('Internal server error', status=500)
 
+    # ── CSV exports (honor the same filters/order as the lists) ─────────
+
+    def _csv_response(self, filename, header, rows):
+        import csv
+        import io
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(header)
+        writer.writerows(rows)
+        return request.make_response(buf.getvalue(), headers=[
+            ('Content-Type', 'text/csv; charset=utf-8'),
+            ('Content-Disposition', f'attachment; filename="{filename}"'),
+        ])
+
+    @http.route('/pr/api/nominations/export', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def pr_nominations_export(self, **kw):
+        try:
+            domain = []
+            if kw.get('stage'):
+                domain.append(('stage', '=', kw['stage']))
+            if kw.get('tier'):
+                domain.append(('tier', '=', kw['tier']))
+            if kw.get('vertical'):
+                domain.append(('vertical', '=', kw['vertical']))
+            if kw.get('priority'):
+                domain += ['&', ('stage', '!=', 'rejected'),
+                           '|', ('tier', '=', '1'), ('high_priority', '=', True)]
+            if kw.get('flag') == 'review':
+                domain.append(('research_status', 'in',
+                               ('needs_review', 'more_info_required')))
+            domain += self._month_domain(kw.get('month'))
+            q = (kw.get('q') or '').strip()
+            if q:
+                domain += ['|', ('nominee_id.name', 'ilike', q),
+                           ('organization', 'ilike', q)]
+            _, _, order = self._list_params(
+                kw, self._NOMINATION_SORT_FIELDS, 'tier asc, id desc',
+                desc_defaults=self._NOMINATION_DESC_DEFAULTS)
+            recs = request.env['pr.nomination'].search(domain, limit=5000, order=order)
+            rows = [(
+                r.nominee_id.name or '', r.stage or '', r.tier or '',
+                r.vertical or '', r.leadership_position or '', r.organization or '',
+                str(r.submission_date) if r.submission_date else '',
+                r.nominator_name or '', r.nominee_id.email or '', r.nominee_id.phone or '',
+            ) for r in recs]
+            return self._csv_response('nominations.csv',
+                ['Nominee', 'Stage', 'Tier', 'Vertical', 'Role', 'Organization',
+                 'Submitted', 'Nominator', 'Email', 'Phone'], rows)
+        except Exception:
+            _logger.exception('PR API error in pr_nominations_export')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/contacts/export', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def pr_contacts_export(self, **kw):
+        try:
+            domain = [('is_pr_contact', '=', True)]
+            q = (kw.get('q') or '').strip()
+            if q:
+                domain += ['|', '|',
+                           ('name', 'ilike', q),
+                           ('email', 'ilike', q),
+                           ('phone', 'ilike', q)]
+            if kw.get('region_id'):
+                domain.append(('pr_region_id', '=', int(kw['region_id'])))
+            if kw.get('involvement') in ('low', 'moderate', 'high'):
+                domain.append(('pr_involvement', '=', kw['involvement']))
+            _, _, order = self._list_params(
+                kw, self._CONTACT_SORT_FIELDS, 'name asc',
+                desc_defaults=self._CONTACT_DESC_DEFAULTS)
+            recs = request.env['res.partner'].search(domain, limit=5000, order=order)
+            rows = [(
+                p.name or '', p.email or '', p.phone or '',
+                p.pr_involvement or '', 'yes' if p.pr_vip else '',
+                p.pr_region_id.name or '', p.function or '', p.company_name or '',
+            ) for p in recs]
+            return self._csv_response('contacts.csv',
+                ['Name', 'Email', 'Phone', 'Involvement', 'VIP', 'Region',
+                 'Designation', 'Organization'], rows)
+        except Exception:
+            _logger.exception('PR API error in pr_contacts_export')
+            return self._json_error('Internal server error', status=500)
+
     # ── Follow-ups (interactions with a follow_up_date, center-scoped) ──
 
     @http.route('/pr/api/followups', type='http', auth='user', methods=['GET'], csrf=False)
@@ -497,6 +673,73 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_success([r.to_spa_dict() for r in recs])
         except Exception:
             _logger.exception('PR API error in pr_followups')
+            return self._json_error('Internal server error', status=500)
+
+    # ── Notifications (record rule limits everything to the own user) ──
+
+    @http.route('/pr/api/notifications', type='http', auth='user', methods=['GET'], csrf=False)
+    def pr_notifications(self, **kw):
+        try:
+            recs = request.env['pr.notification'].search([], limit=50)
+            return self._json_success([r.to_spa_dict() for r in recs])
+        except Exception:
+            _logger.exception('PR API error in pr_notifications')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/notifications/unread-count', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def pr_notifications_unread(self, **kw):
+        try:
+            count = request.env['pr.notification'].search_count([('is_read', '=', False)])
+            return self._json_success({'count': count})
+        except Exception:
+            _logger.exception('PR API error in pr_notifications_unread')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/notifications/read', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_notification_read(self, **kw):
+        try:
+            data = self._parse_json()
+            rec = request.env['pr.notification'].browse(int(data['notification_id']))
+            if rec.exists():
+                rec.write({'is_read': True})
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('PR API error in pr_notification_read')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/notifications/read-all', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_notifications_read_all(self, **kw):
+        try:
+            request.env['pr.notification'].search([('is_read', '=', False)]).write({'is_read': True})
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('PR API error in pr_notifications_read_all')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/notifications/clear', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_notifications_clear(self, **kw):
+        try:
+            request.env['pr.notification'].search([]).unlink()
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('PR API error in pr_notifications_clear')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/notifications/delete', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_notification_delete(self, **kw):
+        try:
+            data = self._parse_json()
+            rec = request.env['pr.notification'].browse(int(data['notification_id']))
+            if rec.exists():
+                rec.unlink()
+            return self._json_success({'success': True})
+        except Exception:
+            _logger.exception('PR API error in pr_notification_delete')
             return self._json_error('Internal server error', status=500)
 
     # ── Interactions ────────────────────────────────────────────────────

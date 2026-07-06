@@ -237,11 +237,27 @@ class PrNomination(models.Model):
         self._check_approver()  # human-only gate; AI can never reach this
         self.write({'stage': 'approved', 'approval_status': 'approved',
                     'approver_id': self.env.uid})
+        self._notify_decision('approved')
 
     def action_reject(self):
         self._check_approver()
         self.write({'stage': 'rejected', 'approval_status': 'rejected',
                     'approver_id': self.env.uid})
+        self._notify_decision('rejected')
+
+    def _notify_decision(self, decision):
+        """Tell the nominator's POC the approval decision (if a POC is set
+        and they aren't the one who decided)."""
+        Notification = self.env['pr.notification']
+        for rec in self:
+            poc = rec.poc_id
+            if poc and poc.id != self.env.uid:
+                Notification.notify(
+                    poc, f'nomination_{decision}',
+                    f'Nomination {decision}',
+                    f'{rec.nominee_id.name or "A nominee"} was {decision}.',
+                    path=f'/nominations/{rec.id}',
+                )
 
     def action_start_nurturing(self):
         self.write({'stage': 'nurturing'})

@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import {
   Group,
   Text,
-  Select,
   Center,
   Loader,
   UnstyledButton,
@@ -26,6 +25,8 @@ import {
 } from '@tabler/icons-react';
 import { usePR } from './hooks/usePR';
 import { EmptyState } from './components/EmptyState';
+import { NotificationBell } from './components/NotificationBell';
+import { AccountMenu } from './components/AccountMenu';
 
 const ContactsPage = lazy(() =>
   import('./pages/ContactsPage').then((m) => ({ default: m.ContactsPage })));
@@ -55,7 +56,7 @@ const SIDEBAR_COLLAPSED_W = 64;
 const LOGO_SRC = '/isha_pr/static/description/icon.png';
 
 export function App() {
-  const { me, loading, center, setCenter } = usePR();
+  const { me, loading } = usePR();
   const navigate = useNavigate();
   const location = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
@@ -81,21 +82,6 @@ export function App() {
   const showSidebar = isDesktop;
   const sidebarWidth = sidebarOpen ? SIDEBAR_W : SIDEBAR_COLLAPSED_W;
   const firstName = me.user.name ? me.user.name.split(' ')[0] : '';
-
-  const centerSelect = (
-    <Select
-      size="xs"
-      w={isDesktop ? 180 : 140}
-      aria-label="Center"
-      data={me.centers.map((c) => ({ value: String(c.id), label: c.name }))}
-      value={center ? String(center.id) : null}
-      onChange={(v) => {
-        const c = me.centers.find((x) => String(x.id) === v);
-        if (c) setCenter(c);
-      }}
-      placeholder="No centers"
-    />
-  );
 
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -131,10 +117,11 @@ export function App() {
           </Group>
         )}
         <Group gap={8} wrap="nowrap">
-          {centerSelect}
+          <NotificationBell />
           <ActionIcon variant="subtle" size="lg" aria-label="Toggle dark mode" onClick={toggleColorScheme}>
             {computedColorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
+          <AccountMenu me={me} />
         </Group>
       </Box>
 

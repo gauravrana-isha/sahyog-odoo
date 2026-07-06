@@ -33,6 +33,16 @@ export interface Paged<T> {
   limit: number;
 }
 
+export interface PRNotification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  path: string;
+  is_read: boolean;
+  create_date: string;
+}
+
 export interface Contact {
   id: number;
   name: string;
@@ -177,4 +187,5 @@ export interface DashboardData {
   by_stage: Record<string, number>;
   by_tier: Record<string, number>;
   top_verticals: { vertical: string; label: string; count: number }[];
+  by_month: { month: string; key: string; count: number }[];
 }

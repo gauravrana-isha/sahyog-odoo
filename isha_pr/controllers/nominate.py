@@ -90,7 +90,7 @@ class PRNominatePublic(http.Controller):
             else:
                 partner.write({'is_pr_contact': True})
 
-            request.env['pr.nomination'].sudo().create({
+            nomination = request.env['pr.nomination'].sudo().create({
                 'nominee_id': partner.id,
                 'nominator_name': ' '.join(x for x in (values['nominator_first'], values['nominator_last']) if x),
                 'nominator_email': values['nominator_email'],
@@ -108,6 +108,14 @@ class PRNominatePublic(http.Controller):
                 'submission_date': date.today(),
                 'source_tab': 'web_form',
             })
+
+            # Tell the PR admins a new nomination arrived for review.
+            admins = request.env.ref('isha_pr.group_isha_pr_admin').sudo().users
+            request.env['pr.notification'].sudo().notify(
+                admins, 'nomination_new', 'New nomination received',
+                f'{nominee_name} — nominated by {values["nominator_first"]} {values["nominator_last"]}'.strip(),
+                path=f'/nominations/{nomination.id}',
+            )
         except Exception:
             _logger.exception('PR nomination submission failed')
             return request.render('isha_pr.pr_nomination_form', self._render_ctx(
