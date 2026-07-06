@@ -28,3 +28,27 @@ export const TIER_COLOR: Record<string, string> = {
   '2': 'ochre',
   '3': 'sand',
 };
+
+/** Collaboration-request pipeline stage → palette (mirrors nomination stages). */
+export const COLLAB_STAGE_COLOR: Record<string, string> = {
+  received: 'ochre',
+  evaluated: 'river',
+  approved: 'sage',
+  actioned: 'clay',
+  declined: 'red',
+};
+
+/** Backlash / reputational risk → palette. */
+export const RISK_COLOR: Record<string, string> = {
+  low: 'sage',
+  medium: 'ochre',
+  high: 'red',
+};
+
+/** Who should engage — the routing recommendation → palette. */
+export const RECOMMENDATION_COLOR: Record<string, string> = {
+  sadhguru: 'clay',
+  global_coordinator: 'river',
+  local_teacher: 'sand',
+  decline: 'red',
+};

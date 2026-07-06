@@ -59,12 +59,18 @@ def _pr_assets():
 
 class IshaPRSPA(http.Controller):
 
+    # auth='public': with auth='user' the framework redirects to the stock
+    # /web/login before this method runs — public + explicit check lets us
+    # route to the branded /pr/login with the deep link preserved.
     @http.route(['/pr/app', '/pr/app/<path:subpath>'], type='http',
-                auth='user', website=False)
+                auth='public', website=False)
     def serve_pr_spa(self, subpath=None, **kw):
         user = request.env.user
         if not user or user._is_public():
-            return request.redirect('/web/login?redirect=/pr/app')
+            # Preserve the deep link through the branded login flow
+            from urllib.parse import quote
+            return request.redirect(
+                '/pr/login?redirect=' + quote(request.httprequest.full_path.rstrip('?')))
         if not user.has_group('isha_pr.group_isha_pr'):
             return request.make_response(
                 '<h2 style="font-family:sans-serif;text-align:center;margin-top:20vh">'
@@ -101,6 +107,22 @@ class IshaPRSPA(http.Controller):
         return request.make_response(html, headers=[
             ('Content-Type', 'text/html; charset=utf-8'),
         ])
+
+    VAANI_BRAND = {
+        'name': 'Vaani',
+        'tagline': 'Isha PR — Contacts, Nominations & Outreach',
+        'icon': '/isha_pr/static/pwa/icon-192.png',
+        'image': '/isha_pr/static/pwa/login.jpg',
+        'default_redirect': '/pr/app',
+        'login_url': '/pr/login',
+    }
+
+    @http.route('/pr/login', type='http', auth='public', website=False,
+                methods=['GET', 'POST'])
+    def pr_login(self, **kw):
+        """Branded Vaani login (shared split-panel page from sahyog)."""
+        from odoo.addons.sahyog.controllers.login_page import handle_login
+        return handle_login(self.VAANI_BRAND, **kw)
 
     @http.route('/pr/sw.js', type='http', auth='public', website=False)
     def serve_pr_sw(self, **kw):

@@ -9,6 +9,7 @@ export interface PRCapabilities {
   pr_log_interaction: boolean;
   pr_view_nominations: boolean;
   pr_view_followups: boolean;
+  pr_view_collabs: boolean;
   admin: boolean;
 }
 
@@ -188,4 +189,52 @@ export interface DashboardData {
   by_tier: Record<string, number>;
   top_verticals: { vertical: string; label: string; count: number }[];
   by_month: { month: string; key: string; count: number }[];
+  collabs: CollabStats;
+}
+
+export interface CollabLight {
+  id: number;
+  name: string;
+  request_type: string;
+  stage: string;
+  recommendation: string;
+  risk_level: string;
+  audience_size: string;
+  request_date: string;
+  poc: string;
+}
+
+export interface CollabDetail extends CollabLight {
+  host_names: string;
+  links: string;
+  source: string;
+  requester_name: string;
+  requester_email: string;
+  audience_fit: string;
+  host_credibility: string;
+  brand_alignment: string;
+  content_control: string;
+  guest_history: string;
+  potential_backlash: string;
+  opportunity_cost: string;
+  long_term_value: string;
+  avg_views: string;
+  engagement_rate: string;
+  ratings_score: string;
+  subscriber_view_ratio: string;
+  recommendation_notes: string;
+  eval_summary: string;
+  eval_confidence: number;
+  enriched: boolean;
+  sources: string;
+  action_taken: string;
+  notes: string;
+  decided_by: string;
+}
+
+export interface CollabStats {
+  total: number;
+  to_evaluate: number;
+  to_decide: number;
+  high_risk: number;
 }

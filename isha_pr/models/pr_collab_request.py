@@ -101,6 +101,40 @@ class PrCollabRequest(models.Model):
     def _expand_stages(self, states, domain):
         return [s[0] for s in COLLAB_STAGES]
 
+    def to_spa_light_dict(self):
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'name': self.name or '',
+            'request_type': self.request_type or '',
+            'stage': self.stage or '',
+            'recommendation': self.recommendation or '',
+            'risk_level': self.risk_level or '',
+            'audience_size': self.audience_size or '',
+            'request_date': str(self.request_date) if self.request_date else '',
+            'poc': self.poc_id.name or '',
+        }
+
+    def to_spa_dict(self):
+        self.ensure_one()
+        fields_list = (
+            'name', 'request_type', 'host_names', 'links', 'source', 'requester_name',
+            'requester_email', 'audience_fit', 'host_credibility', 'brand_alignment',
+            'content_control', 'guest_history', 'potential_backlash', 'opportunity_cost',
+            'long_term_value', 'audience_size', 'avg_views', 'engagement_rate',
+            'ratings_score', 'subscriber_view_ratio', 'recommendation', 'recommendation_notes',
+            'risk_level', 'eval_summary', 'sources', 'stage', 'action_taken', 'notes')
+        data = {f: (getattr(self, f) or '') for f in fields_list}
+        data.update({
+            'id': self.id,
+            'request_date': str(self.request_date) if self.request_date else '',
+            'eval_confidence': self.eval_confidence,
+            'enriched': self.enriched,
+            'poc': self.poc_id.name or '',
+            'decided_by': self.decided_by.name or '',
+        })
+        return data
+
     def _check_approver(self):
         if not self.env.user.has_group('isha_pr.group_isha_pr_admin'):
             raise UserError('Only PR Admins can approve or decline collaboration requests.')

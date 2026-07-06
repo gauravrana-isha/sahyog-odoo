@@ -16,6 +16,7 @@ import {
   IconAddressBook,
   IconAward,
   IconChecklist,
+  IconMicrophone,
   IconLayoutDashboard,
   IconSun,
   IconMoon,
@@ -41,11 +42,16 @@ const FollowUpsPage = lazy(() =>
   import('./pages/FollowUpsPage').then((m) => ({ default: m.FollowUpsPage })));
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const CollabsPage = lazy(() =>
+  import('./pages/CollabsPage').then((m) => ({ default: m.CollabsPage })));
+const CollabDetail = lazy(() =>
+  import('./pages/CollabDetail').then((m) => ({ default: m.CollabDetail })));
 
 const NAV = [
   { label: 'Home', icon: IconLayoutDashboard, path: '/home', cap: 'pr_view_dashboard' },
   { label: 'Contacts', icon: IconAddressBook, path: '/contacts', cap: 'pr_view_contacts' },
   { label: 'Nominations', icon: IconAward, path: '/nominations', cap: 'pr_view_nominations' },
+  { label: 'Collaborations', icon: IconMicrophone, path: '/collabs', cap: 'pr_view_collabs' },
   { label: 'Follow-ups', icon: IconChecklist, path: '/follow-ups', cap: 'pr_view_followups' },
 ] as const;
 
@@ -246,6 +252,8 @@ export function App() {
                 <Route path="/contacts/:id" element={<ContactDetail />} />
                 <Route path="/nominations" element={<NominationsPage />} />
                 <Route path="/nominations/:id" element={<NominationDetail />} />
+                <Route path="/collabs" element={<CollabsPage />} />
+                <Route path="/collabs/:id" element={<CollabDetail />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route path="*" element={<Navigate to="/contacts" replace />} />
               </Routes>

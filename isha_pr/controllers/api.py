@@ -17,7 +17,7 @@ from odoo.addons.sahyog.controllers.base import SahyogControllerBase, json_endpo
 _logger = logging.getLogger(__name__)
 
 PR_CAPABILITIES = ['pr_view_dashboard', 'pr_view_contacts', 'pr_log_interaction',
-                   'pr_view_nominations', 'pr_view_followups']
+                   'pr_view_nominations', 'pr_view_followups', 'pr_view_collabs']
 
 # Scalar partner fields the SPA may write directly.
 _WRITABLE_SCALARS = (
@@ -225,6 +225,17 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             'by_tier': by_tier,
             'top_verticals': [x for x in top_verticals if x['count']],
             'by_month': by_month,
+            'collabs': self._collab_stats(),
+        }
+
+    def _collab_stats(self):
+        C = request.env['pr.collab.request']
+        return {
+            'total': C.search_count([]),
+            'to_evaluate': C.search_count([('stage', '=', 'received')]),
+            'to_decide': C.search_count([('stage', '=', 'evaluated')]),
+            'high_risk': C.search_count([('risk_level', '=', 'high'),
+                                         ('stage', 'not in', ('declined', 'actioned'))]),
         }
 
     # ── Master data for pickers ─────────────────────────────────────────
@@ -629,6 +640,106 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
                  'Submitted', 'Nominator', 'Email', 'Phone'], rows)
         except Exception:
             _logger.exception('PR API error in pr_nominations_export')
+            return self._json_error('Internal server error', status=500)
+
+    # ── Collaboration requests ──────────────────────────────────────────
+
+    _COLLAB_WRITABLE = (
+        'name', 'request_type', 'host_names', 'links', 'source', 'requester_name',
+        'requester_email', 'audience_fit', 'host_credibility', 'brand_alignment',
+        'content_control', 'guest_history', 'potential_backlash', 'opportunity_cost',
+        'long_term_value', 'audience_size', 'avg_views', 'engagement_rate',
+        'ratings_score', 'subscriber_view_ratio', 'recommendation', 'recommendation_notes',
+        'risk_level', 'eval_summary', 'action_taken', 'notes', 'request_date',
+    )
+    _COLLAB_ACTIONS = {
+        'evaluate': 'action_mark_evaluated', 'approve': 'action_approve',
+        'decline': 'action_decline', 'action': 'action_mark_actioned',
+        'reset': 'action_reset_received',
+    }
+
+    @http.route('/pr/api/collabs', type='http', auth='user', methods=['GET'], csrf=False)
+    def pr_collabs(self, **kw):
+        try:
+            domain = []
+            for f in ('stage', 'request_type', 'recommendation'):
+                if kw.get(f):
+                    domain.append((f, '=', kw[f]))
+            if kw.get('risk'):
+                domain.append(('risk_level', '=', kw['risk']))
+            q = (kw.get('q') or '').strip()
+            if q:
+                domain += ['|', ('name', 'ilike', q), ('host_names', 'ilike', q)]
+            try:
+                offset = max(0, int(kw.get('offset', 0)))
+                limit = min(200, max(1, int(kw.get('limit', 50))))
+            except (TypeError, ValueError):
+                offset, limit = 0, 50
+            C = request.env['pr.collab.request']
+            total = C.search_count(domain)
+            recs = C.search(domain, offset=offset, limit=limit, order='request_date desc, id desc')
+            return self._json_success({'records': [r.to_spa_light_dict() for r in recs],
+                                       'total': total, 'offset': offset, 'limit': limit})
+        except Exception:
+            _logger.exception('PR API error in pr_collabs')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/collabs/<int:cid>', type='http', auth='user', methods=['GET'], csrf=False)
+    def pr_collab_detail(self, cid, **kw):
+        try:
+            rec = request.env['pr.collab.request'].browse(cid)
+            if not rec.exists():
+                return self._json_error('Request not found')
+            return self._json_success(rec.to_spa_dict())
+        except Exception:
+            _logger.exception('PR API error in pr_collab_detail')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/collabs/<int:cid>/update', type='http', auth='user', methods=['POST'], csrf=False)
+    def pr_collab_update(self, cid, **kw):
+        try:
+            rec = request.env['pr.collab.request'].browse(cid)
+            if not rec.exists():
+                return self._json_error('Request not found')
+            data = self._parse_json()
+            vals = {k: data[k] for k in self._COLLAB_WRITABLE if k in data}
+            if vals:
+                rec.write(vals)
+            return self._json_success(rec.to_spa_dict())
+        except Exception:
+            _logger.exception('PR API error in pr_collab_update')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/collabs/create', type='http', auth='user', methods=['POST'], csrf=False)
+    def pr_collab_create(self, **kw):
+        try:
+            data = self._parse_json()
+            if not (data.get('name') or '').strip():
+                return self._json_error('An opportunity name is required.')
+            vals = {k: data[k] for k in self._COLLAB_WRITABLE if k in data}
+            vals['stage'] = 'received'
+            rec = request.env['pr.collab.request'].create(vals)
+            return self._json_success(rec.to_spa_dict())
+        except Exception:
+            _logger.exception('PR API error in pr_collab_create')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/collabs/<int:cid>/action', type='http', auth='user', methods=['POST'], csrf=False)
+    def pr_collab_action(self, cid, **kw):
+        try:
+            rec = request.env['pr.collab.request'].browse(cid)
+            if not rec.exists():
+                return self._json_error('Request not found')
+            data = self._parse_json()
+            method = self._COLLAB_ACTIONS.get(data.get('action'))
+            if not method:
+                return self._json_error('Unknown action')
+            getattr(rec, method)()
+            return self._json_success(rec.to_spa_dict())
+        except UserError as e:
+            return self._json_error(str(e))
+        except Exception:
+            _logger.exception('PR API error in pr_collab_action')
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/contacts/export', type='http', auth='user',

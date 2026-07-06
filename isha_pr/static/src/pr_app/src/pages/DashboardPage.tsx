@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Group, Progress, SimpleGrid, Stack, Text, ThemeIcon,
+  Badge, Card, Group, Progress, SimpleGrid, Stack, Text, ThemeIcon,
   UnstyledButton,
 } from '@mantine/core';
 import { AreaChart, BarChart, DonutChart } from '@mantine/charts';
 import {
   IconStar, IconFlask, IconSeeding, IconAlertTriangle, IconPhone, IconChevronRight,
+  IconMicrophone,
 } from '@tabler/icons-react';
 import { apiGet } from '../api';
 import { STAGE_COLOR, TIER_COLOR } from '../tokens';
@@ -187,6 +188,21 @@ export function DashboardPage() {
           </Group>
         </Card>
       </UnstyledButton>
+
+      {d.collabs && d.collabs.total > 0 && (
+        <UnstyledButton onClick={() => navigate('/collabs')}>
+          <Card withBorder radius="md" p="md">
+            <Group justify="space-between">
+              <Group gap={8}><IconMicrophone size={18} /><Text fw={600}>Collaboration Requests</Text></Group>
+              <Group gap={6}>
+                {d.collabs.to_decide > 0 && <Badge color="ochre" variant="light">{d.collabs.to_decide} to decide</Badge>}
+                {d.collabs.high_risk > 0 && <Badge color="red" variant="light">{d.collabs.high_risk} high risk</Badge>}
+                <IconChevronRight />
+              </Group>
+            </Group>
+          </Card>
+        </UnstyledButton>
+      )}
     </Stack>
   );
 }
