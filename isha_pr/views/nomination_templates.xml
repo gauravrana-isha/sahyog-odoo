@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Public nomination form (/pr/nominate)
+         Design matches the Isha USA "Leadership for a Conscious Planet"
+         nomination page: navy header/footer, light gray-blue page, white
+         card, bookish serif (EB Garamond), label-left rows, green submit.
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <template id="pr_nomination_page_layout" name="PR Nomination Layout">
+        <t t-call="web.html_container">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta name="robots" content="noindex"/>
+                <title>Leadership for a Conscious Planet — Nomination Form</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+                <style>
+                    :root {
+                        --navy: #0a0b4b;
+                        --ink: #36466a;
+                        --ink-soft: #5a688a;
+                        --page: #eceef4;
+                        --card: #ffffff;
+                        --line: #d4dae6;
+                        --input-border: #c8cfdd;
+                        --req: #d0342c;
+                        --accent: #3d6ef2;
+                        --green: #54b45e;
+                        --green-dark: #47a251;
+                        --orange: #f7941d;
+                        --flourish: #33587a;
+                    }
+                    * { box-sizing: border-box; }
+                    body {
+                        margin: 0;
+                        background: var(--page);
+                        color: var(--ink);
+                        font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+                        font-size: 19px;
+                        line-height: 1.55;
+                        -webkit-font-smoothing: antialiased;
+                    }
+                    .topbar {
+                        background: var(--navy);
+                        padding: 22px 32px;
+                    }
+                    .topbar .wordmark {
+                        color: #fff;
+                        font-style: italic;
+                        font-weight: 600;
+                        font-size: 30px;
+                        letter-spacing: 0.5px;
+                        text-decoration: none;
+                    }
+                    .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 72px; }
+                    .card {
+                        background: var(--card);
+                        max-width: 1080px;
+                        margin: 0 auto;
+                        padding: 56px clamp(20px, 6vw, 96px) 48px;
+                        box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+                    }
+                    h1 { font-size: clamp(30px, 4vw, 42px); font-weight: 600; text-align: center; margin: 8px 0 6px; }
+                    h2.subtitle { font-size: clamp(22px, 3vw, 28px); font-weight: 600; text-align: center; margin: 18px 0 34px; }
+                    .quote { text-align: center; font-style: italic; margin: 0 auto 36px; max-width: 780px; }
+                    .intro p { margin: 0 0 20px; }
+                    .intro ul { margin: 0 0 20px; padding-left: 34px; }
+                    .intro li { margin-bottom: 10px; }
+                    .flourish { display: block; margin: 44px auto; }
+                    h3.section {
+                        font-size: 26px;
+                        font-weight: 600;
+                        margin: 8px 0 10px;
+                        padding-bottom: 12px;
+                        border-bottom: 1px solid var(--line);
+                    }
+                    .row {
+                        display: grid;
+                        grid-template-columns: 300px 1fr;
+                        gap: 12px 28px;
+                        margin: 34px 0;
+                        align-items: start;
+                    }
+                    .row.stack { grid-template-columns: 1fr; }
+                    .qlabel { font-size: 20px; padding-top: 8px; }
+                    .req { color: var(--req); margin-left: 2px; }
+                    .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                    .sublabel { font-size: 15px; color: var(--ink-soft); margin-top: 6px; }
+                    input[type=text], input[type=email], input[type=tel], select, textarea {
+                        width: 100%;
+                        font: inherit;
+                        color: var(--ink);
+                        background: #fff;
+                        border: 1px solid var(--input-border);
+                        border-radius: 4px;
+                        padding: 11px 14px;
+                    }
+                    textarea { min-height: 170px; resize: vertical; }
+                    input:focus, select:focus, textarea:focus {
+                        outline: 2px solid var(--accent);
+                        outline-offset: 0;
+                        border-color: var(--accent);
+                    }
+                    .choices { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+                    .choices.inline { flex-direction: row; gap: 12%; }
+                    .choice { display: flex; align-items: flex-start; gap: 12px; font-size: 20px; cursor: pointer; }
+                    .choice input { width: 22px; height: 22px; margin-top: 4px; accent-color: var(--accent); flex-shrink: 0; }
+                    .note { font-weight: 700; font-size: 21px; margin: 40px 0; }
+                    .qtitle { font-size: 20px; margin: 0 0 14px; }
+                    .error-banner {
+                        background: #fdecea;
+                        border: 1px solid #f2b8b5;
+                        color: #a4322b;
+                        border-radius: 4px;
+                        padding: 12px 16px;
+                        margin-bottom: 28px;
+                    }
+                    .submit-bar { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 34px; text-align: center; }
+                    button.submit {
+                        font: inherit;
+                        font-size: 20px;
+                        color: #fff;
+                        background: var(--green);
+                        border: none;
+                        border-radius: 4px;
+                        padding: 13px 52px;
+                        cursor: pointer;
+                    }
+                    button.submit:hover { background: var(--green-dark); }
+                    .footer {
+                        background: var(--navy);
+                        color: #fff;
+                        text-align: center;
+                        padding: 44px 16px 64px;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        font-size: 17px;
+                        margin-top: 64px;
+                    }
+                    .footer a { color: var(--orange); text-decoration: none; }
+                    .thanks { text-align: center; padding: 40px 0 24px; }
+                    .thanks h1 { margin-bottom: 18px; }
+                    @media (max-width: 760px) {
+                        .row { grid-template-columns: 1fr; margin: 28px 0; }
+                        .qlabel { padding-top: 0; }
+                        .choices.inline { flex-direction: column; gap: 14px; }
+                        .card { padding-top: 36px; }
+                    }
+                    /* Override Odoo's injected body styles */
+                    .o_body_html { padding: 0 !important; margin: 0 !important; background: var(--page) !important; }
+                </style>
+            </head>
+            <body>
+                <div class="topbar">
+                    <!-- Drop the official white Isha logo at
+                         isha_pr/static/src/img/isha_logo_white.png and swap this
+                         wordmark for an <img> when available. -->
+                    <a class="wordmark" href="/pr/nominate">isha</a>
+                </div>
+                <div class="wrap">
+                    <div class="card">
+                        <t t-out="0"/>
+                    </div>
+                </div>
+                <div class="footer">
+                    ©2026. Inner Engineering <a href="https://www.innerengineering.com/terms-and-conditions" target="_blank">Terms and Conditions</a>.
+                    All Rights Reserved. Read our <a href="https://isha.sadhguru.org/privacy-policy" target="_blank">Privacy Policy</a>.
+                </div>
+            </body>
+        </t>
+    </template>
+
+    <!-- Decorative lotus flourish divider -->
+    <template id="pr_nomination_flourish" name="PR Nomination Flourish">
+        <svg class="flourish" width="300" height="86" viewBox="0 0 300 86" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g stroke="#33587a" stroke-width="2.2" stroke-linecap="round" fill="none">
+                <!-- flowing baseline -->
+                <path d="M28 46 C 90 38, 210 38, 272 46"/>
+                <path d="M8 49 h3 M16 48 h3"/>
+                <!-- lotus petals -->
+                <path d="M150 36 C 146 24, 146 16, 150 6 C 154 16, 154 24, 150 36 Z" fill="#33587a"/>
+                <path d="M150 36 C 141 27, 136 22, 132 12 C 142 17, 147 24, 150 36 Z" fill="#33587a"/>
+                <path d="M150 36 C 159 27, 164 22, 168 12 C 158 17, 153 24, 150 36 Z" fill="#33587a"/>
+                <path d="M150 36 C 138 32, 130 30, 120 30 C 130 36, 140 38, 150 36 Z"/>
+                <path d="M150 36 C 162 32, 170 30, 180 30 C 170 36, 160 38, 150 36 Z"/>
+                <!-- spiral below -->
+                <path d="M150 56 C 158 56, 162 62, 158 68 C 154 73, 146 71, 146 65 C 146 61, 150 59, 153 61"/>
+                <path d="M136 74 h2 M143 77 h2 M151 79 h2 M159 77 h2 M166 74 h2" stroke-width="3"/>
+            </g>
+        </svg>
+    </template>
+
+    <!-- ── The form page ── -->
+    <template id="pr_nomination_form" name="PR Nomination Form">
+        <t t-call="isha_pr.pr_nomination_page_layout">
+
+            <h1>Leadership for a Conscious Planet</h1>
+            <h2 class="subtitle">Nomination Form 2026</h2>
+
+            <p class="quote">“Only if citizens and leaders invest themselves in long-term planetary well-being can we create a Conscious Planet.” — Sadhguru</p>
+
+            <div class="intro">
+                <p>We invite you to nominate individuals who shape people and culture - because when leadership becomes conscious, the world shifts with it. It is not about leadership as a title or position, but about inner responsibility, clarity, and the ability to live and act consciously. It is for those across diverse fields who may be ready to deepen this inner dimension and strengthen how they lead and create meaningful impact.</p>
+                <p>Guided by Sadhguru’s vision of leadership from within, Isha offers immersive retreats and tailored engagements for leaders and influencers. A range of such opportunities is being planned for 2026, and we invite you to nominate individuals - or yourself - who may resonate as these offerings unfold.</p>
+                <p>Offerings include:</p>
+                <ul>
+                    <li><b>Inner Engineering Retreat (IER) – Special Event:</b> a multi-day retreat including a full Inner Engineering Retreat conducted by an Isha Instructor, along with a session with Sadhguru.</li>
+                    <li>We will share more offerings with you as they become available.</li>
+                </ul>
+                <p>This nomination is an initial step—an expression of interest that helps us understand alignment as these opportunities take shape.</p>
+                <p>If someone comes to mind—including yourself—who may be ready for deeper inner engagement with Isha, please share their name below.</p>
+
+                <h3 class="section" style="border-bottom:none; margin-top:40px;">Who Can Be Nominated? (Examples)</h3>
+                <ul>
+                    <li><b>Business Leaders:</b> Entrepreneurs and business owners creating meaningful impact; senior and mid-level leaders serving as intrapreneurs across small, mid-sized, and large organizations</li>
+                    <li><b>Healthcare Leaders:</b> Physicians with published research, heads of departments, and other professionals shaping clinical practice, education, and healthcare systems</li>
+                    <li><b>Arts, Sports, and Cultural Influencers:</b> Accomplished athletes, renowned artists, musicians, authors, poets, and social media content creators with significant public influence</li>
+                    <li><b>Academic &amp; Research Leaders:</b> University professors, department heads, school board members, and scientists with strong research or publication records, including those contributing to public policy and thought leadership</li>
+                    <li><b>Public Service Leaders:</b> Government officials at the federal, state, or city level, as well as board members of nonprofit and civil-society organizations involved in public policy development and implementation</li>
+                    <li><b>Media Professionals:</b> Journalists and media professionals from local or national news organizations</li>
+                    <li><b>Emerging &amp; Next-Generation Leaders:</b> Student leaders, young professionals, founders under 35, and individuals in early leadership roles</li>
+                    <li><b>Environmental &amp; Sustainability Leaders:</b> Climate scientists, sustainability executives, conservation leaders, and policy advocates shaping environmental resilience</li>
+                </ul>
+                <p style="margin-top:32px;">This form takes approximately 1-2 minutes to complete.</p>
+                <p>All information shared here will be treated with confidentiality.</p>
+            </div>
+
+            <t t-call="isha_pr.pr_nomination_flourish"/>
+
+            <t t-if="error">
+                <div class="error-banner" t-esc="error"/>
+            </t>
+
+            <form method="post" action="/pr/nominate/submit" novalidate="novalidate">
+
+                <h3 class="section">Your Details</h3>
+
+                <div class="row">
+                    <div class="qlabel">Your Name<span class="req">*</span></div>
+                    <div>
+                        <div class="duo">
+                            <div>
+                                <input type="text" name="nominator_first" t-att-value="values.get('nominator_first', '')" required="required"/>
+                                <div class="sublabel">First Name</div>
+                            </div>
+                            <div>
+                                <input type="text" name="nominator_last" t-att-value="values.get('nominator_last', '')"/>
+                                <div class="sublabel">Last Name</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="qlabel">Email Address<span class="req">*</span></div>
+                    <div>
+                        <input type="email" name="nominator_email" t-att-value="values.get('nominator_email', '')" required="required"/>
+                        <div class="sublabel">example@example.com</div>
+                    </div>
+                </div>
+
+                <div class="row stack">
+                    <div class="duo">
+                        <div>
+                            <div class="qlabel" style="padding:0 0 10px;">Country Code</div>
+                            <select name="nominator_country_code">
+                                <t t-foreach="phone_codes" t-as="code">
+                                    <option t-att-value="code" t-att-selected="'selected' if values.get('nominator_country_code', '1') == code else None" t-esc="code"/>
+                                </t>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="qlabel" style="padding:0 0 10px;">Phone Number<span class="req">*</span></div>
+                            <input type="tel" name="nominator_phone" placeholder="(000) 000-0000" t-att-value="values.get('nominator_phone', '')" required="required"/>
+                            <div class="sublabel">Please enter a valid phone number.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="qlabel">Address</div>
+                    <div>
+                        <div class="duo">
+                            <div>
+                                <input type="text" name="nominator_city" t-att-value="values.get('nominator_city', '')"/>
+                                <div class="sublabel">City</div>
+                            </div>
+                            <div>
+                                <input type="text" name="nominator_state" t-att-value="values.get('nominator_state', '')"/>
+                                <div class="sublabel">State / Province</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:20px;">
+                            <select name="nominator_country">
+                                <option value="">Please Select</option>
+                                <t t-foreach="countries" t-as="country">
+                                    <option t-att-value="country" t-att-selected="'selected' if values.get('nominator_country') == country else None" t-esc="country"/>
+                                </t>
+                            </select>
+                            <div class="sublabel">Country</div>
+                        </div>
+                    </div>
+                </div>
+
+                <t t-call="isha_pr.pr_nomination_flourish"/>
+
+                <h3 class="section">Nominee Details</h3>
+
+                <div class="row">
+                    <div class="qlabel">Is this a self-nomination?<span class="req">*</span></div>
+                    <div class="choices inline">
+                        <label class="choice"><input type="radio" name="is_self_nomination" value="yes" t-att-checked="'checked' if values.get('is_self_nomination') == 'yes' else None" required="required"/> Yes</label>
+                        <label class="choice"><input type="radio" name="is_self_nomination" value="no" t-att-checked="'checked' if values.get('is_self_nomination') == 'no' else None"/> No</label>
+                    </div>
+                </div>
+
+                <div class="row stack">
+                    <div class="qtitle">You are nominating this individual (or yourself) for (please select all that apply)<span class="req">*</span></div>
+                    <div class="choices">
+                        <label class="choice"><input type="checkbox" name="nominated_for" value="IER-Special Event 2026" t-att-checked="'checked' if 'IER-Special Event 2026' in values.get('nominated_for_list', []) else None"/> IER-Special Event 2026</label>
+                    </div>
+                </div>
+
+                <p class="note">For nominating others, please nominate only individuals you can personally connect with.</p>
+
+                <div class="row stack">
+                    <div class="qtitle">If approved, how would you prefer to proceed?<span class="req">*</span></div>
+                    <div class="choices">
+                        <label class="choice"><input type="radio" name="proceed_preference" value="self_invite" t-att-checked="'checked' if values.get('proceed_preference') == 'self_invite' else None" required="required"/> I will invite the nominee directly</label>
+                        <label class="choice"><input type="radio" name="proceed_preference" value="guidance" t-att-checked="'checked' if values.get('proceed_preference') == 'guidance' else None"/> I would like guidance from an Isha volunteer but will extend the invitation myself</label>
+                        <label class="choice"><input type="radio" name="proceed_preference" value="isha_reach_out" t-att-checked="'checked' if values.get('proceed_preference') == 'isha_reach_out' else None"/> I would prefer Isha to reach out, and I can facilitate the connection</label>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="qlabel">Name of Nominee:<span class="req">*</span></div>
+                    <div>
+                        <div class="duo">
+                            <div>
+                                <input type="text" name="nominee_first" t-att-value="values.get('nominee_first', '')" required="required"/>
+                                <div class="sublabel">First Name</div>
+                            </div>
+                            <div>
+                                <input type="text" name="nominee_last" t-att-value="values.get('nominee_last', '')"/>
+                                <div class="sublabel">Last Name</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row stack">
+                    <div class="qtitle">Website and/or relevant social media profiles (Please share at least one link, if available):<span class="req">*</span></div>
+                    <div>
+                        <textarea name="social_links" required="required"><t t-esc="values.get('social_links', '')"/></textarea>
+                        <div class="sublabel">e.g., personal website, LinkedIn, Instagram, X/Twitter, Facebook, YouTube, TikTok</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="qlabel">Has the nominee completed Inner Engineering (Shambhavi Mahamudra Kriya)?<span class="req">*</span></div>
+                    <div>
+                        <select name="ie_completed" required="required">
+                            <option value="">Please Select</option>
+                            <option value="yes" t-att-selected="'selected' if values.get('ie_completed') == 'yes' else None">Yes</option>
+                            <option value="no" t-att-selected="'selected' if values.get('ie_completed') == 'no' else None">No</option>
+                            <option value="unknown" t-att-selected="'selected' if values.get('ie_completed') == 'unknown' else None">Not sure</option>
+                        </select>
+                    </div>
+                </div>
+
+                <p class="note" style="font-size:22px;">Optional: If you’d like, you may share the nominee’s phone number and/or email:</p>
+
+                <div class="row stack">
+                    <div class="duo">
+                        <div>
+                            <div class="qlabel" style="padding:0 0 10px;">Nominee’s Country Code</div>
+                            <select name="nominee_country_code">
+                                <t t-foreach="phone_codes" t-as="code">
+                                    <option t-att-value="code" t-att-selected="'selected' if values.get('nominee_country_code', '1') == code else None" t-esc="code"/>
+                                </t>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="qlabel" style="padding:0 0 10px;">Nominee’s Phone Number</div>
+                            <input type="tel" name="nominee_phone" placeholder="(000) 000-0000" t-att-value="values.get('nominee_phone', '')"/>
+                            <div class="sublabel">Please enter a valid phone number.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="qlabel">Nominee’s Email</div>
+                    <div>
+                        <input type="email" name="nominee_email" t-att-value="values.get('nominee_email', '')"/>
+                        <div class="sublabel">example@example.com</div>
+                    </div>
+                </div>
+
+                <div class="row stack">
+                    <div class="qtitle">Optional: If you’d like, please share examples that reflect the nominee’s sphere of influence and how their inner growth has—or may—shape others within it.</div>
+                    <textarea name="influence_examples"><t t-esc="values.get('influence_examples', '')"/></textarea>
+                </div>
+
+                <div class="submit-bar">
+                    <button class="submit" type="submit">Submit</button>
+                </div>
+            </form>
+        </t>
+    </template>
+
+    <!-- ── Thank-you page ── -->
+    <template id="pr_nomination_thanks" name="PR Nomination Thanks">
+        <t t-call="isha_pr.pr_nomination_page_layout">
+            <div class="thanks">
+                <t t-call="isha_pr.pr_nomination_flourish"/>
+                <h1>Thank You</h1>
+                <p class="quote" style="margin-bottom:12px;">Your nomination has been received.</p>
+                <p style="max-width:640px; margin:0 auto;">We appreciate you taking the time to share this. Our team will review the nomination and be in touch as these offerings take shape.</p>
+                <p style="margin-top:36px;"><a href="/pr/nominate" style="color:var(--flourish);">Submit another nomination</a></p>
+            </div>
+        </t>
+    </template>
+
+</odoo>

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List -->
+    <record id="view_pr_nomination_list" model="ir.ui.view">
+        <field name="name">pr.nomination.list</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <list string="Nominations" decoration-success="stage == 'approved'"
+                  decoration-info="stage == 'nominated'" decoration-muted="stage == 'rejected'">
+                <field name="stage"/>
+                <field name="nominee_id"/>
+                <field name="vertical"/>
+                <field name="tier"/>
+                <field name="high_priority" optional="show"/>
+                <field name="leadership_position" string="Designation" optional="hide"/>
+                <field name="organization" string="Institution" optional="show"/>
+                <field name="research_volunteer" optional="show"/>
+                <field name="research_recommendation" optional="hide"/>
+                <field name="tier_confidence" optional="hide" widget="percentage"/>
+                <field name="approval_status" optional="show"/>
+                <field name="response_sent" optional="hide"/>
+                <field name="added_to_nominator_group" optional="hide"/>
+                <field name="research_status" optional="hide"/>
+                <field name="poc_id" optional="show"/>
+                <field name="nominator_name" optional="hide"/>
+                <field name="submission_date" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form -->
+    <record id="view_pr_nomination_form" model="ir.ui.view">
+        <field name="name">pr.nomination.form</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <form string="Nomination">
+                <header>
+                    <button name="action_mark_researched" type="object" string="Mark Researched"
+                            class="btn-primary" invisible="stage != 'nominated'"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            class="btn-primary" invisible="stage != 'researched'"
+                            groups="isha_pr.group_isha_pr_admin"/>
+                    <button name="action_reject" type="object" string="Reject"
+                            invisible="stage not in ('nominated','researched')"
+                            groups="isha_pr.group_isha_pr_admin"/>
+                    <button name="action_start_nurturing" type="object" string="Start Nurturing"
+                            class="btn-primary" invisible="stage != 'approved'"/>
+                    <button name="action_reset_nominated" type="object" string="Reset to Nominated"
+                            invisible="stage == 'nominated'"/>
+                    <field name="stage" widget="statusbar"
+                           statusbar_visible="nominated,researched,approved,nurturing"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="nominee_id" placeholder="Nominee"/></h1>
+                    </div>
+                    <div class="alert alert-info mb-3" role="status" invisible="not brief"
+                         style="white-space: pre-line;">
+                        <field name="brief" nolabel="1" readonly="1"/>
+                    </div>
+                    <group>
+                        <group string="Classification">
+                            <field name="vertical"/>
+                            <field name="tier"/>
+                            <field name="tier_confidence" widget="percentage"/>
+                            <field name="research_status"/>
+                            <field name="poc_id"/>
+                            <field name="enriched"/>
+                        </group>
+                        <group string="Profile">
+                            <field name="leadership_position"/>
+                            <field name="organization"/>
+                            <field name="website" widget="url"/>
+                            <field name="linkedin"/>
+                            <field name="instagram"/>
+                            <field name="social_following"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Location">
+                            <field name="nominee_city"/>
+                            <field name="nominee_state"/>
+                            <field name="nominee_country"/>
+                        </group>
+                        <group string="Isha Relationship">
+                            <field name="is_meditator"/>
+                            <field name="ie_or_shambhavi"/>
+                            <field name="follows_sadhguru"/>
+                            <field name="previous_engagements"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Research (volunteer or AI)">
+                            <field name="research_volunteer"/>
+                            <field name="research_recommendation"/>
+                            <field name="high_priority"/>
+                        </group>
+                        <group string="Approval" groups="isha_pr.group_isha_pr_admin">
+                            <field name="approval_status"/>
+                            <field name="approval_detail"/>
+                            <field name="response_sent"/>
+                            <field name="response_sent_note"/>
+                            <field name="added_to_nominator_group"/>
+                            <field name="approver_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Tier Rationale &amp; Sources">
+                            <field name="tier_rationale" placeholder="Why this tier…"/>
+                            <field name="sources" placeholder="Citations…"/>
+                        </page>
+                        <page string="Research / Call Notes">
+                            <field name="next_step"/>
+                            <field name="research_notes" placeholder="Call notes, follow-ups…"/>
+                        </page>
+                        <page string="Approval Notes (Rui)" groups="isha_pr.group_isha_pr_admin">
+                            <field name="review_notes_rui" placeholder="Rui's review notes…"/>
+                        </page>
+                        <page string="Outreach Campaigns">
+                            <field name="outreach_ids">
+                                <list editable="bottom">
+                                    <field name="campaign"/>
+                                    <field name="status"/>
+                                    <field name="notes"/>
+                                    <field name="action_items" optional="show"/>
+                                    <field name="recommendation" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Form Submission">
+                            <group>
+                                <group string="Declared on Form">
+                                    <field name="is_self_nomination"/>
+                                    <field name="nominated_for"/>
+                                    <field name="proceed_preference"/>
+                                    <field name="submission_date"/>
+                                </group>
+                                <group string="Links &amp; Influence">
+                                    <field name="social_links"/>
+                                    <field name="influence_examples"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Nominator">
+                            <group>
+                                <field name="nominator_name"/>
+                                <field name="nominator_email"/>
+                                <field name="nominator_phone"/>
+                                <field name="nominator_region"/>
+                                <field name="nominator_city"/>
+                                <field name="nominator_state"/>
+                                <field name="nominator_country"/>
+                                <field name="submission_date"/>
+                                <field name="source_tab"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban grouped by tier -->
+    <record id="view_pr_nomination_kanban" model="ir.ui.view">
+        <field name="name">pr.nomination.kanban</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage" class="o_kanban_small_column">
+                <field name="stage"/>
+                <field name="tier"/>
+                <field name="vertical"/>
+                <field name="high_priority"/>
+                <field name="leadership_position"/>
+                <field name="organization"/>
+                <field name="last_touch"/>
+                <field name="next_step"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_global_click">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <strong><field name="nominee_id"/></strong>
+                                <span t-if="record.tier.raw_value"
+                                      t-attf-class="badge #{record.tier.raw_value == '1' ? 'text-bg-success' : record.tier.raw_value == '2' ? 'text-bg-warning' : 'text-bg-secondary'}">
+                                    T<field name="tier"/></span>
+                            </div>
+                            <div class="text-muted small"><field name="leadership_position"/></div>
+                            <div class="small"><field name="organization"/></div>
+                            <div class="mt-1">
+                                <span t-if="record.high_priority.raw_value" class="badge text-bg-danger me-1">⚑ Priority</span>
+                                <span class="badge text-bg-light"><field name="vertical"/></span>
+                            </div>
+                            <div t-if="record.last_touch.value" class="small text-muted mt-1">📞 <field name="last_touch"/></div>
+                            <div t-if="record.next_step.value" class="small mt-1 text-primary">➡️ <field name="next_step"/></div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Search -->
+    <record id="view_pr_nomination_search" model="ir.ui.view">
+        <field name="name">pr.nomination.search</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="nominee_id"/>
+                <field name="organization" string="Institution"/>
+                <field name="leadership_position" string="Designation"/>
+                <field name="nominator_name" string="Nominator"/>
+                <field name="research_volunteer"/>
+                <field name="poc_id"/>
+                <separator/>
+                <filter name="s_nominated" string="Nominated" domain="[('stage','=','nominated')]"/>
+                <filter name="s_researched" string="Researched" domain="[('stage','=','researched')]"/>
+                <filter name="s_approved" string="Approved" domain="[('stage','=','approved')]"/>
+                <filter name="s_nurturing" string="Nurturing" domain="[('stage','=','nurturing')]"/>
+                <filter name="s_rejected" string="Rejected" domain="[('stage','=','rejected')]"/>
+                <separator/>
+                <filter name="tier1" string="Tier 1" domain="[('tier','=','1')]"/>
+                <filter name="tier2" string="Tier 2" domain="[('tier','=','2')]"/>
+                <filter name="tier3" string="Tier 3" domain="[('tier','=','3')]"/>
+                <filter name="high_priority" string="High Priority" domain="[('high_priority','=',True)]"/>
+                <separator/>
+                <filter name="needs_review" string="Needs Review"
+                        domain="[('research_status','=','needs_review')]"/>
+                <filter name="more_info" string="More Info Required"
+                        domain="[('research_status','=','more_info_required')]"/>
+                <filter name="enriched" string="AI Enriched" domain="[('enriched','=',True)]"/>
+                <filter name="response_sent" string="Response Sent" domain="[('response_sent','=',True)]"/>
+                <separator/>
+                <filter name="mine" string="My POC" domain="[('poc_id','=',uid)]"/>
+                <separator/>
+                <filter name="g_stage" string="Stage" domain="[]" context="{'group_by':'stage'}"/>
+                <filter name="g_tier" string="Tier" domain="[]" context="{'group_by':'tier'}"/>
+                <filter name="g_vertical" string="Vertical" domain="[]" context="{'group_by':'vertical'}"/>
+                <filter name="g_organization" string="Organization" domain="[]" context="{'group_by':'organization'}"/>
+                <filter name="g_research_vol" string="Research Volunteer" domain="[]" context="{'group_by':'research_volunteer'}"/>
+                <filter name="g_recommendation" string="Recommendation" domain="[]" context="{'group_by':'research_recommendation'}"/>
+                <filter name="g_approval" string="Approval Status" domain="[]" context="{'group_by':'approval_status'}"/>
+                <filter name="g_nominator" string="Nominator" domain="[]" context="{'group_by':'nominator_name'}"/>
+                <filter name="g_poc" string="POC" domain="[]" context="{'group_by':'poc_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Graph + Pivot (dashboard analytics) -->
+    <record id="view_pr_nomination_graph" model="ir.ui.view">
+        <field name="name">pr.nomination.graph</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <graph string="Nominations" type="bar" sample="1">
+                <field name="vertical"/>
+                <field name="tier"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_pr_nomination_pivot" model="ir.ui.view">
+        <field name="name">pr.nomination.pivot</field>
+        <field name="model">pr.nomination</field>
+        <field name="arch" type="xml">
+            <pivot string="Nominations" sample="1">
+                <field name="vertical" type="row"/>
+                <field name="tier" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_pr_nomination" model="ir.actions.act_window">
+        <field name="name">All Nominations</field>
+        <field name="res_model">pr.nomination</field>
+        <field name="view_mode">kanban,list,graph,pivot,form</field>
+        <field name="search_view_id" ref="view_pr_nomination_search"/>
+    </record>
+
+    <!-- Priority Leads landing: Tier 1 or High Priority, not rejected -->
+    <record id="action_pr_nomination_priority" model="ir.actions.act_window">
+        <field name="name">Priority Leads</field>
+        <field name="res_model">pr.nomination</field>
+        <field name="view_mode">kanban,list,graph,form</field>
+        <field name="domain">['&amp;', ('stage','!=','rejected'), '|', ('tier','=','1'), ('high_priority','=',True)]</field>
+        <field name="search_view_id" ref="view_pr_nomination_search"/>
+    </record>
+
+    <!-- Role-based lenses on the same data -->
+    <record id="action_pr_nomination_research" model="ir.actions.act_window">
+        <field name="name">To Research</field>
+        <field name="res_model">pr.nomination</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('stage','=','nominated')]</field>
+        <field name="search_view_id" ref="view_pr_nomination_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing to research right now</p>
+            <p>New nominations awaiting research (vertical, tier, notes) land here.</p>
+        </field>
+    </record>
+
+    <record id="action_pr_nomination_approve" model="ir.actions.act_window">
+        <field name="name">To Approve</field>
+        <field name="res_model">pr.nomination</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('stage','=','researched')]</field>
+        <field name="search_view_id" ref="view_pr_nomination_search"/>
+    </record>
+
+    <record id="action_pr_nomination_nurture" model="ir.actions.act_window">
+        <field name="name">Nurturing</field>
+        <field name="res_model">pr.nomination</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('stage','in',('approved','nurturing'))]</field>
+        <field name="search_view_id" ref="view_pr_nomination_search"/>
+    </record>
+
+</odoo>

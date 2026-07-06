@@ -7,6 +7,11 @@
         <field name="view_mode">kanban,list,form</field>
         <field name="domain">[('is_pr_contact', '=', True)]</field>
         <field name="context">{'default_is_pr_contact': True}</field>
+        <field name="search_view_id" ref="view_pr_contact_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_pr_contact_kanban')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_pr_contact_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_pr_contact_form')})]"/>
     </record>
 
     <record id="action_pr_program" model="ir.actions.act_window">
@@ -22,11 +27,25 @@
     </record>
 
     <menuitem id="menu_isha_pr_root" name="PR" sequence="50"
+              web_icon="isha_pr,static/description/icon.png"
               groups="group_isha_pr"/>
     <menuitem id="menu_pr_contacts" name="Contacts" parent="menu_isha_pr_root"
               action="action_pr_contacts" sequence="10"/>
     <menuitem id="menu_pr_interactions" name="Interactions" parent="menu_isha_pr_root"
               action="action_pr_interaction" sequence="20"/>
+    <menuitem id="menu_pr_nominations" name="Nominations" parent="menu_isha_pr_root"
+              sequence="15"/>
+    <menuitem id="menu_pr_nom_priority" name="⭐ Priority Leads" parent="menu_pr_nominations"
+              action="action_pr_nomination_priority" sequence="5"/>
+    <menuitem id="menu_pr_nom_all" name="All Nominations" parent="menu_pr_nominations"
+              action="action_pr_nomination" sequence="10"/>
+    <menuitem id="menu_pr_nom_research" name="To Research" parent="menu_pr_nominations"
+              action="action_pr_nomination_research" sequence="20"/>
+    <menuitem id="menu_pr_nom_approve" name="To Approve" parent="menu_pr_nominations"
+              action="action_pr_nomination_approve" sequence="30"
+              groups="group_isha_pr_admin"/>
+    <menuitem id="menu_pr_nom_nurture" name="Nurturing" parent="menu_pr_nominations"
+              action="action_pr_nomination_nurture" sequence="40"/>
     <menuitem id="menu_pr_config" name="Configuration" parent="menu_isha_pr_root"
               sequence="90" groups="group_isha_pr_admin"/>
     <menuitem id="menu_pr_programs" name="Programs" parent="menu_pr_config"

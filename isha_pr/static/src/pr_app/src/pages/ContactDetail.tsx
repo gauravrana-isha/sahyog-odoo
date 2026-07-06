@@ -8,9 +8,12 @@ import {
 import { notifications } from '@mantine/notifications';
 import {
   IconArrowLeft, IconHome, IconMessagePlus, IconCamera, IconTrash, IconDeviceFloppy,
+  IconUserOff, IconMessageCircle,
 } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
 import { usePR } from '../hooks/usePR';
+import { GUEST_LINK_COLOR } from '../tokens';
+import { EmptyState } from '../components/EmptyState';
 import type { ContactDetail as Detail, Interaction } from '../types';
 
 const INVOLVEMENT = [
@@ -26,6 +29,11 @@ const SOURCES = [
   { value: 'event', label: 'Event' }, { value: 'referral', label: 'Referral' },
   { value: 'web', label: 'Web' }, { value: 'social', label: 'Social Media' },
   { value: 'other', label: 'Other' },
+];
+const MET_SG = [
+  { value: 'met', label: 'Met Sadhguru' },
+  { value: 'wants', label: 'Wants to Meet' },
+  { value: 'no', label: 'Not Yet' },
 ];
 const IMAGE_KINDS = [
   { value: 'card_front', label: 'Card — Front' },
@@ -51,9 +59,10 @@ function fileToBase64(file: File): Promise<string> {
 const empty = {
   name: '', pr_alternate_name: '', email: '', pr_secondary_email: '',
   phone: '', pr_secondary_phone: '', pr_whatsapp: '', pr_gender: '',
-  pr_involvement: '', pr_source: '', function: '', company_name: '',
-  street: '', city: '', zip: '', comment: '', pr_poc_notes: '',
-  pr_vip: false, pr_met_sadhguru: false, pr_follows_sg: false,
+  pr_involvement: '', pr_source: '', pr_source_detail: '', function: '',
+  company_name: '', street: '', city: '', zip: '', comment: '', pr_poc_notes: '',
+  pr_social_links: '', pr_primary_poc_email: '', pr_secondary_poc_email: '',
+  pr_vip: false, pr_met_sadhguru: '', pr_follows_sg: false,
 };
 
 export function ContactDetail() {
@@ -82,9 +91,13 @@ export function ContactDetail() {
           pr_secondary_email: d.secondary_email, phone: d.phone,
           pr_secondary_phone: d.secondary_phone, pr_whatsapp: d.whatsapp,
           pr_gender: d.gender, pr_involvement: d.pr_involvement, pr_source: d.source,
-          function: d.function, company_name: d.company_name, street: d.street,
+          pr_source_detail: d.source_detail, function: d.function,
+          company_name: d.company_name, street: d.street,
           city: d.city, zip: d.zip, comment: d.notes, pr_poc_notes: d.poc_notes,
-          pr_vip: d.vip, pr_met_sadhguru: d.met_sadhguru, pr_follows_sg: d.follows_sg,
+          pr_social_links: d.social_links,
+          pr_primary_poc_email: d.primary_poc_email,
+          pr_secondary_poc_email: d.secondary_poc_email,
+          pr_vip: d.vip, pr_met_sadhguru: d.met_sadhguru || '', pr_follows_sg: d.follows_sg,
         });
         setPrograms(d.programs.map((p) => p.name));
         setCampaigns(d.campaigns.map((c) => c.name));
@@ -148,21 +161,29 @@ export function ContactDetail() {
   };
 
   if (loading) return <Center py="xl"><Loader /></Center>;
-  if (!data) return <Text c="dimmed" ta="center" py="xl">Contact not found.</Text>;
+  if (!data) {
+    return (
+      <EmptyState
+        icon={IconUserOff}
+        title="Contact not found"
+        description="This contact may have been removed or is outside your centers."
+      />
+    );
+  }
 
   return (
-    <Stack pb={80}>
+    <Stack pb={80} maw={720} mx="auto">
       <Group justify="space-between">
         <Button variant="subtle" leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate('/contacts')} px={4}>Back</Button>
-        <Button color="grape" leftSection={<IconDeviceFloppy size={16} />}
+        <Button leftSection={<IconDeviceFloppy size={16} />}
           loading={saving} onClick={save}>Save</Button>
       </Group>
 
       {/* Portrait + name */}
       <Group>
         <Stack gap={4} align="center">
-          <Avatar src={data.portrait_url} size={72} radius="xl" color="grape">
+          <Avatar src={data.portrait_url} size={72} radius="xl" color="clay">
             {data.name.slice(0, 1)}
           </Avatar>
           <FileButton onChange={uploadPortrait} accept="image/*">
@@ -179,14 +200,14 @@ export function ContactDetail() {
             <Switch label="VIP" checked={f.pr_vip}
               onChange={(e) => set('pr_vip', e.currentTarget.checked)} />
             {data.guest_summary.visit_count > 0 &&
-              <Badge color="teal" variant="light">Guest ×{data.guest_summary.visit_count}</Badge>}
+              <Badge color={GUEST_LINK_COLOR} variant="light">Guest ×{data.guest_summary.visit_count}</Badge>}
           </Group>
         </Stack>
       </Group>
 
       {/* Guest Care history (summary-only, via shared person) */}
       {data.guest_summary.visit_count > 0 && (
-        <Alert color="teal" icon={<IconHome size={18} />} title="Guest Care history" p="xs">
+        <Alert color={GUEST_LINK_COLOR} icon={<IconHome size={18} />} title="Guest Care history" p="xs">
           Hosted <b>{data.guest_summary.visit_count}</b> time(s).
           {data.guest_summary.last_visit && (
             <> Last: {data.guest_summary.last_visit.arrival_date}
@@ -200,12 +221,17 @@ export function ContactDetail() {
           <Accordion.Control>Involvement</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs">
-              <Select label="Involvement level" data={INVOLVEMENT} value={f.pr_involvement}
-                onChange={(v) => set('pr_involvement', v || '')} clearable />
-              <Select label="Source" data={SOURCES} value={f.pr_source}
-                onChange={(v) => set('pr_source', v || '')} clearable />
-              <Switch label="Met Sadhguru? (SGO Contact)" checked={f.pr_met_sadhguru}
-                onChange={(e) => set('pr_met_sadhguru', e.currentTarget.checked)} />
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+                <Select label="Involvement level" data={INVOLVEMENT} value={f.pr_involvement}
+                  onChange={(v) => set('pr_involvement', v || '')} clearable />
+                <Select label="Source" data={SOURCES} value={f.pr_source}
+                  onChange={(v) => set('pr_source', v || '')} clearable />
+              </SimpleGrid>
+              <TextInput label="Source detail" placeholder="Event / campaign where met"
+                value={f.pr_source_detail}
+                onChange={(e) => set('pr_source_detail', e.currentTarget.value)} />
+              <Select label="Met Sadhguru? (SGO Contact)" data={MET_SG} value={f.pr_met_sadhguru}
+                onChange={(v) => set('pr_met_sadhguru', v || '')} clearable />
               <Switch label="Follows SG?" checked={f.pr_follows_sg}
                 onChange={(e) => set('pr_follows_sg', e.currentTarget.checked)} />
               <TagsInput label="Programs" data={progOpts} value={programs}
@@ -220,24 +246,29 @@ export function ContactDetail() {
           <Accordion.Control>Contact & occupation</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs">
-              <TextInput label="Alternate name" value={f.pr_alternate_name}
-                onChange={(e) => set('pr_alternate_name', e.currentTarget.value)} />
-              <Select label="Gender" data={GENDERS} value={f.pr_gender}
-                onChange={(v) => set('pr_gender', v || '')} clearable />
-              <TextInput label="Email" value={f.email}
-                onChange={(e) => set('email', e.currentTarget.value)} />
-              <TextInput label="Secondary email" value={f.pr_secondary_email}
-                onChange={(e) => set('pr_secondary_email', e.currentTarget.value)} />
-              <TextInput label="Phone" value={f.phone}
-                onChange={(e) => set('phone', e.currentTarget.value)} />
-              <TextInput label="Secondary phone" value={f.pr_secondary_phone}
-                onChange={(e) => set('pr_secondary_phone', e.currentTarget.value)} />
-              <TextInput label="WhatsApp" value={f.pr_whatsapp}
-                onChange={(e) => set('pr_whatsapp', e.currentTarget.value)} />
-              <TextInput label="Designation" value={f.function}
-                onChange={(e) => set('function', e.currentTarget.value)} />
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+                <TextInput label="Alternate name" value={f.pr_alternate_name}
+                  onChange={(e) => set('pr_alternate_name', e.currentTarget.value)} />
+                <Select label="Gender" data={GENDERS} value={f.pr_gender}
+                  onChange={(v) => set('pr_gender', v || '')} clearable />
+                <TextInput label="Email" value={f.email}
+                  onChange={(e) => set('email', e.currentTarget.value)} />
+                <TextInput label="Secondary email" value={f.pr_secondary_email}
+                  onChange={(e) => set('pr_secondary_email', e.currentTarget.value)} />
+                <TextInput label="Phone" value={f.phone}
+                  onChange={(e) => set('phone', e.currentTarget.value)} />
+                <TextInput label="Secondary phone" value={f.pr_secondary_phone}
+                  onChange={(e) => set('pr_secondary_phone', e.currentTarget.value)} />
+                <TextInput label="WhatsApp" value={f.pr_whatsapp}
+                  onChange={(e) => set('pr_whatsapp', e.currentTarget.value)} />
+                <TextInput label="Designation" value={f.function}
+                  onChange={(e) => set('function', e.currentTarget.value)} />
+              </SimpleGrid>
               <TextInput label="Organization" value={f.company_name}
                 onChange={(e) => set('company_name', e.currentTarget.value)} />
+              <Textarea label="Social / profile links" autosize minRows={2}
+                placeholder="Website, LinkedIn, Instagram, X…" value={f.pr_social_links}
+                onChange={(e) => set('pr_social_links', e.currentTarget.value)} />
               <TextInput label="Address" value={f.street}
                 onChange={(e) => set('street', e.currentTarget.value)} />
               <Group grow>
@@ -257,6 +288,15 @@ export function ContactDetail() {
               {data.primary_poc && (
                 <Badge variant="light">Primary POC: {data.primary_poc.name}</Badge>
               )}
+              {data.secondary_poc && (
+                <Badge variant="light" color="river">Secondary POC: {data.secondary_poc.name}</Badge>
+              )}
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+                <TextInput label="Primary POC email" value={f.pr_primary_poc_email}
+                  onChange={(e) => set('pr_primary_poc_email', e.currentTarget.value)} />
+                <TextInput label="Secondary POC email" value={f.pr_secondary_poc_email}
+                  onChange={(e) => set('pr_secondary_poc_email', e.currentTarget.value)} />
+              </SimpleGrid>
               <Textarea label="POC notes" placeholder="Name / details when we don't have a full contact yet"
                 autosize minRows={2} value={f.pr_poc_notes}
                 onChange={(e) => set('pr_poc_notes', e.currentTarget.value)} />
@@ -281,7 +321,7 @@ export function ContactDetail() {
                   )}
                 </FileButton>
               </Group>
-              <SimpleGrid cols={3} spacing="xs">
+              <SimpleGrid cols={{ base: 3, sm: 4 }} spacing="xs">
                 {data.images.map((img) => (
                   <Box key={img.id} pos="relative">
                     <Image src={img.url} radius="sm" h={90} fit="cover" />
@@ -312,14 +352,18 @@ export function ContactDetail() {
           <Textarea placeholder="Notes" autosize minRows={2} value={interaction.notes}
             onChange={(e) => setInteraction({ ...interaction, notes: e.currentTarget.value })} />
           <Text size="xs" c="dimmed">Logging in center: <b>{center?.name || 'none'}</b></Text>
-          <Button color="grape" leftSection={<IconMessagePlus size={16} />}
+          <Button leftSection={<IconMessagePlus size={16} />}
             loading={logging} onClick={logInteraction}>Log</Button>
         </Stack>
       </Card>
 
       <Divider label={`Interactions (${data.interactions.length})`} />
       {data.interactions.length === 0 ? (
-        <Text c="dimmed" size="sm">No interactions in your center(s) yet.</Text>
+        <EmptyState
+          icon={IconMessageCircle}
+          title="No interactions yet"
+          description="Interactions logged in your center(s) will appear here."
+        />
       ) : (
         <Timeline active={data.interactions.length} bulletSize={16} lineWidth={2}>
           {data.interactions.map((i) => (

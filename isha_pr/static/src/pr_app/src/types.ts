@@ -4,9 +4,11 @@ export interface Center {
 }
 
 export interface PRCapabilities {
+  pr_view_dashboard: boolean;
   pr_view_contacts: boolean;
   pr_log_interaction: boolean;
-  pr_view_events: boolean;
+  pr_view_nominations: boolean;
+  pr_view_followups: boolean;
   admin: boolean;
 }
 
@@ -14,6 +16,7 @@ export interface PRMe {
   user: { id: number; name: string; login: string };
   groups: { pr: boolean; global: boolean; admin: boolean };
   centers: Center[];
+  regions: Ref[];
   can: PRCapabilities;
 }
 
@@ -58,6 +61,66 @@ export interface ContactImage {
   url: string;
 }
 
+export interface NominationLight {
+  id: number;
+  nominee: string;
+  nominee_id: number;
+  stage: string;
+  stage_label: string;
+  tier: string;
+  vertical: string;
+  vertical_label: string;
+  leadership_position: string;
+  organization: string;
+  high_priority: boolean;
+  is_self_nomination: boolean;
+  submission_date: string;
+  image_url: string | null;
+}
+
+export interface NominationOutreach {
+  id: number;
+  campaign: string;
+  status: string;
+  notes: string;
+}
+
+export interface Nomination extends NominationLight {
+  tier_confidence: number;
+  tier_rationale: string;
+  sources: string;
+  website: string;
+  linkedin: string;
+  instagram: string;
+  social_following: string;
+  social_links: string;
+  location: string;
+  is_meditator: string;
+  ie_or_shambhavi: string;
+  follows_sadhguru: string;
+  research_status: string;
+  research_volunteer: string;
+  research_recommendation: string;
+  research_notes: string;
+  enriched: boolean;
+  approval_status: string;
+  approval_detail: string;
+  approver: string;
+  poc: string;
+  next_step: string;
+  brief: string;
+  last_touch: string;
+  email: string;
+  phone: string;
+  nominated_for: string;
+  proceed_preference: string;
+  influence_examples: string;
+  nominator_name: string;
+  nominator_email: string;
+  nominator_phone: string;
+  outreach: NominationOutreach[];
+}
+
 export interface ContactDetail extends Contact {
   alternate_name: string;
   secondary_email: string;
@@ -72,7 +135,9 @@ export interface ContactDetail extends Contact {
   zip: string;
   region_id: Ref | null;
   source: string;
-  met_sadhguru: boolean;
+  source_detail: string;
+  social_links: string;
+  met_sadhguru: string;
   follows_sg: boolean;
   owner: Ref | null;
   tags: Ref[];
@@ -82,6 +147,8 @@ export interface ContactDetail extends Contact {
   related: Ref[];
   primary_poc: { id: number; name: string; email: string } | null;
   secondary_poc: { id: number; name: string; email: string } | null;
+  primary_poc_email: string;
+  secondary_poc_email: string;
   poc_notes: string;
   images: ContactImage[];
   has_portrait: boolean;
@@ -90,4 +157,16 @@ export interface ContactDetail extends Contact {
   next_followup: string;
   interactions: Interaction[];
   guest_summary: GuestSummary;
+}
+
+export interface DashboardData {
+  total: number;
+  priority_leads: number;
+  nurturing: number;
+  needs_review: number;
+  with_outreach: number;
+  to_research: number;
+  by_stage: Record<string, number>;
+  by_tier: Record<string, number>;
+  top_verticals: { vertical: string; label: string; count: number }[];
 }

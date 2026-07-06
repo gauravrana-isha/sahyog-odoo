@@ -26,7 +26,7 @@ class TestPRContacts(PRHttpCase):
     def test_create_with_full_fields(self):
         res = self._post('/pr/api/contacts/create', {
             'name': 'Ravi', 'email': 'ravi@example.com', 'pr_involvement': 'high',
-            'pr_gender': 'male', 'pr_vip': True, 'pr_met_sadhguru': True,
+            'pr_gender': 'male', 'pr_vip': True, 'pr_met_sadhguru': 'met',
             'function': 'CEO', 'company_name': 'Acme', 'pr_whatsapp': '+91999',
             'pr_secondary_phone': '+91888', 'pr_poc_notes': 'assistant: Sam',
             'program_names': ['Inner Engineering', 'Bhava Spandana'],

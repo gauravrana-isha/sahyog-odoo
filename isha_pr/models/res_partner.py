@@ -20,6 +20,13 @@ PR_SOURCES = [
     ('other', 'Other'),
 ]
 
+# Free-text nuance from the SGO database ("Wants to meet Sadhguru", etc.)
+PR_MET_SG = [
+    ('met', 'Met Sadhguru'),
+    ('wants', 'Wants to Meet'),
+    ('no', 'Not Yet'),
+]
+
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -32,9 +39,10 @@ class ResPartner(models.Model):
     # ── Involvement with the Foundation ──
     pr_involvement = fields.Selection(INVOLVEMENT_LEVELS, string='Involvement Level')
     pr_owner_id = fields.Many2one('res.users', string='Relationship Owner')
-    pr_met_sadhguru = fields.Boolean('Met Sadhguru? (SGO Contact)')
+    pr_met_sadhguru = fields.Selection(PR_MET_SG, string='Met Sadhguru? (SGO Contact)')
     pr_follows_sg = fields.Boolean('Follows SG?')
     pr_source = fields.Selection(PR_SOURCES, string='Source')
+    pr_source_detail = fields.Char('Source Detail', help='Free-text: event/campaign where met')
     pr_program_ids = fields.Many2many('pr.program', string='Programs')
     pr_campaign_ids = fields.Many2many('pr.campaign', string='Campaigns')
 
@@ -53,7 +61,11 @@ class ResPartner(models.Model):
         string='Related Contacts')
     pr_primary_poc_id = fields.Many2one('res.partner', string='Primary POC')
     pr_secondary_poc_id = fields.Many2one('res.partner', string='Secondary POC')
+    pr_primary_poc_email = fields.Char('Primary POC Email')
+    pr_secondary_poc_email = fields.Char('Secondary POC Email')
     pr_poc_notes = fields.Text('POC Notes')  # for "just a name" POCs
+    # Social/profile links (the "Related Contact(s)" column often holds handles)
+    pr_social_links = fields.Text('Social / Profile Links')
 
     # ── Images: portrait = native image_1920; extras = typed gallery ──
     pr_image_ids = fields.One2many('pr.contact.image', 'partner_id',

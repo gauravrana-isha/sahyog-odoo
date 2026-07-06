@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+      Dedicated PR contact views. High priority + bound explicitly to the PR
+      Contacts action (see menu_views.xml view_ids), so the global Contacts app
+      and Guest Care keep Odoo's default partner form. These only show relevant
+      PR fields — no Tax ID / Sales & Purchase.
+    -->
+
+    <!-- Form -->
+    <record id="view_pr_contact_form" model="ir.ui.view">
+        <field name="name">pr.contact.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <form string="PR Contact">
+                <sheet>
+                    <field name="image_1920" widget="image" class="oe_avatar"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Full name"/></h1>
+                        <field name="pr_alternate_name" placeholder="Alternate name / handle"/>
+                        <field name="is_pr_contact" invisible="1"/>
+                    </div>
+                    <group>
+                        <group string="Contact">
+                            <field name="function" string="Designation"/>
+                            <field name="company_name" string="Organization"/>
+                            <field name="email"/>
+                            <field name="pr_secondary_email"/>
+                            <field name="phone"/>
+                            <field name="pr_secondary_phone"/>
+                            <field name="pr_whatsapp"/>
+                            <field name="website" widget="url"/>
+                            <field name="pr_gender"/>
+                        </group>
+                        <group string="PR Relationship">
+                            <field name="pr_involvement"/>
+                            <field name="pr_source"/>
+                            <field name="pr_source_detail"/>
+                            <field name="pr_region_id"/>
+                            <field name="pr_owner_id"/>
+                            <field name="pr_met_sadhguru"/>
+                            <field name="pr_follows_sg"/>
+                            <field name="pr_vip"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Location">
+                            <field name="street" placeholder="Street..."/>
+                            <field name="street2" placeholder="Street 2..."/>
+                            <field name="city"/>
+                            <field name="state_id"/>
+                            <field name="zip"/>
+                            <field name="country_id"/>
+                        </group>
+                        <group string="Points of Contact">
+                            <field name="pr_primary_poc_id"/>
+                            <field name="pr_primary_poc_email"/>
+                            <field name="pr_secondary_poc_id"/>
+                            <field name="pr_secondary_poc_email"/>
+                            <field name="pr_poc_notes" placeholder="POC (name only)..."/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Programs &amp; Campaigns">
+                            <group>
+                                <field name="pr_program_ids" widget="many2many_tags"/>
+                                <field name="pr_campaign_ids" widget="many2many_tags"/>
+                                <field name="pr_related_partner_ids" widget="many2many_tags"/>
+                                <field name="pr_social_links" placeholder="Instagram, LinkedIn, etc."/>
+                            </group>
+                        </page>
+                        <page string="Interactions">
+                            <field name="pr_interaction_ids">
+                                <list>
+                                    <field name="date"/>
+                                    <field name="interaction_type"/>
+                                    <field name="subject"/>
+                                    <field name="center_id"/>
+                                    <field name="owner_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Images / Documents">
+                            <field name="pr_image_ids"/>
+                        </page>
+                        <page string="Notes">
+                            <field name="comment" placeholder="Internal notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- List -->
+    <record id="view_pr_contact_list" model="ir.ui.view">
+        <field name="name">pr.contact.list</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="PR Contacts">
+                <field name="name"/>
+                <field name="function" string="Designation" optional="show"/>
+                <field name="company_name" string="Organization" optional="show"/>
+                <field name="pr_region_id" optional="show"/>
+                <field name="pr_involvement" optional="show"/>
+                <field name="pr_source" optional="hide"/>
+                <field name="email" optional="show"/>
+                <field name="phone" optional="show"/>
+                <field name="pr_vip" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search: PR-relevant filters + group-bys -->
+    <record id="view_pr_contact_search" model="ir.ui.view">
+        <field name="name">pr.contact.search</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <search string="PR Contacts">
+                <field name="name"/>
+                <field name="function" string="Designation"/>
+                <field name="company_name" string="Organization"/>
+                <field name="email"/>
+                <field name="city"/>
+                <field name="pr_region_id"/>
+                <field name="pr_source_detail" string="Source"/>
+                <separator/>
+                <filter name="vip" string="VIP" domain="[('pr_vip','=',True)]"/>
+                <filter name="follows_sg" string="Follows SG" domain="[('pr_follows_sg','=',True)]"/>
+                <separator/>
+                <filter name="met_sg" string="Met Sadhguru" domain="[('pr_met_sadhguru','=','met')]"/>
+                <filter name="wants_sg" string="Wants to Meet" domain="[('pr_met_sadhguru','=','wants')]"/>
+                <separator/>
+                <filter name="inv_high" string="High Involvement" domain="[('pr_involvement','=','high')]"/>
+                <filter name="inv_moderate" string="Moderate Involvement" domain="[('pr_involvement','=','moderate')]"/>
+                <separator/>
+                <filter name="has_email" string="Has Email" domain="[('email','!=',False)]"/>
+                <filter name="has_phone" string="Has Phone" domain="[('phone','!=',False)]"/>
+                <filter name="mine" string="My Contacts" domain="[('pr_owner_id','=',uid)]"/>
+                <separator/>
+                <filter name="g_involvement" string="Involvement" domain="[]" context="{'group_by':'pr_involvement'}"/>
+                <filter name="g_region" string="Region" domain="[]" context="{'group_by':'pr_region_id'}"/>
+                <filter name="g_met" string="Met Sadhguru" domain="[]" context="{'group_by':'pr_met_sadhguru'}"/>
+                <filter name="g_gender" string="Gender" domain="[]" context="{'group_by':'pr_gender'}"/>
+                <filter name="g_country" string="Country" domain="[]" context="{'group_by':'country_id'}"/>
+                <filter name="g_owner" string="Owner" domain="[]" context="{'group_by':'pr_owner_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Kanban -->
+    <record id="view_pr_contact_kanban" model="ir.ui.view">
+        <field name="name">pr.contact.kanban</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="pr_involvement"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-start">
+                            <field name="avatar_128" widget="image"
+                                   class="flex-shrink-0 me-2 rounded"
+                                   options="{'size': [40, 40]}" alt="Avatar"/>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <strong><field name="name"/></strong>
+                                <div class="text-muted"><field name="function"/></div>
+                                <div><field name="company_name"/></div>
+                                <field name="pr_involvement" widget="badge"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+</odoo>

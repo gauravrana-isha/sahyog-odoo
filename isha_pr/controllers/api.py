@@ -11,19 +11,21 @@ import logging
 
 from odoo import http
 from odoo.http import request
-from odoo.exceptions import ValidationError, AccessError
+from odoo.exceptions import ValidationError, AccessError, UserError
 from odoo.addons.sahyog.controllers.base import SahyogControllerBase, json_endpoint
 
 _logger = logging.getLogger(__name__)
 
-PR_CAPABILITIES = ['pr_view_contacts', 'pr_log_interaction', 'pr_view_events']
+PR_CAPABILITIES = ['pr_view_dashboard', 'pr_view_contacts', 'pr_log_interaction',
+                   'pr_view_nominations', 'pr_view_followups']
 
 # Scalar partner fields the SPA may write directly.
 _WRITABLE_SCALARS = (
     'name', 'pr_alternate_name', 'email', 'pr_secondary_email', 'phone',
     'pr_secondary_phone', 'pr_whatsapp', 'pr_gender', 'pr_involvement', 'pr_source',
-    'pr_met_sadhguru', 'pr_follows_sg', 'pr_vip', 'function', 'company_name',
-    'street', 'street2', 'city', 'zip', 'comment', 'pr_poc_notes',
+    'pr_source_detail', 'pr_met_sadhguru', 'pr_follows_sg', 'pr_vip', 'function',
+    'company_name', 'street', 'street2', 'city', 'zip', 'comment', 'pr_poc_notes',
+    'pr_social_links', 'pr_primary_poc_email', 'pr_secondary_poc_email',
 )
 _WRITABLE_M2O = ('state_id', 'country_id', 'pr_region_id',
                  'pr_owner_id', 'pr_primary_poc_id', 'pr_secondary_poc_id')
@@ -108,6 +110,8 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             'country_id': self._m2o(p, 'country_id'),
             'region_id': self._m2o(p, 'pr_region_id'),
             'source': p.pr_source or '',
+            'source_detail': p.pr_source_detail or '',
+            'social_links': p.pr_social_links or '',
             'met_sadhguru': p.pr_met_sadhguru,
             'follows_sg': p.pr_follows_sg,
             'owner': self._m2o(p, 'pr_owner_id'),
@@ -118,6 +122,8 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             'related': self._m2m(p, 'pr_related_partner_ids'),
             'primary_poc': self._poc_dict(p.pr_primary_poc_id),
             'secondary_poc': self._poc_dict(p.pr_secondary_poc_id),
+            'primary_poc_email': p.pr_primary_poc_email or '',
+            'secondary_poc_email': p.pr_secondary_poc_email or '',
             'poc_notes': p.pr_poc_notes or '',
             'images': [{
                 'id': img.id, 'kind': img.kind, 'label': img.label or '',
@@ -164,11 +170,46 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         is_admin = user.has_group('isha_pr.group_isha_pr_admin')
         can = {key: is_pr for key in PR_CAPABILITIES}
         can['admin'] = is_admin
+        # Regions are a shared name-master (contacts carry pr_region_id);
+        # read sudo like centers — it holds no sensitive data.
+        regions = request.env['sahyog.region'].sudo().search([])
         return {
             'user': {'id': user.id, 'name': user.name, 'login': user.login},
             'groups': {'pr': is_pr, 'global': is_global, 'admin': is_admin},
             'centers': [{'id': c.id, 'name': c.name} for c in self._pr_centers()],
+            'regions': [{'id': r.id, 'name': r.name} for r in regions],
             'can': can,
+        }
+
+    # ── Dashboard / home stats ──────────────────────────────────────────
+
+    @http.route('/pr/api/dashboard', type='http', auth='user', methods=['GET'], csrf=False)
+    @json_endpoint
+    def pr_dashboard(self, **kw):
+        Nom = request.env['pr.nomination']
+
+        def c(dom):
+            return Nom.search_count(dom)
+
+        stages = ['nominated', 'researched', 'approved', 'nurturing', 'rejected']
+        by_stage = {s: c([('stage', '=', s)]) for s in stages}
+        by_tier = {t: c([('tier', '=', t)]) for t in ('1', '2', '3')}
+        verts = dict(Nom._fields['vertical'].selection)
+        top_verticals = sorted(
+            ({'vertical': k, 'label': v, 'count': c([('vertical', '=', k)])}
+             for k, v in verts.items() if k not in ('uncategorized', 'review')),
+            key=lambda x: -x['count'])[:6]
+        return {
+            'total': c([]),
+            'priority_leads': c(['&', ('stage', '!=', 'rejected'),
+                                 '|', ('tier', '=', '1'), ('high_priority', '=', True)]),
+            'nurturing': by_stage['nurturing'],
+            'needs_review': c([('research_status', 'in', ('needs_review', 'more_info_required'))]),
+            'with_outreach': c([('outreach_ids', '!=', False)]),
+            'to_research': by_stage['nominated'],
+            'by_stage': by_stage,
+            'by_tier': by_tier,
+            'top_verticals': [x for x in top_verticals if x['count']],
         }
 
     # ── Master data for pickers ─────────────────────────────────────────
@@ -203,6 +244,9 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
                            ('name', 'ilike', search),
                            ('email', 'ilike', search),
                            ('phone', 'ilike', search)]
+            region_id = kw.get('region_id')
+            if region_id:
+                domain.append(('pr_region_id', '=', int(region_id)))
             partners = request.env['res.partner'].search(domain, limit=100, order='name')
             return self._json_success([self._contact_dict(p) for p in partners])
         except Exception:
@@ -305,6 +349,109 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_success({'success': True})
         except Exception:
             _logger.exception('PR API error in pr_delete_image')
+            return self._json_error('Internal server error', status=500)
+
+    # ── Nominations (pipeline fed by the public /pr/nominate form) ──────
+
+    # Research fields a coordinator may edit from the PWA. Stage moves go
+    # through the action endpoint so the model's approval gates apply.
+    _NOMINATION_WRITABLE = (
+        'tier', 'vertical', 'research_recommendation', 'research_notes',
+        'next_step', 'high_priority', 'leadership_position', 'organization',
+        'website', 'linkedin', 'instagram', 'social_following',
+    )
+
+    _NOMINATION_ACTIONS = {
+        'mark_researched': 'action_mark_researched',
+        'approve': 'action_approve',
+        'reject': 'action_reject',
+        'start_nurturing': 'action_start_nurturing',
+        'reset': 'action_reset_nominated',
+    }
+
+    @http.route('/pr/api/nominations', type='http', auth='user', methods=['GET'], csrf=False)
+    def pr_nominations(self, **kw):
+        try:
+            domain = []
+            if kw.get('stage'):
+                domain.append(('stage', '=', kw['stage']))
+            if kw.get('tier'):
+                domain.append(('tier', '=', kw['tier']))
+            if kw.get('vertical'):
+                domain.append(('vertical', '=', kw['vertical']))
+            q = (kw.get('q') or '').strip()
+            if q:
+                domain += ['|', ('nominee_id.name', 'ilike', q),
+                           ('organization', 'ilike', q)]
+            recs = request.env['pr.nomination'].search(domain, limit=200,
+                                                       order='tier, id desc')
+            return self._json_success([r.to_spa_light_dict() for r in recs])
+        except Exception:
+            _logger.exception('PR API error in pr_nominations')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/nominations/<int:nid>', type='http', auth='user',
+                methods=['GET'], csrf=False)
+    def pr_nomination_detail(self, nid, **kw):
+        try:
+            rec = request.env['pr.nomination'].browse(nid)
+            if not rec.exists():
+                return self._json_error('Nomination not found')
+            return self._json_success(rec.to_spa_dict())
+        except Exception:
+            _logger.exception('PR API error in pr_nomination_detail')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/nominations/<int:nid>/update', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_nomination_update(self, nid, **kw):
+        try:
+            rec = request.env['pr.nomination'].browse(nid)
+            if not rec.exists():
+                return self._json_error('Nomination not found')
+            data = self._parse_json()
+            vals = {k: data[k] for k in self._NOMINATION_WRITABLE if k in data}
+            if vals:
+                rec.write(vals)
+            return self._json_success(rec.to_spa_dict())
+        except ValidationError as e:
+            return self._json_error(str(e))
+        except Exception:
+            _logger.exception('PR API error in pr_nomination_update')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/nominations/<int:nid>/action', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    def pr_nomination_action(self, nid, **kw):
+        try:
+            rec = request.env['pr.nomination'].browse(nid)
+            if not rec.exists():
+                return self._json_error('Nomination not found')
+            data = self._parse_json()
+            method = self._NOMINATION_ACTIONS.get(data.get('action'))
+            if not method:
+                return self._json_error('Unknown action')
+            getattr(rec, method)()
+            return self._json_success(rec.to_spa_dict())
+        except UserError as e:
+            return self._json_error(str(e))
+        except ValidationError as e:
+            return self._json_error(str(e))
+        except Exception:
+            _logger.exception('PR API error in pr_nomination_action')
+            return self._json_error('Internal server error', status=500)
+
+    # ── Follow-ups (interactions with a follow_up_date, center-scoped) ──
+
+    @http.route('/pr/api/followups', type='http', auth='user', methods=['GET'], csrf=False)
+    def pr_followups(self, **kw):
+        try:
+            recs = request.env['pr.interaction'].search(
+                [('follow_up_date', '!=', False)],
+                order='follow_up_date', limit=200)
+            return self._json_success([r.to_spa_dict() for r in recs])
+        except Exception:
+            _logger.exception('PR API error in pr_followups')
             return self._json_error('Internal server error', status=500)
 
     # ── Interactions ────────────────────────────────────────────────────
