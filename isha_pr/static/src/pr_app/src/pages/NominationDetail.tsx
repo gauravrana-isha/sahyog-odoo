@@ -1,21 +1,23 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Accordion, Anchor, Avatar, Badge, Box, Button, Card, Group, Select,
-  SimpleGrid, Stack, Switch, Text, Textarea, TextInput, Timeline,
+  Accordion, Anchor, Avatar, Badge, Box, Button, Card, Group, Modal, RingProgress, Select,
+  SimpleGrid, Stack, Switch, Text, Textarea, TextInput, ThemeIcon, Timeline,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
   IconArrowLeft, IconAwardOff, IconCheck, IconDeviceFloppy, IconFlag,
-  IconFlame, IconPlant, IconX,
+  IconFlame, IconPlant, IconX, IconAlertTriangle, IconLink,
 } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
 import { usePR } from '../hooks/usePR';
-import { STAGE_COLOR, TIER_COLOR } from '../tokens';
+import { STAGE_COLOR, TIER_COLOR, RISK_COLOR } from '../tokens';
 import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { Field } from '../components/Field';
+import { parseSourceLinks, SourceLinksList } from '../components/SourceLinks';
+import { SectionCard } from '../components/SectionCard';
 import type { Nomination } from '../types';
 
 const TIER_OPTIONS = [
@@ -76,6 +78,7 @@ export function NominationDetail() {
   const [saving, setSaving] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
   const [research, setResearch] = useState<ResearchDraft | null>(null);
+  const [controversyModal, setControversyModal] = useState(false);
 
   const applyData = (n: Nomination) => {
     setData(n);
@@ -148,9 +151,142 @@ export function NominationDetail() {
     { action: 'start_nurturing', label: 'Start Nurturing', icon: IconPlant, show: data.stage === 'approved' },
   ];
   const visibleActions = stageActions.filter((a) => a.show);
+  const sources = parseSourceLinks(data.source_links);
+  const showApproval = data.approval_status !== 'pending' || !!data.approver;
+
+  // Section bodies — rendered as an accordion on mobile (kept as-is) and as an
+  // open two-column card grid on desktop to use the width.
+  const researchBody = (
+    <Stack gap="sm">
+      <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+        <Select label="Tier" placeholder="Untiered" data={TIER_OPTIONS}
+          value={research.tier} onChange={(v) => setResearch({ ...research, tier: v })} clearable />
+        <Select label="Vertical" placeholder="Select" data={VERTICAL_OPTIONS}
+          value={research.vertical} onChange={(v) => setResearch({ ...research, vertical: v })} clearable />
+      </SimpleGrid>
+      <Select label="Research Recommendation" placeholder="Select" data={RECOMMENDATION_OPTIONS}
+        value={research.research_recommendation}
+        onChange={(v) => setResearch({ ...research, research_recommendation: v })} clearable />
+      <Switch label="High priority" checked={research.high_priority}
+        onChange={(e) => setResearch({ ...research, high_priority: e.currentTarget.checked })} />
+      <Textarea label="Research / Call Notes" autosize minRows={2}
+        value={research.research_notes}
+        onChange={(e) => setResearch({ ...research, research_notes: e.currentTarget.value })} />
+      <TextInput label="Next Step" value={research.next_step}
+        onChange={(e) => setResearch({ ...research, next_step: e.currentTarget.value })} />
+      {data.tier_rationale && <Field label="Tier Rationale (AI)" value={data.tier_rationale} />}
+      <Button leftSection={<IconDeviceFloppy size={16} />} loading={saving} onClick={saveResearch}>
+        Save Research
+      </Button>
+    </Stack>
+  );
+  const profileBody = (
+    <Stack gap="xs">
+      <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
+        <Field label="Email" value={data.email} />
+        <Field label="Phone" value={data.phone} />
+        <Field label="Location" value={data.location} />
+        <Field label="Reach / Following" value={data.social_following} />
+      </SimpleGrid>
+      {(data.website || data.linkedin || data.instagram) && (
+        <Box>
+          <Text size="xs" c="dimmed" mb={2}>Researched Links</Text>
+          <Group gap="sm">
+            {data.website && <Anchor size="sm" href={data.website} target="_blank">Website</Anchor>}
+            {data.linkedin && <Anchor size="sm" href={data.linkedin} target="_blank">LinkedIn</Anchor>}
+            {data.instagram && <Anchor size="sm" href={data.instagram} target="_blank">Instagram</Anchor>}
+          </Group>
+        </Box>
+      )}
+      {data.social_links && <Field label="Links (from form)" value={data.social_links} />}
+      <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
+        <Field label="Meditator?" value={YES_NO[data.is_meditator]} />
+        <Field label="Completed IE / Shambhavi?" value={YES_NO[data.ie_or_shambhavi]} />
+      </SimpleGrid>
+    </Stack>
+  );
+  const formBody = (
+    <Stack gap="xs">
+      <Field label="Nominated For" value={data.nominated_for} />
+      <Field label="Proceed Preference" value={PROCEED_LABELS[data.proceed_preference] || data.proceed_preference} />
+      <Field label="Sphere of Influence" value={data.influence_examples} />
+      <Field label="Submitted" value={data.submission_date} />
+    </Stack>
+  );
+  const nominatorBody = (
+    <Stack gap="xs">
+      <Field label="Name" value={data.nominator_name} />
+      <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
+        <Field label="Email" value={data.nominator_email} />
+        <Field label="Phone" value={data.nominator_phone} />
+      </SimpleGrid>
+      <Field label="Nominator POC" value={data.poc} />
+    </Stack>
+  );
+  const approvalBody = (
+    <Stack gap="xs">
+      <Field label="Status" value={data.approval_status} />
+      <Field label="Approved For" value={data.approval_detail} />
+      <Field label="Approved By" value={data.approver} />
+    </Stack>
+  );
+  const sourcesBody = (
+    <>
+      <Text size="xs" c="dimmed" mb="xs">Where the research came from — cited inline as [n].</Text>
+      <SourceLinksList sources={sources} />
+    </>
+  );
+
+  const sections = isWide ? (
+    <SimpleGrid cols={2} spacing="md" style={{ alignItems: 'start' }}>
+      <Stack gap="md">
+        <SectionCard title="Research & Classification">{researchBody}</SectionCard>
+        <SectionCard title="Profile & Links">{profileBody}</SectionCard>
+      </Stack>
+      <Stack gap="md">
+        <SectionCard title="Nomination Form">{formBody}</SectionCard>
+        <SectionCard title="Nominator">{nominatorBody}</SectionCard>
+        {showApproval && <SectionCard title="Approval">{approvalBody}</SectionCard>}
+        {sources.length > 0 && (
+          <SectionCard title={`Sources (${sources.length})`} icon={<IconLink size={15} />}>{sourcesBody}</SectionCard>
+        )}
+      </Stack>
+    </SimpleGrid>
+  ) : (
+    <Accordion variant="separated" defaultValue="research" multiple={false}>
+      <Accordion.Item value="research">
+        <Accordion.Control>Research & Classification</Accordion.Control>
+        <Accordion.Panel>{researchBody}</Accordion.Panel>
+      </Accordion.Item>
+      <Accordion.Item value="profile">
+        <Accordion.Control>Profile & Links</Accordion.Control>
+        <Accordion.Panel>{profileBody}</Accordion.Panel>
+      </Accordion.Item>
+      <Accordion.Item value="form">
+        <Accordion.Control>Nomination Form</Accordion.Control>
+        <Accordion.Panel>{formBody}</Accordion.Panel>
+      </Accordion.Item>
+      <Accordion.Item value="nominator">
+        <Accordion.Control>Nominator</Accordion.Control>
+        <Accordion.Panel>{nominatorBody}</Accordion.Panel>
+      </Accordion.Item>
+      {showApproval && (
+        <Accordion.Item value="approval">
+          <Accordion.Control>Approval</Accordion.Control>
+          <Accordion.Panel>{approvalBody}</Accordion.Panel>
+        </Accordion.Item>
+      )}
+      {sources.length > 0 && (
+        <Accordion.Item value="sources">
+          <Accordion.Control icon={<IconLink size={16} />}>Sources ({sources.length})</Accordion.Control>
+          <Accordion.Panel>{sourcesBody}</Accordion.Panel>
+        </Accordion.Item>
+      )}
+    </Accordion>
+  );
 
   return (
-    <Box style={{ maxWidth: isWide ? 760 : undefined, margin: isWide ? '0 auto' : undefined }}>
+    <Box style={{ maxWidth: isWide ? 1160 : undefined, margin: isWide ? '0 auto' : undefined }}>
       <Stack gap="md">
         <Group justify="space-between" wrap="nowrap">
           <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} px={4}
@@ -176,10 +312,21 @@ export function NominationDetail() {
             <Group gap={4} mt={6}>
               {data.tier && <Badge size="xs" variant="light" color={TIER_COLOR[data.tier] || 'sand'}>Tier {data.tier}</Badge>}
               {data.vertical_label && <Badge size="xs" variant="light" color="river">{data.vertical_label}</Badge>}
+              {data.reputational_risk && (
+                <Badge size="xs" variant="filled" color={RISK_COLOR[data.reputational_risk] || 'sand'} tt="capitalize"
+                  leftSection={data.reputational_risk === 'high' ? <IconAlertTriangle size={10} /> : undefined}>
+                  {data.reputational_risk} risk
+                </Badge>
+              )}
               {data.is_self_nomination && <Badge size="xs" variant="light" color="ochre">Self-nomination</Badge>}
               {data.enriched && <Badge size="xs" variant="light" color="sand">AI enriched</Badge>}
             </Group>
           </Box>
+          {data.tier_confidence > 0 && (
+            <RingProgress size={64} thickness={6} roundCaps
+              sections={[{ value: data.tier_confidence * 100, color: TIER_COLOR[data.tier] || 'clay' }]}
+              label={<Text ta="center" fw={700} fz={13} lh={1}>{Math.round(data.tier_confidence * 100)}%</Text>} />
+          )}
         </Group>
 
         {/* Stage actions */}
@@ -201,6 +348,38 @@ export function NominationDetail() {
           </Group>
         )}
 
+        {/* Reputational risk & controversies — decision-critical, kept prominent */}
+        {(data.controversies || data.reputational_risk) && (
+          <Card withBorder radius="md" p="md"
+            style={{ background: `var(--mantine-color-${RISK_COLOR[data.reputational_risk] || 'sand'}-light)` }}>
+            <Group gap={8} wrap="nowrap" align="flex-start">
+              <ThemeIcon variant="light" color={RISK_COLOR[data.reputational_risk] || 'sand'} radius="md" size="md">
+                <IconAlertTriangle size={16} />
+              </ThemeIcon>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                <Group justify="space-between" wrap="nowrap">
+                  <Text fw={700} size="sm">Reputational Risk & Controversies</Text>
+                  {data.reputational_risk && (
+                    <Badge color={RISK_COLOR[data.reputational_risk]} variant="filled" tt="capitalize">
+                      {data.reputational_risk}
+                    </Badge>
+                  )}
+                </Group>
+                <Text size="xs" c="dimmed">Sadhguru would be publicly associated with this person.</Text>
+                {data.controversies && (
+                  <>
+                    <Text size="sm" mt={8} style={{ whiteSpace: 'pre-wrap' }} lineClamp={5}>{data.controversies}</Text>
+                    {data.controversies.length > 240 && (
+                      <Text size="xs" c="river" mt={4} fw={500} style={{ cursor: 'pointer' }}
+                        onClick={() => setControversyModal(true)}>Read full →</Text>
+                    )}
+                  </>
+                )}
+              </Box>
+            </Group>
+          </Card>
+        )}
+
         {/* At-a-glance brief */}
         {data.brief && (
           <Card withBorder padding="sm" style={{ backgroundColor: 'light-dark(var(--mantine-color-sand-0), var(--mantine-color-dark-6))' }}>
@@ -211,109 +390,7 @@ export function NominationDetail() {
           </Card>
         )}
 
-        <Accordion variant="separated" defaultValue="research" multiple={false}>
-          {/* Research — editable by coordinators */}
-          <Accordion.Item value="research">
-            <Accordion.Control>Research & Classification</Accordion.Control>
-            <Accordion.Panel>
-              <Stack gap="sm">
-                <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-                  <Select label="Tier" placeholder="Untiered" data={TIER_OPTIONS}
-                    value={research.tier} onChange={(v) => setResearch({ ...research, tier: v })} clearable />
-                  <Select label="Vertical" placeholder="Select" data={VERTICAL_OPTIONS}
-                    value={research.vertical} onChange={(v) => setResearch({ ...research, vertical: v })} clearable />
-                </SimpleGrid>
-                <Select label="Research Recommendation" placeholder="Select" data={RECOMMENDATION_OPTIONS}
-                  value={research.research_recommendation}
-                  onChange={(v) => setResearch({ ...research, research_recommendation: v })} clearable />
-                <Switch label="High priority" checked={research.high_priority}
-                  onChange={(e) => setResearch({ ...research, high_priority: e.currentTarget.checked })} />
-                <Textarea label="Research / Call Notes" autosize minRows={2}
-                  value={research.research_notes}
-                  onChange={(e) => setResearch({ ...research, research_notes: e.currentTarget.value })} />
-                <TextInput label="Next Step" value={research.next_step}
-                  onChange={(e) => setResearch({ ...research, next_step: e.currentTarget.value })} />
-                {data.tier_rationale && <Field label="Tier Rationale (AI)" value={data.tier_rationale} />}
-                {data.sources && <Field label="Sources" value={data.sources} />}
-                <Button leftSection={<IconDeviceFloppy size={16} />} loading={saving} onClick={saveResearch}>
-                  Save Research
-                </Button>
-              </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          {/* Profile */}
-          <Accordion.Item value="profile">
-            <Accordion.Control>Profile & Links</Accordion.Control>
-            <Accordion.Panel>
-              <Stack gap="xs">
-                <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
-                  <Field label="Email" value={data.email} />
-                  <Field label="Phone" value={data.phone} />
-                  <Field label="Location" value={data.location} />
-                  <Field label="Reach / Following" value={data.social_following} />
-                </SimpleGrid>
-                {(data.website || data.linkedin || data.instagram) && (
-                  <Box>
-                    <Text size="xs" c="dimmed" mb={2}>Researched Links</Text>
-                    <Group gap="sm">
-                      {data.website && <Anchor size="sm" href={data.website} target="_blank">Website</Anchor>}
-                      {data.linkedin && <Anchor size="sm" href={data.linkedin} target="_blank">LinkedIn</Anchor>}
-                      {data.instagram && <Anchor size="sm" href={data.instagram} target="_blank">Instagram</Anchor>}
-                    </Group>
-                  </Box>
-                )}
-                {data.social_links && <Field label="Links (from form)" value={data.social_links} />}
-                <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
-                  <Field label="Meditator?" value={YES_NO[data.is_meditator]} />
-                  <Field label="Completed IE / Shambhavi?" value={YES_NO[data.ie_or_shambhavi]} />
-                </SimpleGrid>
-              </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          {/* Form submission */}
-          <Accordion.Item value="form">
-            <Accordion.Control>Nomination Form</Accordion.Control>
-            <Accordion.Panel>
-              <Stack gap="xs">
-                <Field label="Nominated For" value={data.nominated_for} />
-                <Field label="Proceed Preference" value={PROCEED_LABELS[data.proceed_preference] || data.proceed_preference} />
-                <Field label="Sphere of Influence" value={data.influence_examples} />
-                <Field label="Submitted" value={data.submission_date} />
-              </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          {/* Nominator */}
-          <Accordion.Item value="nominator">
-            <Accordion.Control>Nominator</Accordion.Control>
-            <Accordion.Panel>
-              <Stack gap="xs">
-                <Field label="Name" value={data.nominator_name} />
-                <SimpleGrid cols={isWide ? 2 : 1} spacing="xs">
-                  <Field label="Email" value={data.nominator_email} />
-                  <Field label="Phone" value={data.nominator_phone} />
-                </SimpleGrid>
-                <Field label="Nominator POC" value={data.poc} />
-              </Stack>
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          {/* Approval */}
-          {(data.approval_status !== 'pending' || data.approver) && (
-            <Accordion.Item value="approval">
-              <Accordion.Control>Approval</Accordion.Control>
-              <Accordion.Panel>
-                <Stack gap="xs">
-                  <Field label="Status" value={data.approval_status} />
-                  <Field label="Approved For" value={data.approval_detail} />
-                  <Field label="Approved By" value={data.approver} />
-                </Stack>
-              </Accordion.Panel>
-            </Accordion.Item>
-          )}
-        </Accordion>
+        {sections}
 
         {/* Outreach history */}
         {data.outreach.length > 0 && (
@@ -330,6 +407,15 @@ export function NominationDetail() {
           </>
         )}
       </Stack>
+
+      {/* Full controversies text */}
+      <Modal opened={controversyModal} onClose={() => setControversyModal(false)}
+        title="Reputational Risk & Controversies" centered size="lg">
+        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{data.controversies}</Text>
+        {sources.length > 0 && (
+          <Text size="xs" c="dimmed" mt="md">Numbers like [1] are cited in the Sources section.</Text>
+        )}
+      </Modal>
     </Box>
   );
 }

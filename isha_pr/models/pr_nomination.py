@@ -112,7 +112,16 @@ class PrNomination(models.Model):
     tier = fields.Selection(TIERS, string='Tier', index=True)
     tier_confidence = fields.Float('Tier Confidence', help='0–1, from AI enrichment')
     tier_rationale = fields.Text('Tier Rationale')
-    sources = fields.Text('Sources', help='Citations backing the research')
+    sources = fields.Text('Sources', help='Human-readable numbered source list')
+    source_links = fields.Text('Source Links (JSON)',
+                               help='JSON ordered [{"n","title","url"}] for inline [n] citations')
+    controversies = fields.Text('Controversies / Risk Flags',
+                                help='Scandals, legal issues, polarizing associations surfaced '
+                                     'by research — Sadhguru would be publicly linked to this person')
+    reputational_risk = fields.Selection(
+        [('low', 'Low'), ('medium', 'Medium'), ('high', 'High')],
+        string='Reputational Risk', index=True,
+        help='Risk to Isha/Sadhguru of publicly engaging this nominee')
 
     # ── Profile (researched) ──
     leadership_position = fields.Char('Role / Designation')
@@ -301,12 +310,16 @@ class PrNomination(models.Model):
             'social_following') if getattr(self, k)}
         if self.nominee_id.email:
             idents['email'] = self.nominee_id.email
-        web = ('You MUST use web search to confirm identity and influence; cross-check the '
-               'identifiers so you profile the RIGHT person, not a namesake.'
-               if not self._has_research_context() else
-               'Use the context below; web-search only if it is insufficient.')
+        ctx = ('Context is provided below — still web-search to VERIFY it and to check for '
+               'controversy.' if self._has_research_context() else
+               'Only the name/basic identifiers are given — web-search to confirm you have the '
+               'RIGHT person, not a namesake.')
         return f"""Research this nominee for Isha Outreach and assign an outreach tier (1/2/3)
 using the OFFICIAL criteria for their vertical. Be conservative and evidence-based.
+USE WEB SEARCH to (a) confirm identity, (b) gauge real influence/reach, and — CRITICALLY —
+(c) surface any controversy, scandal, legal issue, extremist tie or reputational risk.
+Isha would publicly associate Sadhguru with this person, so known controversies are
+decision-critical and must NOT be omitted. {ctx}
 
 NOMINEE: {self.nominee_id.name}
 VERTICAL: {c['name']}  (axis: {c['axis']})
@@ -314,7 +327,6 @@ IDENTIFIERS: {json.dumps(idents, ensure_ascii=False) or '(only the name)'}
 RESEARCH NOTES: {self.research_notes or '(none)'}
 NOMINATED BY: {self.nominator_name or '(unknown)'} (a personal/family nominator with no public
 profile for the nominee often signals Tier 3)
-{web}
 
 TIER MEANING: {json.dumps(TIER_MEANING, ensure_ascii=False)}
 CRITERIA — Tier 1: {c['t1']}
@@ -322,10 +334,27 @@ CRITERIA — Tier 1: {c['t1']}
            Tier 3: {c['t3']}
 REVIEWER GUIDANCE: {c['guidance']}
 
+Assess and return:
+- identity_confident: are you sure this is the SPECIFIC person, not a namesake?
+- tier + tier_confidence per the criteria above
+- role, organization, website, linkedin, instagram
+- social_following: reach as a short scalar (e.g. "2.79M YouTube", "480K X / Twitter")
+- controversies: SPECIFIC scandals / legal issues / polarizing associations, each cited [n];
+  write "None found" ONLY if genuine web search surfaces nothing
+- reputational_risk: low | medium | high — risk to Isha/Sadhguru of publicly engaging them
+- follows_sadhguru
+A nominee with strong influence BUT serious unresolved controversy should be Tier 2 at most
+and flagged — never a clean Tier 1. Weigh the controversy explicitly in your rationale.
+
+Cite sources inline as [1], [2] … The "sources" array is REQUIRED: every page you cited,
+in order, with its real title and URL.
+
 If you CANNOT confidently confirm this specific person's identity, set tier to "" and explain.
 Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or empty",
 "tier_confidence":0.0,"role":"","organization":"","website":"","linkedin":"","instagram":"",
-"follows_sadhguru":"yes|no|unknown","rationale":"one paragraph citing the criteria"}}"""
+"social_following":"","controversies":"","reputational_risk":"low|medium|high",
+"follows_sadhguru":"yes|no|unknown","rationale":"one paragraph citing the criteria and any risk",
+"sources":[{{"title":"","url":"https://..."}}]}}"""
 
     @staticmethod
     def _first_json(text):
@@ -353,6 +382,34 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
                         return None
         return None
 
+    @staticmethod
+    def _build_sources(model_sources, grounding):
+        """Ordered, numbered source list for inline [n] citations. The model's own
+        list drives the numbering; verified grounding URLs are appended so nothing
+        cited is a bare number. Mirrors pr.collab.request._build_sources."""
+        links = []
+        for i, s in enumerate(model_sources or [], 1):
+            if isinstance(s, dict):
+                title, url = str(s.get('title') or '').strip(), str(s.get('url') or '').strip()
+            else:
+                title, url = str(s).strip(), ''
+            links.append({'n': i, 'title': title or url or ('Source %d' % i), 'url': url})
+        seen = {(l['url'] or l['title']).lower() for l in links}
+        for g in (grounding or []):
+            key = (g['url'] or g['title']).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            links.append({'n': len(links) + 1, 'title': g['title'], 'url': g['url']})
+        if not links:
+            return {'sources': False, 'source_links': False}
+        return {
+            'source_links': json.dumps(links),
+            'sources': '; '.join(
+                '[%d] %s%s' % (l['n'], l['title'], (' — %s' % l['url']) if l['url'] else '')
+                for l in links),
+        }
+
     def _call_vertex(self, token):
         project = self._vertex_cfg('project')
         if not project:
@@ -360,34 +417,54 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         location, model = self._vertex_cfg('location'), self._vertex_cfg('model')
         endpoint = (f'https://{location}-aiplatform.googleapis.com/v1/projects/{project}'
                     f'/locations/{location}/publishers/google/models/{model}:generateContent')
+        # Always web-grounded: identity confirmation AND controversy checks need live search.
         body = {'contents': [{'role': 'user', 'parts': [{'text': self._research_prompt()}]}],
+                'tools': [{'googleSearch': {}}],
                 'generationConfig': {'temperature': 0.2}}
-        if not self._has_research_context():
-            body['tools'] = [{'googleSearch': {}}]
         req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), method='POST',
                                      headers={'Authorization': 'Bearer %s' % token,
                                               'Content-Type': 'application/json'})
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.load(resp)
-        txt = ''.join(p.get('text', '') for p in data['candidates'][0]['content']['parts'])
-        return self._first_json(txt)
+        cand = (data.get('candidates') or [{}])[0]
+        parts = ((cand.get('content') or {}).get('parts')) or []
+        txt = ''.join(p.get('text', '') for p in parts)
+        grounding = []
+        gm = cand.get('groundingMetadata') or {}
+        for ch in (gm.get('groundingChunks') or []):
+            web = ch.get('web') or {}
+            uri = web.get('uri')
+            if uri:
+                grounding.append({'title': (web.get('title') or uri), 'url': uri})
+        return self._first_json(txt), grounding
 
-    def _apply_research(self, res):
-        """Write AI research back. Unconfirmed identity → flag, no high tier."""
+    def _apply_research(self, res, grounding=None):
+        """Write AI research back. Unconfirmed identity → flag, no high tier.
+        Serious reputational risk → always flagged for a human, never a clean Tier 1."""
         vals = {'research_attempted': True, 'enriched': True, 'research_error': False,
                 'research_volunteer': self.research_volunteer or 'AI Research'}
         confident = bool(res.get('identity_confident'))
         tier = res.get('tier') if res.get('tier') in ('1', '2', '3') else ''
         rationale = (res.get('rationale') or '').strip()
+        risk = res.get('reputational_risk') if res.get('reputational_risk') in ('low', 'medium', 'high') else ''
         for src, dst in (('role', 'leadership_position'), ('organization', 'organization'),
                          ('website', 'website'), ('linkedin', 'linkedin'),
-                         ('instagram', 'instagram'), ('follows_sadhguru', 'follows_sadhguru')):
+                         ('instagram', 'instagram'), ('social_following', 'social_following'),
+                         ('follows_sadhguru', 'follows_sadhguru')):
             v = str(res.get(src) or '').strip()
             if v and v.lower() not in ('', 'unknown', 'n/a', 'none', '0') and not getattr(self, dst):
                 vals[dst] = v
+        controversies = str(res.get('controversies') or '').strip()
+        if controversies and controversies.lower() not in ('none', 'none found', 'n/a', ''):
+            vals['controversies'] = controversies
+        if risk:
+            vals['reputational_risk'] = risk
+        vals.update(self._build_sources(res.get('sources'), grounding))
         if confident and tier:
             vals.update(tier=tier, tier_confidence=float(res.get('tier_confidence') or 0),
                         tier_rationale=rationale, research_status='ok', stage='researched')
+            if risk == 'high':
+                vals['research_status'] = 'needs_review'  # high risk always gets human eyes
         else:
             # unconfirmed: do not prioritize a guess — deprioritize + flag for a human
             vals.update(tier='3', tier_rationale='[AI could not confirm identity] ' + rationale,
@@ -400,10 +477,10 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         token = self._vertex_token()
         for rec in self:
             try:
-                res = rec._call_vertex(token)
+                res, grounding = rec._call_vertex(token)
                 if not res:
                     raise ValueError('unparseable AI response')
-                rec._apply_research(res)
+                rec._apply_research(res, grounding)
             except Exception as e:  # noqa: BLE001 — never let one record break the batch
                 _logger.warning('AI research failed for nomination %s: %s', rec.id, e)
                 rec.write({'research_attempted': True, 'research_status': 'needs_review',
@@ -455,6 +532,9 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
             'tier_confidence': self.tier_confidence,
             'tier_rationale': self.tier_rationale or '',
             'sources': self.sources or '',
+            'source_links': self.source_links or '',
+            'controversies': self.controversies or '',
+            'reputational_risk': self.reputational_risk or '',
             'website': self.website or '',
             'linkedin': self.linkedin or '',
             'instagram': self.instagram or '',

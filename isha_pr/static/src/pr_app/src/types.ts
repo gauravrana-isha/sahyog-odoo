@@ -32,6 +32,7 @@ export interface Paged<T> {
   total: number;
   offset: number;
   limit: number;
+  overview?: CollabOverview;
 }
 
 export interface PRNotification {
@@ -108,6 +109,9 @@ export interface Nomination extends NominationLight {
   tier_confidence: number;
   tier_rationale: string;
   sources: string;
+  source_links: string;
+  controversies: string;
+  reputational_risk: string;
   website: string;
   linkedin: string;
   instagram: string;
@@ -204,9 +208,16 @@ export interface CollabLight {
   poc: string;
 }
 
+export interface SourceLink {
+  n: number;
+  title: string;
+  url: string;
+}
+
 export interface CollabDetail extends CollabLight {
   host_names: string;
   links: string;
+  details: string;
   source: string;
   requester_name: string;
   requester_email: string;
@@ -227,6 +238,8 @@ export interface CollabDetail extends CollabLight {
   eval_confidence: number;
   enriched: boolean;
   sources: string;
+  source_links: string;
+  reach_headlines: string;
   action_taken: string;
   notes: string;
   decided_by: string;
@@ -237,4 +250,10 @@ export interface CollabStats {
   to_evaluate: number;
   to_decide: number;
   high_risk: number;
+}
+
+export interface CollabOverview extends CollabStats {
+  by_stage: Record<string, number>;
+  by_recommendation: Record<string, number>;
+  by_risk: Record<string, number>;
 }

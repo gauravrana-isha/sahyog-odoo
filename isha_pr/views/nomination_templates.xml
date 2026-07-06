@@ -46,15 +46,15 @@
                     }
                     .topbar {
                         background: var(--navy);
-                        padding: 22px 32px;
+                        padding: 18px 32px;
                     }
-                    .topbar .wordmark {
-                        color: #fff;
-                        font-style: italic;
-                        font-weight: 600;
-                        font-size: 30px;
-                        letter-spacing: 0.5px;
-                        text-decoration: none;
+                    .topbar .logo-link { display: inline-flex; }
+                    .topbar .logo {
+                        height: 42px;
+                        width: auto;
+                        display: block;
+                        /* Official logo is dark — render it white on navy */
+                        filter: brightness(0) invert(1);
                     }
                     .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 72px; }
                     .card {
@@ -143,22 +143,113 @@
                     .footer a { color: var(--orange); text-decoration: none; }
                     .thanks { text-align: center; padding: 40px 0 24px; }
                     .thanks h1 { margin-bottom: 18px; }
+
+                    /* ── Custom select (progressive enhancement over native) ── */
+                    select {
+                        appearance: none;
+                        -webkit-appearance: none;
+                        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2336466a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+                        background-repeat: no-repeat;
+                        background-position: right 14px center;
+                        padding-right: 40px;
+                    }
+                    .cselect { position: relative; }
+                    .cselect select {
+                        position: absolute;
+                        inset: 0;
+                        opacity: 0;
+                        pointer-events: none;
+                    }
+                    .cselect-btn {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 10px;
+                        width: 100%;
+                        font: inherit;
+                        color: var(--ink);
+                        text-align: left;
+                        background: #fff;
+                        border: 1px solid var(--input-border);
+                        border-radius: 4px;
+                        padding: 11px 14px;
+                        cursor: pointer;
+                    }
+                    .cselect-btn:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+                    .cselect-btn .placeholder { color: #9aa5bb; }
+                    .cselect-btn svg { flex-shrink: 0; }
+                    .cselect-panel {
+                        position: absolute;
+                        z-index: 30;
+                        top: calc(100% + 4px);
+                        left: 0;
+                        right: 0;
+                        background: #fff;
+                        border: 1px solid var(--input-border);
+                        border-radius: 6px;
+                        box-shadow: 0 8px 24px rgba(20, 30, 60, 0.14);
+                        display: none;
+                        overflow: hidden;
+                    }
+                    .cselect.open .cselect-panel { display: block; }
+                    .cselect-search {
+                        width: 100%;
+                        font: inherit;
+                        font-size: 16px;
+                        border: none;
+                        border-bottom: 1px solid var(--line);
+                        border-radius: 0;
+                        padding: 10px 14px;
+                    }
+                    .cselect-search:focus { outline: none; }
+                    .cselect-list { max-height: 260px; overflow-y: auto; }
+                    .cselect-opt {
+                        padding: 9px 14px;
+                        cursor: pointer;
+                        font-size: 17px;
+                    }
+                    .cselect-opt:hover, .cselect-opt.active { background: #eef2f7; }
+                    .cselect-opt.selected { font-weight: 700; color: var(--navy); }
+                    .cselect-empty { padding: 12px 14px; color: #9aa5bb; font-size: 15px; }
                     @media (max-width: 760px) {
-                        .row { grid-template-columns: 1fr; margin: 28px 0; }
+                        body { font-size: 16.5px; }
+                        h1 { font-size: 26px; }
+                        h2.subtitle { font-size: 20px; margin-bottom: 24px; }
+                        h3.section { font-size: 21px; }
+                        .qlabel, .qtitle, .choice { font-size: 17px; }
+                        .note { font-size: 18px; margin: 28px 0; }
+                        .sublabel { font-size: 13px; }
+                        .intro ul { padding-left: 22px; }
+                        .topbar { padding: 14px 16px; }
+                        .topbar .logo { height: 34px; }
+                        .wrap { padding: 12px 8px 40px; }
+                        .card { padding: 32px 16px 32px; }
+                        .row { grid-template-columns: 1fr; margin: 24px 0; }
                         .qlabel { padding-top: 0; }
                         .choices.inline { flex-direction: column; gap: 14px; }
-                        .card { padding-top: 36px; }
+                        .flourish { margin: 28px auto; transform: scale(0.8); }
                     }
-                    /* Override Odoo's injected body styles */
-                    .o_body_html { padding: 0 !important; margin: 0 !important; background: var(--page) !important; }
+                    /* Override Odoo's injected body styles: web.html_container
+                       tags the body o_body_html, which report CSS renders as a
+                       fixed-width "page" (width, shadow, rounded corners) —
+                       that caused the dead strip on the right. Neutralize it. */
+                    .o_body_html {
+                        width: 100% !important;
+                        max-width: none !important;
+                        min-height: 100vh !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                        background: var(--page) !important;
+                    }
                 </style>
             </head>
             <body>
                 <div class="topbar">
-                    <!-- Drop the official white Isha logo at
-                         isha_pr/static/src/img/isha_logo_white.png and swap this
-                         wordmark for an <img> when available. -->
-                    <a class="wordmark" href="/pr/nominate">isha</a>
+                    <a class="logo-link" href="/pr/nominate">
+                        <img class="logo" src="/isha_pr/static/pwa/isha-logo.svg" alt="Isha"/>
+                    </a>
                 </div>
                 <div class="wrap">
                     <div class="card">
@@ -169,6 +260,138 @@
                     ©2026. Inner Engineering <a href="https://www.innerengineering.com/terms-and-conditions" target="_blank">Terms and Conditions</a>.
                     All Rights Reserved. Read our <a href="https://isha.sadhguru.org/privacy-policy" target="_blank">Privacy Policy</a>.
                 </div>
+                <script>//<![CDATA[
+// Progressive enhancement: dress every <select> as a styled combobox.
+// The native select stays in the form (submission, required-validation and
+// no-JS fallback unchanged); long lists (> 8 options) gain a search box.
+(function () {
+  var CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#36466a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+
+  function enhance(sel) {
+    var wrap = document.createElement('div');
+    wrap.className = 'cselect';
+    sel.parentNode.insertBefore(wrap, sel);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cselect-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+
+    var labelSpan = document.createElement('span');
+    btn.appendChild(labelSpan);
+    btn.insertAdjacentHTML('beforeend', CHEVRON);
+
+    var panel = document.createElement('div');
+    panel.className = 'cselect-panel';
+
+    var search = null;
+    if (sel.options.length > 8) {
+      search = document.createElement('input');
+      search.type = 'text';
+      search.className = 'cselect-search';
+      search.placeholder = 'Search…';
+      search.setAttribute('autocomplete', 'off');
+      panel.appendChild(search);
+    }
+
+    var list = document.createElement('div');
+    list.className = 'cselect-list';
+    list.setAttribute('role', 'listbox');
+    panel.appendChild(list);
+
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+    wrap.appendChild(sel);
+
+    function refreshLabel() {
+      var opt = sel.options[sel.selectedIndex];
+      var text = opt ? opt.text : '';
+      labelSpan.textContent = text || 'Please Select';
+      labelSpan.className = (opt && opt.value) ? '' : 'placeholder';
+    }
+
+    function buildList(filter) {
+      list.innerHTML = '';
+      var q = (filter || '').toLowerCase();
+      var shown = 0;
+      Array.prototype.forEach.call(sel.options, function (opt, i) {
+        if (q && opt.text.toLowerCase().indexOf(q) === -1) return;
+        shown++;
+        var row = document.createElement('div');
+        row.className = 'cselect-opt' + (i === sel.selectedIndex ? ' selected' : '');
+        row.setAttribute('role', 'option');
+        row.textContent = opt.text || ' ';
+        row.addEventListener('click', function () {
+          sel.selectedIndex = i;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          refreshLabel();
+          close();
+        });
+        list.appendChild(row);
+      });
+      if (!shown) {
+        var empty = document.createElement('div');
+        empty.className = 'cselect-empty';
+        empty.textContent = 'No matches';
+        list.appendChild(empty);
+      }
+    }
+
+    function open() {
+      document.querySelectorAll('.cselect.open').forEach(function (o) {
+        o.classList.remove('open');
+      });
+      wrap.classList.add('open');
+      buildList('');
+      if (search) { search.value = ''; search.focus(); }
+      var selRow = list.querySelector('.selected');
+      if (selRow) selRow.scrollIntoView({ block: 'nearest' });
+    }
+
+    function close() {
+      wrap.classList.remove('open');
+    }
+
+    btn.addEventListener('click', function () {
+      wrap.classList.contains('open') ? close() : open();
+    });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+    });
+    if (search) {
+      search.addEventListener('input', function () { buildList(search.value); });
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { close(); btn.focus(); }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var first = list.querySelector('.cselect-opt');
+          if (first) first.click();
+        }
+      });
+    }
+
+    refreshLabel();
+    return { wrap: wrap, close: close };
+  }
+
+  var enhanced = [];
+  document.querySelectorAll('select').forEach(function (sel) {
+    enhanced.push(enhance(sel));
+  });
+
+  document.addEventListener('click', function (e) {
+    enhanced.forEach(function (c) {
+      if (!c.wrap.contains(e.target)) c.close();
+    });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') enhanced.forEach(function (c) { c.close(); });
+  });
+})();
+//]]></script>
             </body>
         </t>
     </template>

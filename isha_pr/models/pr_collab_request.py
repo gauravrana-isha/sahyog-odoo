@@ -52,6 +52,9 @@ class PrCollabRequest(models.Model):
     # ── Intake ──
     host_names = fields.Char('Host / Organizer Names')
     links = fields.Text('Links')
+    details = fields.Text('Details / Context',
+                          help='The actual ask + any context: what they want (speak, '
+                               'podcast, meet), format, dates, who reached out, why now')
     source = fields.Char('Source of Request', help='Email lead / internal research / who raised it')
     requester_name = fields.Char('Requested By')
     requester_email = fields.Char('Requester Email')
@@ -81,7 +84,12 @@ class PrCollabRequest(models.Model):
     risk_level = fields.Selection(RISK, string='Backlash Risk')
     eval_summary = fields.Text('Evaluation Summary')
     eval_confidence = fields.Float('AI Confidence')
-    sources = fields.Text('Sources')
+    sources = fields.Text('Sources', help='Human-readable numbered source list')
+    source_links = fields.Text('Source Links (JSON)',
+                               help='JSON: ordered [{"n","title","url"}] for inline [n] citations')
+    reach_headlines = fields.Text('Reach Headlines (JSON)',
+                                  help='JSON {metric_key: short scalar, e.g. "340K members"} '
+                                       'for stat-card display; the prose lives on the metric field')
 
     # ── Workflow ──
     stage = fields.Selection(COLLAB_STAGES, string='Stage', default='received',
@@ -118,12 +126,13 @@ class PrCollabRequest(models.Model):
     def to_spa_dict(self):
         self.ensure_one()
         fields_list = (
-            'name', 'request_type', 'host_names', 'links', 'source', 'requester_name',
-            'requester_email', 'audience_fit', 'host_credibility', 'brand_alignment',
-            'content_control', 'guest_history', 'potential_backlash', 'opportunity_cost',
-            'long_term_value', 'audience_size', 'avg_views', 'engagement_rate',
-            'ratings_score', 'subscriber_view_ratio', 'recommendation', 'recommendation_notes',
-            'risk_level', 'eval_summary', 'sources', 'stage', 'action_taken', 'notes')
+            'name', 'request_type', 'host_names', 'links', 'details', 'source',
+            'requester_name', 'requester_email', 'audience_fit', 'host_credibility',
+            'brand_alignment', 'content_control', 'guest_history', 'potential_backlash',
+            'opportunity_cost', 'long_term_value', 'audience_size', 'avg_views',
+            'engagement_rate', 'ratings_score', 'subscriber_view_ratio', 'recommendation',
+            'recommendation_notes', 'risk_level', 'eval_summary', 'sources', 'source_links',
+            'reach_headlines', 'stage', 'action_taken', 'notes')
         data = {f: (getattr(self, f) or '') for f in fields_list}
         data.update({
             'id': self.id,
@@ -205,34 +214,74 @@ class PrCollabRequest(models.Model):
         return None
 
     def _eval_prompt(self):
-        return f"""Evaluate this collaboration/engagement opportunity for Isha Foundation and
-Sadhguru. USE WEB SEARCH to find current metrics and, critically, any controversy or
-reputational risk. Numbers are estimates — cite where each came from.
+        rtype = dict(COLLAB_TYPES).get(self.request_type, self.request_type or 'opportunity')
+        return f"""You are advising Isha Foundation on an INBOUND collaboration request.
 
-OPPORTUNITY: {self.name}  (type: {dict(COLLAB_TYPES).get(self.request_type, '')})
-HOST / ORGANIZER: {self.host_names or '(unknown)'}
-LINKS: {self.links or '(none)'}
+An external party — "{self.name}" — has REACHED OUT wanting Sadhguru (spiritual leader,
+founder of Isha Foundation) to participate ({rtype}). This is THEIR request to collaborate
+with Sadhguru; it is NOT Isha reaching out to them.
 
-Research and assess:
-- Reach: audience_size (subscribers/followers), avg_views (per episode), engagement_rate,
-  ratings_score (Spotify/Apple avg), subscriber_view_ratio
-- audience_fit (audience type + receptivity to a spiritual leader like Sadhguru)
-- host_credibility (tone, respect for guests, professionalism, any controversy)
-- guest_history (notable past guests + outcomes)
-- brand_alignment (values fit; political/ideological risk)
-- content_control (live vs pre-recorded; edits reviewable)
-- potential_backlash (SEARCH for controversy, hostile audience, reputational risk)
-- opportunity_cost (worth Sadhguru's time, or delegable?)
-- long_term_value
+YOUR JOB: research the REQUESTER and decide whether Isha/Sadhguru should ACCEPT this
+opportunity — what Isha/Sadhguru would gain, and what reputational risk it carries.
 
-Then recommend WHO should engage and the risk level.
+CRITICAL RULES:
+- Every reach / audience / credibility metric MUST describe the REQUESTER
+  ("{self.name}" / {self.host_names or 'the host/organizer'}) — NEVER Sadhguru's own
+  numbers. Do NOT report Sadhguru's followers, subscribers, or ratings anywhere.
+- If a metric does not fit this format (e.g. "avg views" for a live conference), use the
+  closest equivalent (attendees, members, circulation) or "N/A" — never pad with our side.
+- USE WEB SEARCH and be SPECIFIC, at the depth of a human analyst. Name actual past guests
+  by name, give real subscriber / attendee / member counts, describe the real audience
+  demographic (age, political or religious leaning, geography), quote real controversies.
+  Generic prose ("a large engaged audience") is useless — give names and numbers.
+- Cite sources inline as [1], [2] … inside each field, where the number is the position in
+  the ordered "sources" array you return. The "sources" array is REQUIRED and must list
+  EVERY page you cited, in citation order, each with its real title and URL — never leave
+  it empty. Only cite pages you actually used.
+
+REQUEST
+  Opportunity   : {self.name}
+  Type          : {rtype}
+  Host/Organizer: {self.host_names or '(unknown — research who runs it)'}
+  Links         : {self.links or '(none)'}
+  Context / Ask : {self.details or '(none given — infer the likely ask from the above)'}
+
+RESEARCH & ASSESS (all fields describe the REQUESTER, judged for Isha/Sadhguru):
+- audience_size   : the requester's reach — subscribers / followers / members / attendees [n]
+- avg_views       : typical views/listens per episode, or event attendance; "N/A" if n/a
+- engagement_rate : likes/comments/shares ratio, or audience engagement signal
+- ratings_score   : Spotify/Apple/Google rating if a show; else a reputation signal
+- subscriber_view_ratio : how much of the audience actually watches (reach quality)
+- audience_fit    : WHO listens — demographics, age, political/religious leaning, geography,
+                    and how receptive they are to a spiritual figure like Sadhguru [n]
+- host_credibility: the host's interviewing style, professionalism, tone, and any past
+                    controversy or hostility toward guests [n]
+- guest_history   : NAME notable past guests specifically (people, orgs) — this signals the
+                    company Sadhguru would be keeping by appearing [n]
+- brand_alignment : does the requester's values/positioning fit Isha? political/ideological
+                    risk of the association [n]
+- content_control : live vs pre-recorded; can topics/edits be reviewed beforehand?
+- potential_backlash : SEARCH hard for reputational risk TO Sadhguru/Isha — hostile audience,
+                    controversial host, prior guest scandals, likely criticism [n]
+- opportunity_cost: is this worth Sadhguru's personal time, or better delegated?
+- long_term_value : strategic upside for Isha's mission if accepted
+
+Then decide WHO on the Isha side should engage, and the backlash risk to Isha/Sadhguru:
+- recommendation : sadhguru (worth Sadhguru personally) | global_coordinator | local_teacher | decline
+- risk_level     : low | medium | high  (reputational risk to Isha/Sadhguru if accepted)
+
+For EACH of the 5 reach metrics, ALSO give a HEADLINE in "headlines": a ≤4-word scalar to
+show on a stat card (e.g. "340K members", "26K / event", "4.8★", "3.2% eng.", "N/A"). Keep the
+full sentence WITH [n] citations in the metric field; the headline is just the number.
 
 Reply ONLY with compact JSON, keys exactly:
 {{"audience_size":"","avg_views":"","engagement_rate":"","ratings_score":"","subscriber_view_ratio":"",
+"headlines":{{"audience_size":"","avg_views":"","engagement_rate":"","ratings_score":"","subscriber_view_ratio":""}},
 "audience_fit":"","host_credibility":"","guest_history":"","brand_alignment":"","content_control":"",
 "potential_backlash":"","opportunity_cost":"","long_term_value":"",
 "recommendation":"sadhguru|global_coordinator|local_teacher|decline","risk_level":"low|medium|high",
-"confidence":0.0,"summary":"2-3 sentence bottom line","sources":[]}}"""
+"confidence":0.0,"summary":"2-3 sentence bottom line for Isha's decision",
+"sources":[{{"title":"page title","url":"https://..."}}]}}"""
 
     def _call_vertex_eval(self, token):
         project = self._vertex_cfg('project')
@@ -249,18 +298,31 @@ Reply ONLY with compact JSON, keys exactly:
                                               'Content-Type': 'application/json'})
         with urllib.request.urlopen(req, timeout=150) as resp:
             data = json.load(resp)
-        txt = ''.join(p.get('text', '') for p in data['candidates'][0]['content']['parts'])
-        return self._first_json(txt)
+        cand = (data.get('candidates') or [{}])[0]
+        # Grounding-heavy responses occasionally omit content/parts (safety/finish
+        # edge cases) — access defensively so it degrades to a clean retry, not a crash.
+        parts = ((cand.get('content') or {}).get('parts')) or []
+        txt = ''.join(p.get('text', '') for p in parts)
+        # Capture the REAL grounding sources (verified URLs Vertex actually retrieved).
+        grounding = []
+        gm = cand.get('groundingMetadata') or {}
+        for ch in (gm.get('groundingChunks') or []):
+            web = ch.get('web') or {}
+            uri = web.get('uri')
+            if uri:
+                grounding.append({'title': (web.get('title') or uri), 'url': uri})
+        return self._first_json(txt), grounding
 
-    def _apply_eval(self, res):
+    def _apply_eval(self, res, grounding=None):
         vals = {'eval_attempted': True, 'enriched': True, 'eval_error': False, 'stage': 'evaluated'}
         text_fields = ('audience_size', 'avg_views', 'engagement_rate', 'ratings_score',
                        'subscriber_view_ratio', 'audience_fit', 'host_credibility',
                        'guest_history', 'brand_alignment', 'content_control',
                        'potential_backlash', 'opportunity_cost', 'long_term_value')
+        # AI (re)fills these; a human edits AFTER, so a fresh eval should overwrite.
         for k in text_fields:
             v = str(res.get(k) or '').strip()
-            if v and v.lower() not in ('', 'n/a', 'unknown', 'none') and not getattr(self, k):
+            if v and v.lower() not in ('', 'n/a', 'unknown', 'none'):
                 vals[k] = v
         if res.get('recommendation') in ('sadhguru', 'global_coordinator', 'local_teacher', 'decline'):
             vals['recommendation'] = res['recommendation']
@@ -268,19 +330,53 @@ Reply ONLY with compact JSON, keys exactly:
             vals['risk_level'] = res['risk_level']
         vals['eval_confidence'] = float(res.get('confidence') or 0)
         vals['eval_summary'] = (res.get('summary') or '').strip() or False
-        srcs = res.get('sources')
-        if srcs:
-            vals['sources'] = '; '.join(srcs) if isinstance(srcs, list) else str(srcs)
+        # Short scalar per metric for stat-card display (prose stays on the field).
+        heads = res.get('headlines')
+        metric_keys = ('audience_size', 'avg_views', 'engagement_rate',
+                       'ratings_score', 'subscriber_view_ratio')
+        if isinstance(heads, dict):
+            clean = {k: str(heads[k]).strip() for k in metric_keys
+                     if str(heads.get(k) or '').strip()}
+            vals['reach_headlines'] = json.dumps(clean) if clean else False
+        vals.update(self._build_sources(res.get('sources'), grounding))
         self.write(vals)
+
+    @staticmethod
+    def _build_sources(model_sources, grounding):
+        """Ordered, numbered source list for inline [n] citations. The model's own
+        list drives the numbering (its [n] refer to it); verified grounding URLs are
+        appended so nothing cited is a dead/bare number."""
+        links = []
+        for i, s in enumerate(model_sources or [], 1):
+            if isinstance(s, dict):
+                title, url = str(s.get('title') or '').strip(), str(s.get('url') or '').strip()
+            else:
+                title, url = str(s).strip(), ''
+            links.append({'n': i, 'title': title or url or ('Source %d' % i), 'url': url})
+        seen = {(l['url'] or l['title']).lower() for l in links}
+        for g in (grounding or []):
+            key = (g['url'] or g['title']).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            links.append({'n': len(links) + 1, 'title': g['title'], 'url': g['url']})
+        if not links:
+            return {'sources': False, 'source_links': False}
+        return {
+            'source_links': json.dumps(links),
+            'sources': '; '.join(
+                '[%d] %s%s' % (l['n'], l['title'], (' — %s' % l['url']) if l['url'] else '')
+                for l in links),
+        }
 
     def action_run_evaluation(self):
         token = self._vertex_token()
         for rec in self:
             try:
-                res = rec._call_vertex_eval(token)
+                res, grounding = rec._call_vertex_eval(token)
                 if not res:
                     raise ValueError('unparseable AI response')
-                rec._apply_eval(res)
+                rec._apply_eval(res, grounding)
             except Exception as e:  # noqa: BLE001
                 _logger.warning('AI eval failed for collab %s: %s', rec.id, e)
                 rec.write({'eval_attempted': True, 'eval_error': str(e)[:200]})
