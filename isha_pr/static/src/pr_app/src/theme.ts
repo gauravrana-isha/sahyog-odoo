@@ -63,6 +63,8 @@ const dark: MantineColorsTuple = [
 export const theme = createTheme({
   primaryColor: 'clay',
   primaryShade: { light: 6, dark: 4 },
+  // Checkboxes, radios and switches show a pointer cursor
+  cursorType: 'pointer',
   colors: {
     clay,
     sand,

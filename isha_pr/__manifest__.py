@@ -1,5 +1,5 @@
 {
-    'name': 'Isha PR — Contacts & Outreach',
+    'name': 'Vaani — PR Contacts & Outreach',
     'version': '19.0.1.0.0',
     'category': 'Marketing',
     'summary': 'Center-scoped PR contact database and outreach interactions',

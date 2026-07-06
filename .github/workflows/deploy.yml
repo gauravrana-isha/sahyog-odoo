@@ -43,12 +43,13 @@ jobs:
         run: |
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Deploy: fetch latest code, copy built SPA, restart
-          ssh $SERVER_USER@$SERVER_IP "sudo bash -c '
-            cd /home/gauravrana/sahyog-odoo
-            git fetch origin
-            git reset --hard origin/main
-          '"
+          # Sync code from the runner's checkout (the VM is a plain checkout,
+          # not a git clone). --delete mirrors the tree; excludes keep the VM's
+          # secrets (.env), Docker volumes, built dist (synced below), and deps.
+          rsync -avz --delete \
+            --exclude='.git' --exclude='node_modules' --exclude='.env' \
+            --exclude='static/dist' --exclude='pgdata' --exclude='odoo-filestore' \
+            ./ $SERVER_USER@$SERVER_IP:/home/gauravrana/sahyog-odoo/
 
           # Copy the built SPA dists (not in git)
           rsync -avz --chmod=D755,F644 \

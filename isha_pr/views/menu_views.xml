@@ -32,7 +32,7 @@
         <field name="view_mode">list,form</field>
     </record>
 
-    <menuitem id="menu_isha_pr_root" name="PR" sequence="50"
+    <menuitem id="menu_isha_pr_root" name="Vaani" sequence="50"
               web_icon="isha_pr,static/description/icon.png"
               groups="group_isha_pr"/>
     <menuitem id="menu_pr_contacts" name="Contacts" parent="menu_isha_pr_root"

@@ -78,7 +78,7 @@ export function App() {
       <Center h="100vh">
         <EmptyState
           icon={IconUserOff}
-          title="Unable to load PR app"
+          title="Unable to load Vaani"
           description="Your account may not have PR access. Contact an administrator."
         />
       </Center>
@@ -121,9 +121,9 @@ export function App() {
           </Text>
         ) : (
           <Group gap={8} align="center" wrap="nowrap">
-            <img src={LOGO_SRC} alt="Isha PR" style={{ width: 28, height: 28, borderRadius: 6 }} />
+            <img src={LOGO_SRC} alt="Vaani" style={{ width: 28, height: 28, borderRadius: 6 }} />
             <Text fw={600} size="lg" ff="heading" style={{ color: 'light-dark(var(--mantine-color-clay-7), var(--mantine-color-clay-3))' }}>
-              Isha PR
+              Vaani
             </Text>
           </Group>
         )}
@@ -163,10 +163,10 @@ export function App() {
               {sidebarOpen ? (
                 <>
                   <Center style={{ width: 40, flexShrink: 0 }}>
-                    <img src={LOGO_SRC} alt="Isha PR" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                    <img src={LOGO_SRC} alt="Vaani" style={{ width: 28, height: 28, borderRadius: 6 }} />
                   </Center>
                   <Text fw={600} size="lg" ff="heading" style={{ flex: 1, color: 'light-dark(var(--mantine-color-clay-7), var(--mantine-color-clay-3))' }}>
-                    Isha PR
+                    Vaani
                   </Text>
                   <ActionIcon variant="subtle" size="sm" onClick={toggleSidebar} aria-label="Collapse sidebar" color="gray">
                     <IconLayoutSidebarLeftCollapse size={18} />
@@ -180,7 +180,7 @@ export function App() {
                   style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 'var(--mantine-radius-md)' }}
                 >
                   <span className="sahyog-swap-main">
-                    <img src={LOGO_SRC} alt="Isha PR" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                    <img src={LOGO_SRC} alt="Vaani" style={{ width: 28, height: 28, borderRadius: 6 }} />
                   </span>
                   <span className="sahyog-swap-alt" style={{ color: 'var(--mantine-color-dimmed)' }}>
                     <IconLayoutSidebarLeftExpand size={22} />
