@@ -25,19 +25,11 @@ import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCamera, IconEdit, IconX } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
 import { SaveBar } from '../components/SaveBar';
+import { Field } from '../components/Field';
 import type { VolunteerProfile, VolunteerType } from '../types';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-}
-
-function Field({ label, value }: { label: string; value: string | undefined | null }) {
-  return (
-    <Box>
-      <Text size="xs" c="dimmed" mb={2}>{label}</Text>
-      <Text size="sm">{value || '—'}</Text>
-    </Box>
-  );
 }
 
 interface EditableFields {

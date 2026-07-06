@@ -35,21 +35,13 @@ import { apiGet, apiPost } from '../api';
 import type { GuestVisit, GuestFeedbackEntry, GuestPlace } from '../types';
 import { STAR_FILLED, STAR_EMPTY } from '../tokens';
 import { SaveBar } from '../components/SaveBar';
+import { Field } from '../components/Field';
 import { EmptyState } from '../components/EmptyState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 
 function fmtDate(d: string) {
   try { return format(parseISO(d), 'MMM d, yyyy'); }
   catch { return d; }
-}
-
-function Field({ label, value }: { label: string; value: string | undefined | null }) {
-  return (
-    <Box>
-      <Text size="xs" c="dimmed" mb={2}>{label}</Text>
-      <Text size="sm">{value || '—'}</Text>
-    </Box>
-  );
 }
 
 function StarRating({ rating }: { rating: string | undefined }) {

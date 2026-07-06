@@ -110,6 +110,58 @@ body {
   background-color: var(--mantine-color-clay-light-hover);
 }
 
+/* DataTable header filter funnel: visible only on header hover, keyboard
+   focus, or when that column's filter is active. */
+.dt-col-filter {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+th:hover .dt-col-filter,
+.dt-col-filter:focus-within,
+.dt-col-filter[data-active='true'] {
+  opacity: 1;
+}
+
+/* DataTable column-resize handle (PR app tables). */
+.pr-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.pr-col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  right: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 100ms ease;
+}
+
+.pr-col-resizer:hover::after,
+.pr-col-resizer:active::after {
+  background: var(--mantine-color-clay-4);
+}
+
+/* Horizontal swipe containers (e.g. wide segmented controls on mobile):
+   scrollable but without a visible scrollbar. */
+.sahyog-no-scrollbar {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sahyog-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* TimePicker wheels: no visible scrollbars, wheel feel only. */
 .sahyog-wheel {
   scrollbar-width: none;
@@ -117,6 +169,16 @@ body {
 
 .sahyog-wheel::-webkit-scrollbar {
   display: none;
+}
+
+/* Subtle hover tint for small interactive chips/controls. */
+.sahyog-hoverable {
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.sahyog-hoverable:hover {
+  background-color: var(--mantine-color-gray-light);
+  border-color: var(--mantine-color-clay-4) !important;
 }
 
 /* Affordance for clickable cards: lift on hover, settle on press. */
