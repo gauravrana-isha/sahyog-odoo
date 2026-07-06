@@ -7,3 +7,4 @@ from . import pr_interaction
 from . import pr_nomination
 from . import pr_nomination_outreach
 from . import pr_notification
+from . import pr_collab_request

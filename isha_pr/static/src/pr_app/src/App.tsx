@@ -27,6 +27,7 @@ import { usePR } from './hooks/usePR';
 import { EmptyState } from './components/EmptyState';
 import { NotificationBell } from './components/NotificationBell';
 import { AccountMenu } from './components/AccountMenu';
+import { InstallBanner } from './components/InstallBanner';
 
 const ContactsPage = lazy(() =>
   import('./pages/ContactsPage').then((m) => ({ default: m.ContactsPage })));
@@ -85,6 +86,10 @@ export function App() {
 
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* PWA install banner — offset so the fixed sidebar doesn't cover it */}
+      <Box style={{ marginLeft: showSidebar ? sidebarWidth : 0, transition: 'margin-left 0.2s ease' }}>
+        <InstallBanner />
+      </Box>
       {/* ── Header ── */}
       <Box
         component="header"

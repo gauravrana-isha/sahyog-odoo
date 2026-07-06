@@ -22,6 +22,7 @@
         'data/cron_data.xml',
         'views/pr_interaction_views.xml',
         'views/pr_nomination_views.xml',
+        'views/pr_collab_request_views.xml',
         'views/nomination_templates.xml',
         'views/pr_contact_views.xml',
         'views/res_users_views.xml',

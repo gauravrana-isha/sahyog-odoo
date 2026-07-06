@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List -->
+    <record id="view_pr_collab_list" model="ir.ui.view">
+        <field name="name">pr.collab.request.list</field>
+        <field name="model">pr.collab.request</field>
+        <field name="arch" type="xml">
+            <list string="Collaboration Requests" decoration-success="stage == 'approved'"
+                  decoration-muted="stage == 'declined'" decoration-danger="risk_level == 'high'">
+                <field name="stage"/>
+                <field name="name"/>
+                <field name="request_type"/>
+                <field name="recommendation"/>
+                <field name="risk_level" optional="show"/>
+                <field name="audience_size" optional="show"/>
+                <field name="request_date" optional="show"/>
+                <field name="poc_id" optional="show"/>
+                <field name="source" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Kanban by stage -->
+    <record id="view_pr_collab_kanban" model="ir.ui.view">
+        <field name="name">pr.collab.request.kanban</field>
+        <field name="model">pr.collab.request</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage" class="o_kanban_small_column">
+                <field name="stage"/>
+                <field name="recommendation"/>
+                <field name="risk_level"/>
+                <field name="request_type"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_global_click">
+                            <strong><field name="name"/></strong>
+                            <div class="text-muted small"><field name="request_type"/></div>
+                            <div class="mt-1">
+                                <span t-if="record.recommendation.raw_value" class="badge text-bg-primary me-1"><field name="recommendation"/></span>
+                                <span t-if="record.risk_level.raw_value == 'high'" class="badge text-bg-danger">High Risk</span>
+                            </div>
+                            <div class="small text-muted mt-1"><field name="audience_size"/></div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Form -->
+    <record id="view_pr_collab_form" model="ir.ui.view">
+        <field name="name">pr.collab.request.form</field>
+        <field name="model">pr.collab.request</field>
+        <field name="arch" type="xml">
+            <form string="Collaboration Request">
+                <header>
+                    <button name="action_mark_evaluated" type="object" string="Mark Evaluated"
+                            class="btn-primary" invisible="stage != 'received'"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            class="btn-primary" invisible="stage != 'evaluated'"
+                            groups="isha_pr.group_isha_pr_admin"/>
+                    <button name="action_decline" type="object" string="Decline"
+                            invisible="stage not in ('received','evaluated')"
+                            groups="isha_pr.group_isha_pr_admin"/>
+                    <button name="action_mark_actioned" type="object" string="Mark Actioned"
+                            class="btn-primary" invisible="stage != 'approved'"/>
+                    <button name="action_reset_received" type="object" string="Reset"
+                            invisible="stage == 'received'"/>
+                    <field name="stage" widget="statusbar"
+                           statusbar_visible="received,evaluated,approved,actioned"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Opportunity (e.g. PBD Podcast)"/></h1>
+                    </div>
+                    <group>
+                        <group string="Intake">
+                            <field name="request_type"/>
+                            <field name="request_date"/>
+                            <field name="host_names"/>
+                            <field name="source"/>
+                            <field name="requester_name"/>
+                            <field name="requester_email"/>
+                            <field name="links"/>
+                        </group>
+                        <group string="Recommendation">
+                            <field name="recommendation"/>
+                            <field name="risk_level"/>
+                            <field name="eval_confidence" widget="percentage"/>
+                            <field name="poc_id"/>
+                            <field name="enriched"/>
+                        </group>
+                    </group>
+                    <group string="Reach &amp; Influence">
+                        <group>
+                            <field name="audience_size"/>
+                            <field name="avg_views"/>
+                            <field name="engagement_rate"/>
+                        </group>
+                        <group>
+                            <field name="ratings_score"/>
+                            <field name="subscriber_view_ratio"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Evaluation">
+                            <field name="eval_summary" placeholder="AI evaluation summary…"/>
+                            <group>
+                                <field name="audience_fit"/>
+                                <field name="host_credibility"/>
+                                <field name="brand_alignment"/>
+                                <field name="content_control"/>
+                                <field name="guest_history"/>
+                                <field name="potential_backlash"/>
+                                <field name="opportunity_cost"/>
+                                <field name="long_term_value"/>
+                            </group>
+                            <field name="sources" placeholder="Citations…"/>
+                        </page>
+                        <page string="Decision &amp; Action">
+                            <group>
+                                <field name="recommendation_notes"/>
+                                <field name="decided_by"/>
+                                <field name="action_taken" placeholder="What happened…"/>
+                                <field name="notes"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search -->
+    <record id="view_pr_collab_search" model="ir.ui.view">
+        <field name="name">pr.collab.request.search</field>
+        <field name="model">pr.collab.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="host_names"/>
+                <field name="poc_id"/>
+                <filter name="s_received" string="Received" domain="[('stage','=','received')]"/>
+                <filter name="s_evaluated" string="Evaluated" domain="[('stage','=','evaluated')]"/>
+                <filter name="s_approved" string="Approved" domain="[('stage','=','approved')]"/>
+                <filter name="s_actioned" string="Actioned" domain="[('stage','=','actioned')]"/>
+                <separator/>
+                <filter name="r_sadhguru" string="Sadhguru-level" domain="[('recommendation','=','sadhguru')]"/>
+                <filter name="high_risk" string="High Risk" domain="[('risk_level','=','high')]"/>
+                <filter name="mine" string="My Requests" domain="[('poc_id','=',uid)]"/>
+                <separator/>
+                <filter name="g_stage" string="Stage" domain="[]" context="{'group_by':'stage'}"/>
+                <filter name="g_type" string="Type" domain="[]" context="{'group_by':'request_type'}"/>
+                <filter name="g_rec" string="Recommendation" domain="[]" context="{'group_by':'recommendation'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pr_collab" model="ir.actions.act_window">
+        <field name="name">Collaboration Requests</field>
+        <field name="res_model">pr.collab.request</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_pr_collab_search"/>
+    </record>
+
+</odoo>

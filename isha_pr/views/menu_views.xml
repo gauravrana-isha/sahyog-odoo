@@ -52,6 +52,8 @@
               groups="group_isha_pr_admin"/>
     <menuitem id="menu_pr_nom_nurture" name="Nurturing" parent="menu_pr_nominations"
               action="action_pr_nomination_nurture" sequence="40"/>
+    <menuitem id="menu_pr_collab" name="Collaborations" parent="menu_isha_pr_root"
+              action="action_pr_collab" sequence="18"/>
     <menuitem id="menu_pr_config" name="Configuration" parent="menu_isha_pr_root"
               sequence="90" groups="group_isha_pr_admin"/>
     <menuitem id="menu_pr_programs" name="Programs" parent="menu_pr_config"

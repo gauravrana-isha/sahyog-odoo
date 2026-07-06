@@ -82,7 +82,15 @@ class IshaPRSPA(http.Controller):
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf_token" content="{csrf_token}" />
-    <title>Isha PR</title>
+    <meta name="description" content="Vaani — Isha PR portal for contacts, nominations and outreach." />
+    <meta name="theme-color" content="#b0562e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Vaani" />
+    <link rel="apple-touch-icon" href="/isha_pr/static/pwa/icon-192.png" />
+    <link rel="icon" type="image/png" href="/isha_pr/static/pwa/icon-192.png" />
+    <link rel="manifest" href="/isha_pr/static/dist/pr_app/manifest.json" />
+    <title>Vaani</title>
     {css_links}
 </head>
 <body>
@@ -92,4 +100,21 @@ class IshaPRSPA(http.Controller):
 </html>"""
         return request.make_response(html, headers=[
             ('Content-Type', 'text/html; charset=utf-8'),
+        ])
+
+    @http.route('/pr/sw.js', type='http', auth='public', website=False)
+    def serve_pr_sw(self, **kw):
+        """Serve the service worker from within /pr/ so it may claim that
+        scope (a worker's maximum scope is its own URL path)."""
+        import os
+        sw_path = os.path.join(os.path.dirname(__file__), '..',
+                               'static', 'dist', 'pr_app', 'sw.js')
+        try:
+            with open(sw_path, 'r', encoding='utf-8') as fh:
+                body = fh.read()
+        except OSError:
+            return request.not_found()
+        return request.make_response(body, headers=[
+            ('Content-Type', 'application/javascript; charset=utf-8'),
+            ('Cache-Control', 'no-cache'),
         ])

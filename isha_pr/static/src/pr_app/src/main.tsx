@@ -14,6 +14,15 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/karla';
 import './styles/global.css';
 
+// Register the Vaani PWA service worker (served from /pr/ so it can claim
+// that scope — see the /pr/sw.js controller route).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/pr/sw.js', { scope: '/pr/' })
+      .catch(() => { /* silent — PWA install just won't be offered */ });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="auto">
