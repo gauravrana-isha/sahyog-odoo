@@ -125,10 +125,18 @@ export function ListToolbar({
                   <Indicator
                     disabled={activeFilterCount === 0}
                     label={String(activeFilterCount)}
-                    size={16}
+                    size={13}
                     color="clay"
-                    offset={2}
-                    styles={{ indicator: { padding: '0 4px', minWidth: 16, height: 16, fontSize: 10 } }}
+                    offset={3}
+                    styles={{
+                      indicator: {
+                        padding: 0,
+                        minWidth: 13,
+                        height: 13,
+                        fontSize: 8,
+                        lineHeight: 1,
+                      },
+                    }}
                   >
                     <IconFilter size={18} />
                   </Indicator>

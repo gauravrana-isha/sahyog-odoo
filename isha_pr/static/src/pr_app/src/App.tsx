@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   Group,
@@ -11,7 +11,7 @@ import {
   useMantineColorScheme,
   useComputedColorScheme,
 } from '@mantine/core';
-import { useMediaQuery, useDisclosure } from '@mantine/hooks';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   IconAddressBook,
   IconAward,
@@ -29,6 +29,7 @@ import { EmptyState } from './components/EmptyState';
 import { NotificationBell } from './components/NotificationBell';
 import { AccountMenu } from './components/AccountMenu';
 import { InstallBanner } from './components/InstallBanner';
+import { QuoteTicker } from './components/QuoteTicker';
 
 const ContactsPage = lazy(() =>
   import('./pages/ContactsPage').then((m) => ({ default: m.ContactsPage })));
@@ -67,7 +68,17 @@ export function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const [sidebarOpen, { toggle: toggleSidebar }] = useDisclosure(true);
+  // Sidebar open/collapsed state survives reloads (per browser).
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('vaani_sidebar') !== 'collapsed'; }
+    catch { return true; }
+  });
+  const toggleSidebar = () => setSidebarOpen((open) => {
+    const next = !open;
+    try { localStorage.setItem('vaani_sidebar', next ? 'open' : 'collapsed'); }
+    catch { /* ignore */ }
+    return next;
+  });
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme('light');
   const toggleColorScheme = () => setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark');
@@ -116,7 +127,7 @@ export function App() {
         }}
       >
         {isDesktop ? (
-          <Text size="md" c="dimmed" ff="heading" fs="italic">
+          <Text size="md" c="dimmed" ff="heading" fs="italic" style={{ flexShrink: 0 }}>
             Namaskaram{firstName ? `, ${firstName}` : ''}
           </Text>
         ) : (
@@ -127,6 +138,7 @@ export function App() {
             </Text>
           </Group>
         )}
+        {isDesktop && <QuoteTicker />}
         <Group gap={8} wrap="nowrap">
           <NotificationBell />
           <ActionIcon variant="subtle" size="lg" aria-label="Toggle dark mode" onClick={toggleColorScheme}>

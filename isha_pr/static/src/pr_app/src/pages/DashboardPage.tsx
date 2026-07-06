@@ -167,7 +167,13 @@ export function DashboardPage() {
             series={[{ name: 'count', label: 'Nominations', color: 'river.5' }]}
             gridAxis="none"
             withXAxis={false}
-            yAxisProps={{ width: 190 }}
+            yAxisProps={{
+              // Long vertical names crush the bars on phones — narrow the
+              // axis and ellipsize labels there.
+              width: isWide ? 190 : 108,
+              tickFormatter: (v: string) =>
+                isWide || v.length <= 14 ? v : `${v.slice(0, 13)}…`,
+            }}
             barProps={{
               radius: 4,
               style: { cursor: 'pointer' },
