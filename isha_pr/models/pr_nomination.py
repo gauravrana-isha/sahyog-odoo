@@ -1,5 +1,16 @@
+import json
+import logging
+import urllib.request
+
 from odoo import api, fields, models
 from odoo.exceptions import UserError
+
+from .tier_criteria import TIER_MEANING, criteria_for
+
+_logger = logging.getLogger(__name__)
+
+# Vertex AI defaults — overridable via ir.config_parameter isha_pr.vertex_*
+_VERTEX_DEFAULTS = {'location': 'us-central1', 'model': 'gemini-2.5-flash'}
 
 # The nomination lifecycle: a person nominates → a researcher (human OR the AI
 # enrichment) fills classification → an APPROVER (human only) approves → the POC
@@ -132,6 +143,10 @@ class PrNomination(models.Model):
                                        default='needs_review', index=True)
     research_notes = fields.Text('Research / Call Notes')
     enriched = fields.Boolean('AI Enriched', help='Enrichment has pre-filled this record')
+    research_attempted = fields.Boolean('AI Research Attempted', default=False, copy=False,
+                                        help='Set once the auto-research cron has processed this '
+                                             'record (success or failure) so it is not retried in a loop')
+    research_error = fields.Char('AI Research Error', copy=False)
 
     # ── Approval stage (Approver / Rui — human only) ──
     approval_status = fields.Selection(APPROVAL_STATUS, string='Approval Status',
@@ -232,7 +247,167 @@ class PrNomination(models.Model):
         self.write({'stage': 'nurturing'})
 
     def action_reset_nominated(self):
-        self.write({'stage': 'nominated'})
+        self.write({'stage': 'nominated', 'research_attempted': False, 'research_error': False})
+
+    # ── AI auto-research (Nominated → Researched). No button: driven by cron. ──
+
+    def _vertex_cfg(self, key):
+        ICP = self.env['ir.config_parameter'].sudo()
+        return ICP.get_param('isha_pr.vertex_%s' % key) or _VERTEX_DEFAULTS.get(key)
+
+    def _vertex_token(self):
+        """Access token for Vertex. On a GCP VM this uses the instance service
+        account via the metadata server (no key). For local/dev, set the system
+        parameter isha_pr.vertex_token to a `gcloud auth print-access-token`."""
+        tok = self.env['ir.config_parameter'].sudo().get_param('isha_pr.vertex_token')
+        if tok:
+            return tok
+        try:
+            req = urllib.request.Request(
+                'http://metadata.google.internal/computeMetadata/v1/instance/'
+                'service-accounts/default/token', headers={'Metadata-Flavor': 'Google'})
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return json.load(r)['access_token']
+        except Exception as e:  # noqa: BLE001
+            raise UserError(
+                'No Vertex AI credentials. On the prod GCP VM this uses the instance '
+                'service account automatically (grant it roles/aiplatform.user). For '
+                'local testing set system parameter isha_pr.vertex_token. (%s)' % e)
+
+    def _has_research_context(self):
+        return bool(self.leadership_position or self.organization or self.research_notes)
+
+    def _research_prompt(self):
+        c = criteria_for(self.vertical)
+        idents = {k: getattr(self, k) for k in (
+            'leadership_position', 'organization', 'nominee_city', 'nominee_state',
+            'nominee_country', 'instagram', 'linkedin', 'website', 'social_links',
+            'social_following') if getattr(self, k)}
+        if self.nominee_id.email:
+            idents['email'] = self.nominee_id.email
+        web = ('You MUST use web search to confirm identity and influence; cross-check the '
+               'identifiers so you profile the RIGHT person, not a namesake.'
+               if not self._has_research_context() else
+               'Use the context below; web-search only if it is insufficient.')
+        return f"""Research this nominee for Isha Outreach and assign an outreach tier (1/2/3)
+using the OFFICIAL criteria for their vertical. Be conservative and evidence-based.
+
+NOMINEE: {self.nominee_id.name}
+VERTICAL: {c['name']}  (axis: {c['axis']})
+IDENTIFIERS: {json.dumps(idents, ensure_ascii=False) or '(only the name)'}
+RESEARCH NOTES: {self.research_notes or '(none)'}
+NOMINATED BY: {self.nominator_name or '(unknown)'} (a personal/family nominator with no public
+profile for the nominee often signals Tier 3)
+{web}
+
+TIER MEANING: {json.dumps(TIER_MEANING, ensure_ascii=False)}
+CRITERIA — Tier 1: {c['t1']}
+           Tier 2: {c['t2']}
+           Tier 3: {c['t3']}
+REVIEWER GUIDANCE: {c['guidance']}
+
+If you CANNOT confidently confirm this specific person's identity, set tier to "" and explain.
+Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or empty",
+"tier_confidence":0.0,"role":"","organization":"","website":"","linkedin":"","instagram":"",
+"follows_sadhguru":"yes|no|unknown","rationale":"one paragraph citing the criteria"}}"""
+
+    @staticmethod
+    def _first_json(text):
+        start = text.find('{')
+        if start < 0:
+            return None
+        depth = 0
+        instr = esc = False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if instr:
+                esc = (ch == '\\' and not esc)
+                if ch == '"' and not esc:
+                    instr = False
+            elif ch == '"':
+                instr = True
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        return None
+        return None
+
+    def _call_vertex(self, token):
+        project = self._vertex_cfg('project')
+        if not project:
+            raise UserError('Set system parameter isha_pr.vertex_project to your GCP project.')
+        location, model = self._vertex_cfg('location'), self._vertex_cfg('model')
+        endpoint = (f'https://{location}-aiplatform.googleapis.com/v1/projects/{project}'
+                    f'/locations/{location}/publishers/google/models/{model}:generateContent')
+        body = {'contents': [{'role': 'user', 'parts': [{'text': self._research_prompt()}]}],
+                'generationConfig': {'temperature': 0.2}}
+        if not self._has_research_context():
+            body['tools'] = [{'googleSearch': {}}]
+        req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), method='POST',
+                                     headers={'Authorization': 'Bearer %s' % token,
+                                              'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.load(resp)
+        txt = ''.join(p.get('text', '') for p in data['candidates'][0]['content']['parts'])
+        return self._first_json(txt)
+
+    def _apply_research(self, res):
+        """Write AI research back. Unconfirmed identity → flag, no high tier."""
+        vals = {'research_attempted': True, 'enriched': True, 'research_error': False,
+                'research_volunteer': self.research_volunteer or 'AI Research'}
+        confident = bool(res.get('identity_confident'))
+        tier = res.get('tier') if res.get('tier') in ('1', '2', '3') else ''
+        rationale = (res.get('rationale') or '').strip()
+        for src, dst in (('role', 'leadership_position'), ('organization', 'organization'),
+                         ('website', 'website'), ('linkedin', 'linkedin'),
+                         ('instagram', 'instagram'), ('follows_sadhguru', 'follows_sadhguru')):
+            v = str(res.get(src) or '').strip()
+            if v and v.lower() not in ('', 'unknown', 'n/a', 'none', '0') and not getattr(self, dst):
+                vals[dst] = v
+        if confident and tier:
+            vals.update(tier=tier, tier_confidence=float(res.get('tier_confidence') or 0),
+                        tier_rationale=rationale, research_status='ok', stage='researched')
+        else:
+            # unconfirmed: do not prioritize a guess — deprioritize + flag for a human
+            vals.update(tier='3', tier_rationale='[AI could not confirm identity] ' + rationale,
+                        research_status='needs_review')
+            # stays at 'nominated'; research_attempted stops the retry loop
+        self.write(vals)
+
+    def action_run_research(self):
+        """Research each record now (used by the cron; also callable manually)."""
+        token = self._vertex_token()
+        for rec in self:
+            try:
+                res = rec._call_vertex(token)
+                if not res:
+                    raise ValueError('unparseable AI response')
+                rec._apply_research(res)
+            except Exception as e:  # noqa: BLE001 — never let one record break the batch
+                _logger.warning('AI research failed for nomination %s: %s', rec.id, e)
+                rec.write({'research_attempted': True, 'research_status': 'needs_review',
+                           'research_error': str(e)[:200]})
+            self.env.cr.commit()  # persist per-record so a later failure keeps prior work
+
+    @api.model
+    def _cron_auto_research(self, batch=10):
+        """Cron: auto-research new nominations (Nominated → Researched).
+
+        No-ops until isha_pr.vertex_project is set, so it's harmless to leave
+        enabled before Vertex is configured on the server.
+        """
+        if not self.env['ir.config_parameter'].sudo().get_param('isha_pr.vertex_project'):
+            return
+        todo = self.search([('stage', '=', 'nominated'),
+                            ('research_attempted', '=', False)], limit=batch)
+        if todo:
+            _logger.info('Auto-research: processing %d nomination(s)', len(todo))
+            todo.action_run_research()
 
     def to_spa_light_dict(self):
         """Compact serialization for the PWA nominations list."""

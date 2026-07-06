@@ -232,7 +232,30 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             _logger.exception('PR API error in pr_campaigns')
             return self._json_error('Internal server error', status=500)
 
+    # ── Pagination helper ───────────────────────────────────────────────
+
+    def _list_params(self, kw, order_map, default_order, max_limit=100):
+        """Parse offset/limit/order query params. `order` values come from a
+        whitelist map — never raw SQL from the client."""
+        try:
+            offset = max(0, int(kw.get('offset', 0)))
+        except (TypeError, ValueError):
+            offset = 0
+        try:
+            limit = int(kw.get('limit', 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(1, min(limit, max_limit))
+        order = order_map.get(kw.get('order'), default_order)
+        return offset, limit, order
+
     # ── Contacts ────────────────────────────────────────────────────────
+
+    _CONTACT_ORDERS = {
+        'name': 'name asc',
+        'newest': 'id desc',
+        'vip': 'pr_vip desc, name asc',
+    }
 
     @http.route('/pr/api/contacts', type='http', auth='user', methods=['GET'], csrf=False)
     def pr_contacts(self, **kw):
@@ -247,8 +270,16 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             region_id = kw.get('region_id')
             if region_id:
                 domain.append(('pr_region_id', '=', int(region_id)))
-            partners = request.env['res.partner'].search(domain, limit=100, order='name')
-            return self._json_success([self._contact_dict(p) for p in partners])
+            offset, limit, order = self._list_params(kw, self._CONTACT_ORDERS, 'name asc')
+            Partner = request.env['res.partner']
+            total = Partner.search_count(domain)
+            partners = Partner.search(domain, offset=offset, limit=limit, order=order)
+            return self._json_success({
+                'records': [self._contact_dict(p) for p in partners],
+                'total': total,
+                'offset': offset,
+                'limit': limit,
+            })
         except Exception:
             _logger.exception('PR API error in pr_contacts')
             return self._json_error('Internal server error', status=500)
@@ -369,6 +400,12 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         'reset': 'action_reset_nominated',
     }
 
+    _NOMINATION_ORDERS = {
+        'tier': 'tier asc, id desc',
+        'newest': 'id desc',
+        'name': 'nominee_id asc',
+    }
+
     @http.route('/pr/api/nominations', type='http', auth='user', methods=['GET'], csrf=False)
     def pr_nominations(self, **kw):
         try:
@@ -383,9 +420,17 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             if q:
                 domain += ['|', ('nominee_id.name', 'ilike', q),
                            ('organization', 'ilike', q)]
-            recs = request.env['pr.nomination'].search(domain, limit=200,
-                                                       order='tier, id desc')
-            return self._json_success([r.to_spa_light_dict() for r in recs])
+            offset, limit, order = self._list_params(kw, self._NOMINATION_ORDERS,
+                                                     'tier asc, id desc')
+            Nomination = request.env['pr.nomination']
+            total = Nomination.search_count(domain)
+            recs = Nomination.search(domain, offset=offset, limit=limit, order=order)
+            return self._json_success({
+                'records': [r.to_spa_light_dict() for r in recs],
+                'total': total,
+                'offset': offset,
+                'limit': limit,
+            })
         except Exception:
             _logger.exception('PR API error in pr_nominations')
             return self._json_error('Internal server error', status=500)

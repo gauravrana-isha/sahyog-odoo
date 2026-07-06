@@ -25,6 +25,14 @@ export interface Ref {
   name: string;
 }
 
+/** Server-paginated list envelope. */
+export interface Paged<T> {
+  records: T[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface Contact {
   id: number;
   name: string;

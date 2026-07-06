@@ -12,7 +12,8 @@ import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { EntityCard } from '../components/EntityCard';
 import { ListToolbar } from '../components/ListToolbar';
-import type { NominationLight } from '../types';
+import { ListPager } from '../components/ListPager';
+import type { NominationLight, Paged } from '../types';
 
 const STAGE_FILTERS = [
   { label: 'All', value: 'all' },
@@ -55,6 +56,9 @@ export function NominationsPage() {
   const navigate = useNavigate();
   const isWide = useMediaQuery('(min-width: 768px)');
   const [items, setItems] = useState<NominationLight[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState('all');
   const [tier, setTier] = useState<string | null>(null);
@@ -63,54 +67,53 @@ export function NominationsPage() {
   const [groupBy, setGroupBy] = useState('none');
   const [view, setView] = useState('cards');
 
-  const load = useCallback((stageF: string, tierF: string | null, search: string) => {
+  const load = useCallback((stageF: string, tierF: string | null, search: string, order: string, off: number, lim: number) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (stageF !== 'all') params.set('stage', stageF);
     if (tierF) params.set('tier', tierF);
     if (search) params.set('q', search);
-    const qs = params.toString();
-    apiGet<NominationLight[]>(`/nominations${qs ? `?${qs}` : ''}`)
-      .then(setItems)
-      .catch(() => setItems([]))
+    params.set('order', order);
+    params.set('offset', String(off));
+    params.set('limit', String(lim));
+    apiGet<Paged<NominationLight>>(`/nominations?${params.toString()}`)
+      .then((r) => { setItems(r.records); setTotal(r.total); })
+      .catch(() => { setItems([]); setTotal(0); })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => load(stage, tier, q), 250);
+    const t = setTimeout(() => load(stage, tier, q, sort, offset, limit), 250);
     return () => clearTimeout(t);
-  }, [stage, tier, q, load]);
+  }, [stage, tier, q, sort, offset, limit, load]);
 
-  const sorted = useMemo(() => {
-    const arr = [...items];
-    if (sort === 'tier') {
-      arr.sort((a, b) => (a.tier || '9').localeCompare(b.tier || '9') || b.id - a.id);
-    }
-    if (sort === 'newest') arr.sort((a, b) => b.id - a.id);
-    if (sort === 'name') arr.sort((a, b) => a.nominee.localeCompare(b.nominee));
-    return arr;
-  }, [items, sort]);
+  // Any change of search/filter/sort restarts from the first page.
+  const setStageReset = (v: string) => { setStage(v); setOffset(0); };
+  const setTierReset = (v: string | null) => { setTier(v); setOffset(0); };
+  const setQReset = (v: string) => { setQ(v); setOffset(0); };
+  const setSortReset = (v: string) => { setSort(v); setOffset(0); };
 
+  // Sorting is server-side (order param); grouping applies within the page.
   const groups = useMemo(() => {
     if (groupBy === 'stage') {
       return STAGE_ORDER
         .map((s) => ({
           key: s,
           title: STAGE_LABELS[s],
-          items: sorted.filter((n) => n.stage === s),
+          items: items.filter((n) => n.stage === s),
         }))
         .filter((g) => g.items.length > 0);
     }
     if (groupBy === 'vertical') {
-      const verticals = [...new Set(sorted.map((n) => n.vertical_label || 'No vertical'))];
+      const verticals = [...new Set(items.map((n) => n.vertical_label || 'No vertical'))];
       return verticals.map((v) => ({
         key: v,
         title: v,
-        items: sorted.filter((n) => (n.vertical_label || 'No vertical') === v),
+        items: items.filter((n) => (n.vertical_label || 'No vertical') === v),
       }));
     }
-    return [{ key: 'all', title: '', items: sorted }];
-  }, [sorted, groupBy]);
+    return [{ key: 'all', title: '', items }];
+  }, [items, groupBy]);
 
   const filtersActive = stage !== 'all' || !!tier || !!q;
 
@@ -215,12 +218,12 @@ export function NominationsPage() {
         size="xs"
         mb="sm"
         value={stage}
-        onChange={setStage}
+        onChange={setStageReset}
         data={STAGE_FILTERS}
       />
       <ListToolbar
         search={q}
-        onSearch={setQ}
+        onSearch={setQReset}
         searchPlaceholder="Search nominee or organization…"
         filters={
           <Select
@@ -229,21 +232,21 @@ export function NominationsPage() {
             aria-label="Filter by tier"
             data={TIER_FILTERS}
             value={tier}
-            onChange={setTier}
+            onChange={setTierReset}
             clearable
           />
         }
-        sort={{ value: sort, onChange: setSort, options: SORT_OPTIONS }}
+        sort={{ value: sort, onChange: setSortReset, options: SORT_OPTIONS }}
         groupBy={{ value: groupBy, onChange: setGroupBy, options: GROUP_OPTIONS }}
         view={{ value: view, onChange: setView }}
-        count={loading ? undefined : { shown: items.length, label: items.length === 1 ? 'nomination' : 'nominations' }}
+        count={loading ? undefined : { shown: total, label: total === 1 ? 'nomination' : 'nominations' }}
       />
 
       {loading ? (
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} leading="avatar" />)}
         </SimpleGrid>
-      ) : items.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           icon={IconAward}
           title={filtersActive ? 'No nominations found' : 'No nominations yet'}
@@ -269,6 +272,15 @@ export function NominationsPage() {
             </Box>
           ))}
         </Stack>
+      )}
+
+      {!loading && (
+        <ListPager
+          total={total}
+          offset={offset}
+          limit={limit}
+          onChange={(o, l) => { setOffset(o); setLimit(l); }}
+        />
       )}
     </Box>
   );

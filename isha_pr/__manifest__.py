@@ -19,6 +19,7 @@
         'security/ir.model.access.csv',
         'data/pr_offering_data.xml',
         'data/config_params.xml',
+        'data/cron_data.xml',
         'views/pr_interaction_views.xml',
         'views/pr_nomination_views.xml',
         'views/nomination_templates.xml',

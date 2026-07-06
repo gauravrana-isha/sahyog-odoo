@@ -14,11 +14,13 @@ import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { EntityCard } from '../components/EntityCard';
 import { ListToolbar } from '../components/ListToolbar';
-import type { Contact } from '../types';
+import { ListPager } from '../components/ListPager';
+import type { Contact, Paged } from '../types';
 
+// Server-side sort keys (whitelisted in the contacts endpoint).
 const SORT_OPTIONS = [
   { value: 'name', label: 'Name (A–Z)' },
-  { value: 'interactions', label: 'Most interactions' },
+  { value: 'newest', label: 'Newest first' },
   { value: 'vip', label: 'VIP first' },
 ];
 
@@ -43,6 +45,9 @@ export function ContactsPage() {
   const [q, setQ] = useState('');
   const [regionId, setRegionId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState('name');
   const [groupBy, setGroupBy] = useState('none');
@@ -54,22 +59,29 @@ export function ContactsPage() {
   const { me } = usePR();
   const isWide = useMediaQuery('(min-width: 768px)');
 
-  const load = useCallback((search: string, region: string | null) => {
+  const load = useCallback((search: string, region: string | null, order: string, off: number, lim: number) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set('q', search);
     if (region) params.set('region_id', region);
-    const qs = params.toString();
-    apiGet<Contact[]>(`/contacts${qs ? `?${qs}` : ''}`)
-      .then(setContacts)
-      .catch(() => setContacts([]))
+    params.set('order', order);
+    params.set('offset', String(off));
+    params.set('limit', String(lim));
+    apiGet<Paged<Contact>>(`/contacts?${params.toString()}`)
+      .then((r) => { setContacts(r.records); setTotal(r.total); })
+      .catch(() => { setContacts([]); setTotal(0); })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => load(q, regionId), 250);
+    const t = setTimeout(() => load(q, regionId, sort, offset, limit), 250);
     return () => clearTimeout(t);
-  }, [q, regionId, load]);
+  }, [q, regionId, sort, offset, limit, load]);
+
+  // Any change of search/filter/sort restarts from the first page.
+  const setQReset = (v: string) => { setQ(v); setOffset(0); };
+  const setRegionReset = (v: string | null) => { setRegionId(v); setOffset(0); };
+  const setSortReset = (v: string) => { setSort(v); setOffset(0); };
 
   const create = async () => {
     if (!form.name.trim()) return;
@@ -86,24 +98,17 @@ export function ContactsPage() {
     }
   };
 
-  const sorted = useMemo(() => {
-    const arr = [...contacts];
-    if (sort === 'name') arr.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === 'interactions') arr.sort((a, b) => b.interaction_count - a.interaction_count);
-    if (sort === 'vip') arr.sort((a, b) => Number(b.vip) - Number(a.vip) || a.name.localeCompare(b.name));
-    return arr;
-  }, [contacts, sort]);
-
+  // Sorting is server-side (order param); grouping applies within the page.
   const groups = useMemo(() => {
-    if (groupBy !== 'involvement') return [{ key: 'all', title: '', items: sorted }];
+    if (groupBy !== 'involvement') return [{ key: 'all', title: '', items: contacts }];
     return INVOLVEMENT_ORDER
       .map((level) => ({
         key: level || 'none',
         title: INVOLVEMENT_LABELS[level],
-        items: sorted.filter((c) => (c.pr_involvement || '') === level),
+        items: contacts.filter((c) => (c.pr_involvement || '') === level),
       }))
       .filter((g) => g.items.length > 0);
-  }, [sorted, groupBy]);
+  }, [contacts, groupBy]);
 
   const contactCard = (c: Contact, idx: number) => (
     <EntityCard
@@ -172,7 +177,7 @@ export function ContactsPage() {
     <Box style={{ maxWidth: isWide ? 1100 : undefined, margin: isWide ? '0 auto' : undefined }}>
       <ListToolbar
         search={q}
-        onSearch={setQ}
+        onSearch={setQReset}
         searchPlaceholder="Search contacts…"
         filters={
           <Select
@@ -182,15 +187,15 @@ export function ContactsPage() {
             aria-label="Filter by region"
             data={(me?.regions ?? []).map((r) => ({ value: String(r.id), label: r.name }))}
             value={regionId}
-            onChange={setRegionId}
+            onChange={setRegionReset}
             clearable
             searchable
           />
         }
-        sort={{ value: sort, onChange: setSort, options: SORT_OPTIONS }}
+        sort={{ value: sort, onChange: setSortReset, options: SORT_OPTIONS }}
         groupBy={{ value: groupBy, onChange: setGroupBy, options: GROUP_OPTIONS }}
         view={{ value: view, onChange: setView }}
-        count={loading ? undefined : { shown: contacts.length, label: contacts.length === 1 ? 'contact' : 'contacts' }}
+        count={loading ? undefined : { shown: total, label: total === 1 ? 'contact' : 'contacts' }}
         trailing={
           <Button leftSection={<IconPlus size={16} />} onClick={open}>
             New
@@ -202,7 +207,7 @@ export function ContactsPage() {
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} leading="avatar" />)}
         </SimpleGrid>
-      ) : contacts.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           icon={IconAddressBook}
           title={q || regionId ? 'No contacts found' : 'No contacts yet'}
@@ -226,6 +231,15 @@ export function ContactsPage() {
             </Box>
           ))}
         </Stack>
+      )}
+
+      {!loading && (
+        <ListPager
+          total={total}
+          offset={offset}
+          limit={limit}
+          onChange={(o, l) => { setOffset(o); setLimit(l); }}
+        />
       )}
 
       <Modal opened={opened} onClose={close} title="New PR contact">
