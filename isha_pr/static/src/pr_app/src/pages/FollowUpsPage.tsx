@@ -1,15 +1,21 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Badge, Box, Card, Group, SimpleGrid, Stack, Text,
+  Badge, Box, Group, SimpleGrid, Stack, Text,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconChecklist, IconChevronRight } from '@tabler/icons-react';
-import { isBefore, isToday, parseISO, startOfDay, addDays } from 'date-fns';
+import { IconChecklist } from '@tabler/icons-react';
+import { format, isBefore, isToday, parseISO, startOfDay, addDays } from 'date-fns';
 import { apiGet } from '../api';
 import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
+import { EntityCard } from '../components/EntityCard';
 import type { Interaction } from '../types';
+
+function fmtDay(d: string) {
+  try { return format(parseISO(d), 'EEE, MMM d'); }
+  catch { return d; }
+}
 
 interface Bucket {
   key: string;
@@ -76,25 +82,18 @@ export function FollowUpsPage() {
               </Group>
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                 {bucket.items.map((i, idx) => (
-                  <Card
+                  <EntityCard
                     key={i.id}
-                    padding="sm"
-                    withBorder
-                    shadow="xs"
-                    className="sahyog-fade-up sahyog-card-interactive"
-                    style={{ cursor: i.partner_id ? 'pointer' : undefined, '--stagger': idx } as CSSProperties}
-                    onClick={() => i.partner_id && navigate(`/contacts/${i.partner_id.id}`)}
-                  >
-                    <Group wrap="nowrap" gap="sm">
-                      <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Group justify="space-between" wrap="wrap" gap={4}>
-                          <Text ff="heading" fw={600} size="md" lh={1.25}>
-                            {i.partner_id?.name || 'Unknown contact'}
-                          </Text>
-                          <Badge size="xs" variant="light" color={bucket.color}>
-                            {i.follow_up_date}
-                          </Badge>
-                        </Group>
+                    stagger={idx}
+                    onClick={i.partner_id ? () => navigate(`/contacts/${i.partner_id!.id}`) : undefined}
+                    title={i.partner_id?.name || 'Unknown contact'}
+                    badges={
+                      <Badge size="xs" variant="light" color={bucket.color}>
+                        {fmtDay(i.follow_up_date)}
+                      </Badge>
+                    }
+                    meta={
+                      <>
                         <Text size="xs" c="dimmed" mt={2} truncate>
                           {[i.subject || i.interaction_type, i.center_id?.name, i.owner]
                             .filter(Boolean).join(' · ')}
@@ -102,12 +101,9 @@ export function FollowUpsPage() {
                         {i.notes && (
                           <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{i.notes}</Text>
                         )}
-                      </Box>
-                      {i.partner_id && (
-                        <IconChevronRight size={18} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0 }} />
-                      )}
-                    </Group>
-                  </Card>
+                      </>
+                    }
+                  />
                 ))}
               </SimpleGrid>
             </Box>

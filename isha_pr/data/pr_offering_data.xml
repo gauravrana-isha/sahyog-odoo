@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Isha offerings a nominee can be nurtured toward (Step 5). Editable. -->
+    <record id="offering_mom" model="pr.offering">
+        <field name="name">Miracle of the Mind (MoM)</field><field name="sequence">10</field>
+    </record>
+    <record id="offering_ie" model="pr.offering">
+        <field name="name">Inner Engineering (IE)</field><field name="sequence">20</field>
+    </record>
+    <record id="offering_fyo" model="pr.offering">
+        <field name="name">Find Your Own (FYO)</field><field name="sequence">30</field>
+    </record>
+    <record id="offering_save_soil" model="pr.offering">
+        <field name="name">Save Soil</field><field name="sequence">40</field>
+    </record>
+    <record id="offering_sg_event" model="pr.offering">
+        <field name="name">Sadhguru Event</field><field name="sequence">50</field>
+    </record>
+    <record id="offering_pr_amplify" model="pr.offering">
+        <field name="name">PR Amplification (their platform)</field><field name="sequence">60</field>
+    </record>
+    <record id="offering_yogic_city" model="pr.offering">
+        <field name="name">Yogic City (strategic)</field><field name="sequence">70</field>
+    </record>
+    <record id="offering_wmhd" model="pr.offering">
+        <field name="name">WMHD Promo</field><field name="sequence">80</field>
+    </record>
+    <record id="offering_earth_day" model="pr.offering">
+        <field name="name">Earth Day Promo</field><field name="sequence">90</field>
+    </record>
+</odoo>

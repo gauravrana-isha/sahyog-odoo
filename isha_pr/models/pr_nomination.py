@@ -147,6 +147,20 @@ class PrNomination(models.Model):
     poc_id = fields.Many2one('res.users', string='Nominator POC')
     next_step = fields.Char('Next Step')
 
+    # ── Nurturing (Step 4/5 — active cultivation toward engagement) ──
+    engagement_category = fields.Selection([
+        ('program', 'Isha Program'),
+        ('save_soil', 'Save Soil'),
+        ('sg_event', "Sadhguru's Event"),
+        ('pr_amplify', 'PR Amplification (their platform)'),
+        ('yogic_city', 'Yogic City (strategic)'),
+        ('other', 'Other'),
+    ], string='Engagement Category')
+    suggested_offering_ids = fields.Many2many('pr.offering', string='Suggested Offerings')
+    recommended_event = fields.Char('Recommended Program / Event')
+    nurture_group = fields.Boolean('In Nurturing Group?')
+    nurture_notes = fields.Text('Nurturing Notes')
+
     # ── Outreach campaign history (rows, not columns — see the outreach model) ──
     outreach_ids = fields.One2many('pr.nomination.outreach', 'nomination_id',
                                    string='Outreach Campaigns')
@@ -270,6 +284,11 @@ class PrNomination(models.Model):
             'approver': self.approver_id.name or '',
             'poc': self.poc_id.name or '',
             'next_step': self.next_step or '',
+            'engagement_category': self.engagement_category or '',
+            'suggested_offerings': self.suggested_offering_ids.mapped('name'),
+            'recommended_event': self.recommended_event or '',
+            'nurture_group': self.nurture_group,
+            'nurture_notes': self.nurture_notes or '',
             'brief': self.brief or '',
             'last_touch': self.last_touch or '',
             'email': p.email or '',

@@ -1,4 +1,5 @@
 from . import pr_program
+from . import pr_offering
 from . import pr_contact_image
 from . import res_partner
 from . import res_users

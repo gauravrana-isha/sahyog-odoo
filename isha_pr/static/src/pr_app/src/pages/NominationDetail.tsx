@@ -15,6 +15,7 @@ import { usePR } from '../hooks/usePR';
 import { STAGE_COLOR, TIER_COLOR } from '../tokens';
 import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
+import { Field } from '../components/Field';
 import type { Nomination } from '../types';
 
 const TIER_OPTIONS = [
@@ -49,15 +50,6 @@ const PROCEED_LABELS: Record<string, string> = {
 };
 
 const YES_NO: Record<string, string> = { yes: 'Yes', no: 'No', unknown: 'Not sure' };
-
-function Field({ label, value }: { label: string; value: string | undefined | null }) {
-  return (
-    <Box>
-      <Text size="xs" c="dimmed" mb={2}>{label}</Text>
-      <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{value || '—'}</Text>
-    </Box>
-  );
-}
 
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();

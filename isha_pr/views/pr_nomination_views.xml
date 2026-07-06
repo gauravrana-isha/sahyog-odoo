@@ -117,6 +117,17 @@
                         <page string="Approval Notes (Rui)" groups="isha_pr.group_isha_pr_admin">
                             <field name="review_notes_rui" placeholder="Rui's review notes…"/>
                         </page>
+                        <page string="Nurturing">
+                            <group>
+                                <group string="Engagement Plan">
+                                    <field name="engagement_category"/>
+                                    <field name="suggested_offering_ids" widget="many2many_tags"/>
+                                    <field name="recommended_event"/>
+                                    <field name="nurture_group"/>
+                                </group>
+                            </group>
+                            <field name="nurture_notes" placeholder="Interests, requests, engagement format, weekly updates…"/>
+                        </page>
                         <page string="Outreach Campaigns">
                             <field name="outreach_ids">
                                 <list editable="bottom">

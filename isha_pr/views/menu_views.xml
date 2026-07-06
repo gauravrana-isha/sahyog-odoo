@@ -26,6 +26,12 @@
         <field name="view_mode">list,form</field>
     </record>
 
+    <record id="action_pr_offering" model="ir.actions.act_window">
+        <field name="name">Offerings</field>
+        <field name="res_model">pr.offering</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
     <menuitem id="menu_isha_pr_root" name="PR" sequence="50"
               web_icon="isha_pr,static/description/icon.png"
               groups="group_isha_pr"/>
@@ -35,7 +41,7 @@
               action="action_pr_interaction" sequence="20"/>
     <menuitem id="menu_pr_nominations" name="Nominations" parent="menu_isha_pr_root"
               sequence="15"/>
-    <menuitem id="menu_pr_nom_priority" name="⭐ Priority Leads" parent="menu_pr_nominations"
+    <menuitem id="menu_pr_nom_priority" name="Priority Leads" parent="menu_pr_nominations"
               action="action_pr_nomination_priority" sequence="5"/>
     <menuitem id="menu_pr_nom_all" name="All Nominations" parent="menu_pr_nominations"
               action="action_pr_nomination" sequence="10"/>
@@ -52,5 +58,7 @@
               action="action_pr_program" sequence="10"/>
     <menuitem id="menu_pr_campaigns" name="Campaigns" parent="menu_pr_config"
               action="action_pr_campaign" sequence="20"/>
+    <menuitem id="menu_pr_offerings" name="Offerings" parent="menu_pr_config"
+              action="action_pr_offering" sequence="30"/>
 
 </odoo>

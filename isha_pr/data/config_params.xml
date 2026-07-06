@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!--
+      Vertex AI config for nomination auto-research (Nominated → Researched).
+      NOT hardcoded in code: the prod VM runs in a different GCP project than
+      local dev, and the model/region may change. Set these per environment in
+      Settings ▸ Technical ▸ System Parameters (or via the server's env).
+
+      - isha_pr.vertex_project : GCP project id that has Vertex AI enabled and
+        whose service account has the "Vertex AI User" role. LEAVE BLANK here;
+        set it on each server (prod ≠ dev).
+      - isha_pr.vertex_location: Vertex region (default us-central1).
+      - isha_pr.vertex_model   : Gemini model id (default gemini-2.5-flash).
+    -->
+    <record id="param_vertex_project" model="ir.config_parameter">
+        <field name="key">isha_pr.vertex_project</field>
+        <field name="value"></field>
+    </record>
+    <record id="param_vertex_location" model="ir.config_parameter">
+        <field name="key">isha_pr.vertex_location</field>
+        <field name="value">us-central1</field>
+    </record>
+    <record id="param_vertex_model" model="ir.config_parameter">
+        <field name="key">isha_pr.vertex_model</field>
+        <field name="value">gemini-2.5-flash</field>
+    </record>
+</odoo>

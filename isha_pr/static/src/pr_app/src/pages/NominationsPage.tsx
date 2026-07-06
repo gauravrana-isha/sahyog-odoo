@@ -1,15 +1,17 @@
-import { useEffect, useState, useCallback, type CSSProperties } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Avatar, Badge, Box, Card, Group, SegmentedControl, Select, SimpleGrid,
-  Text, TextInput,
+  Stack, Table, Text,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconAward, IconChevronRight, IconFlame, IconSearch } from '@tabler/icons-react';
+import { IconAward, IconFlame } from '@tabler/icons-react';
 import { apiGet } from '../api';
 import { STAGE_COLOR, TIER_COLOR } from '../tokens';
 import { EmptyState } from '../components/EmptyState';
 import { CardSkeleton } from '../components/CardSkeleton';
+import { EntityCard } from '../components/EntityCard';
+import { ListToolbar } from '../components/ListToolbar';
 import type { NominationLight } from '../types';
 
 const STAGE_FILTERS = [
@@ -27,6 +29,24 @@ const TIER_FILTERS = [
   { value: '3', label: 'Tier 3 — Low' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'tier', label: 'Tier (priority first)' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'name', label: 'Name (A–Z)' },
+];
+
+const GROUP_OPTIONS = [
+  { value: 'none', label: 'No grouping' },
+  { value: 'stage', label: 'Stage' },
+  { value: 'vertical', label: 'Vertical' },
+];
+
+const STAGE_ORDER = ['nominated', 'researched', 'approved', 'nurturing', 'rejected'];
+const STAGE_LABELS: Record<string, string> = {
+  nominated: 'Nominated', researched: 'Researched', approved: 'Approved',
+  nurturing: 'Nurturing', rejected: 'Rejected',
+};
+
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 }
@@ -39,6 +59,9 @@ export function NominationsPage() {
   const [stage, setStage] = useState('all');
   const [tier, setTier] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const [sort, setSort] = useState('tier');
+  const [groupBy, setGroupBy] = useState('none');
+  const [view, setView] = useState('cards');
 
   const load = useCallback((stageF: string, tierF: string | null, search: string) => {
     setLoading(true);
@@ -58,7 +81,132 @@ export function NominationsPage() {
     return () => clearTimeout(t);
   }, [stage, tier, q, load]);
 
+  const sorted = useMemo(() => {
+    const arr = [...items];
+    if (sort === 'tier') {
+      arr.sort((a, b) => (a.tier || '9').localeCompare(b.tier || '9') || b.id - a.id);
+    }
+    if (sort === 'newest') arr.sort((a, b) => b.id - a.id);
+    if (sort === 'name') arr.sort((a, b) => a.nominee.localeCompare(b.nominee));
+    return arr;
+  }, [items, sort]);
+
+  const groups = useMemo(() => {
+    if (groupBy === 'stage') {
+      return STAGE_ORDER
+        .map((s) => ({
+          key: s,
+          title: STAGE_LABELS[s],
+          items: sorted.filter((n) => n.stage === s),
+        }))
+        .filter((g) => g.items.length > 0);
+    }
+    if (groupBy === 'vertical') {
+      const verticals = [...new Set(sorted.map((n) => n.vertical_label || 'No vertical'))];
+      return verticals.map((v) => ({
+        key: v,
+        title: v,
+        items: sorted.filter((n) => (n.vertical_label || 'No vertical') === v),
+      }));
+    }
+    return [{ key: 'all', title: '', items: sorted }];
+  }, [sorted, groupBy]);
+
   const filtersActive = stage !== 'all' || !!tier || !!q;
+
+  const nominationCard = (n: NominationLight, idx: number) => (
+    <EntityCard
+      key={n.id}
+      stagger={idx}
+      onClick={() => navigate(`/nominations/${n.id}`)}
+      leading={
+        <Avatar radius="xl" color="clay" size={38} src={n.image_url}>
+          {initials(n.nominee)}
+        </Avatar>
+      }
+      title={n.nominee}
+      titleExtras={n.high_priority && <IconFlame size={16} color="var(--mantine-color-clay-6)" />}
+      badges={
+        <>
+          {n.tier && (
+            <Badge size="xs" variant="light" color={TIER_COLOR[n.tier] || 'sand'}>Tier {n.tier}</Badge>
+          )}
+          <Badge size="xs" variant="light" color={STAGE_COLOR[n.stage] || 'sand'}>
+            {n.stage_label || n.stage}
+          </Badge>
+        </>
+      }
+      meta={
+        <>
+          <Text size="xs" c="dimmed" mt={2} truncate>
+            {[n.leadership_position, n.organization].filter(Boolean).join(' · ') || '—'}
+          </Text>
+          <Group gap={6} mt={4}>
+            {n.vertical_label && (
+              <Badge size="xs" variant="light" color="river">{n.vertical_label}</Badge>
+            )}
+            {n.is_self_nomination && (
+              <Badge size="xs" variant="light" color="ochre">Self</Badge>
+            )}
+            {n.submission_date && (
+              <Text size="xs" c="dimmed">{n.submission_date}</Text>
+            )}
+          </Group>
+        </>
+      }
+    />
+  );
+
+  const nominationsTable = (rows: NominationLight[]) => (
+    <Card withBorder padding={0} className="sahyog-fade-up">
+      <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Nominee</Table.Th>
+            <Table.Th>Role / Organization</Table.Th>
+            <Table.Th>Tier</Table.Th>
+            <Table.Th>Vertical</Table.Th>
+            <Table.Th>Stage</Table.Th>
+            <Table.Th>Submitted</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {rows.map((n) => (
+            <Table.Tr key={n.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/nominations/${n.id}`)}>
+              <Table.Td>
+                <Group gap="sm" wrap="nowrap">
+                  <Avatar radius="xl" color="clay" size={28} src={n.image_url}>
+                    {initials(n.nominee)}
+                  </Avatar>
+                  <Text fw={600} size="sm">{n.nominee}</Text>
+                  {n.high_priority && <IconFlame size={14} color="var(--mantine-color-clay-6)" />}
+                </Group>
+              </Table.Td>
+              <Table.Td>
+                <Text size="sm" c="dimmed" lineClamp={1}>
+                  {[n.leadership_position, n.organization].filter(Boolean).join(' · ') || '—'}
+                </Text>
+              </Table.Td>
+              <Table.Td>
+                {n.tier
+                  ? <Badge size="xs" variant="light" color={TIER_COLOR[n.tier] || 'sand'}>T{n.tier}</Badge>
+                  : <Text size="sm" c="dimmed">—</Text>}
+              </Table.Td>
+              <Table.Td><Text size="sm" c="dimmed">{n.vertical_label || '—'}</Text></Table.Td>
+              <Table.Td>
+                <Badge size="xs" variant="light" color={STAGE_COLOR[n.stage] || 'sand'}>
+                  {n.stage_label || n.stage}
+                </Badge>
+              </Table.Td>
+              <Table.Td><Text size="sm" c="dimmed">{n.submission_date || '—'}</Text></Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Card>
+  );
+
+  const showTable = isWide && view === 'table';
 
   return (
     <Box style={{ maxWidth: isWide ? 1100 : undefined, margin: isWide ? '0 auto' : undefined }}>
@@ -70,25 +218,26 @@ export function NominationsPage() {
         onChange={setStage}
         data={STAGE_FILTERS}
       />
-      <Group wrap="nowrap" mb="md">
-        <TextInput
-          flex={1}
-          leftSection={<IconSearch size={16} />}
-          placeholder="Search nominee or organization…"
-          value={q}
-          onChange={(e) => setQ(e.currentTarget.value)}
-          style={{ maxWidth: isWide ? 420 : undefined }}
-        />
-        <Select
-          w={isWide ? 200 : 150}
-          placeholder="All tiers"
-          aria-label="Filter by tier"
-          data={TIER_FILTERS}
-          value={tier}
-          onChange={setTier}
-          clearable
-        />
-      </Group>
+      <ListToolbar
+        search={q}
+        onSearch={setQ}
+        searchPlaceholder="Search nominee or organization…"
+        filters={
+          <Select
+            w={isWide ? 190 : undefined}
+            placeholder="All tiers"
+            aria-label="Filter by tier"
+            data={TIER_FILTERS}
+            value={tier}
+            onChange={setTier}
+            clearable
+          />
+        }
+        sort={{ value: sort, onChange: setSort, options: SORT_OPTIONS }}
+        groupBy={{ value: groupBy, onChange: setGroupBy, options: GROUP_OPTIONS }}
+        view={{ value: view, onChange: setView }}
+        count={loading ? undefined : { shown: items.length, label: items.length === 1 ? 'nomination' : 'nominations' }}
+      />
 
       {loading ? (
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
@@ -103,58 +252,23 @@ export function NominationsPage() {
             : 'Nominations submitted through the public form will appear here for review.'}
         />
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-          {items.map((n, idx) => (
-            <Card
-              key={n.id}
-              padding="sm"
-              withBorder
-              shadow="xs"
-              className="sahyog-fade-up sahyog-card-interactive"
-              style={{ cursor: 'pointer', '--stagger': idx } as CSSProperties}
-              onClick={() => navigate(`/nominations/${n.id}`)}
-            >
-              <Group wrap="nowrap" gap="sm">
-                <Avatar radius="xl" color="clay" size={38} src={n.image_url}>
-                  {initials(n.nominee)}
-                </Avatar>
-                <Box style={{ flex: 1, minWidth: 0 }}>
-                  <Group justify="space-between" wrap="wrap" gap={4}>
-                    <Group gap={6}>
-                      <Text ff="heading" fw={600} size="md" lh={1.25}>{n.nominee}</Text>
-                      {n.high_priority && <IconFlame size={16} color="var(--mantine-color-clay-6)" />}
-                    </Group>
-                    <Group gap={4}>
-                      {n.tier && (
-                        <Badge size="xs" variant="light" color={TIER_COLOR[n.tier] || 'sand'}>
-                          Tier {n.tier}
-                        </Badge>
-                      )}
-                      <Badge size="xs" variant="light" color={STAGE_COLOR[n.stage] || 'sand'}>
-                        {n.stage_label || n.stage}
-                      </Badge>
-                    </Group>
-                  </Group>
-                  <Text size="xs" c="dimmed" mt={2} truncate>
-                    {[n.leadership_position, n.organization].filter(Boolean).join(' · ') || '—'}
-                  </Text>
-                  <Group gap={6} mt={4}>
-                    {n.vertical_label && (
-                      <Badge size="xs" variant="light" color="river">{n.vertical_label}</Badge>
-                    )}
-                    {n.is_self_nomination && (
-                      <Badge size="xs" variant="light" color="ochre">Self</Badge>
-                    )}
-                    {n.submission_date && (
-                      <Text size="xs" c="dimmed">{n.submission_date}</Text>
-                    )}
-                  </Group>
-                </Box>
-                <IconChevronRight size={18} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0 }} />
-              </Group>
-            </Card>
+        <Stack gap="lg">
+          {groups.map((g) => (
+            <Box key={g.key}>
+              {g.title && (
+                <Group gap="xs" mb="sm">
+                  <Text ff="heading" fw={600} fz="lg">{g.title}</Text>
+                  <Badge size="sm" variant="light" color={STAGE_COLOR[g.key] || 'river'}>{g.items.length}</Badge>
+                </Group>
+              )}
+              {showTable ? nominationsTable(g.items) : (
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                  {g.items.map(nominationCard)}
+                </SimpleGrid>
+              )}
+            </Box>
           ))}
-        </SimpleGrid>
+        </Stack>
       )}
     </Box>
   );
