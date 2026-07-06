@@ -1,0 +1,195 @@
+/* Sahyog global styles — "Earthen Warmth" design language. */
+
+body {
+  background-color: #f3eddf;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-mantine-color-scheme='dark'] body {
+  background-color: #1c1712;
+}
+
+/* Fraunces reads best slightly tightened. */
+.mantine-Title-root {
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--mantine-color-clay-2);
+}
+
+[data-mantine-color-scheme='dark'] ::selection {
+  background: var(--mantine-color-clay-8);
+}
+
+/* ── Themed scrollbars (vertical + horizontal) ──
+   Warm sand thumb, clay on hover, transparent track. Standard properties
+   cover Firefox + modern Chromium; the -webkit rules give older WebKit the
+   same look with a pill thumb inset from the edge. */
+:root {
+  --sahyog-scrollbar-thumb: var(--mantine-color-sand-3);
+  --sahyog-scrollbar-thumb-hover: var(--mantine-color-clay-5);
+}
+
+[data-mantine-color-scheme='dark'] {
+  --sahyog-scrollbar-thumb: var(--mantine-color-dark-4);
+  --sahyog-scrollbar-thumb-hover: var(--mantine-color-clay-6);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sahyog-scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--sahyog-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sahyog-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Collapsed-sidebar logo button: logo by default, expand icon only on hover. */
+.sahyog-logo-swap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sahyog-logo-swap .sahyog-swap-main {
+  display: flex;
+  transition: opacity 120ms ease;
+}
+
+.sahyog-logo-swap .sahyog-swap-alt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sahyog-logo-swap:hover .sahyog-swap-main {
+  opacity: 0;
+}
+
+.sahyog-logo-swap:hover .sahyog-swap-alt {
+  opacity: 1;
+}
+
+/* Sidebar nav rows */
+.sahyog-nav-item {
+  transition: background-color 120ms ease;
+}
+
+.sahyog-nav-item:hover {
+  background-color: var(--mantine-color-gray-light);
+}
+
+.sahyog-nav-item[data-active='true']:hover {
+  background-color: var(--mantine-color-clay-light-hover);
+}
+
+/* TimePicker wheels: no visible scrollbars, wheel feel only. */
+.sahyog-wheel {
+  scrollbar-width: none;
+}
+
+.sahyog-wheel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Affordance for clickable cards: lift on hover, settle on press. */
+.sahyog-card-interactive {
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.sahyog-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mantine-shadow-md);
+  border-color: var(--mantine-color-clay-3);
+}
+
+[data-mantine-color-scheme='dark'] .sahyog-card-interactive:hover {
+  border-color: var(--mantine-color-clay-7);
+}
+
+.sahyog-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--mantine-shadow-xs);
+}
+
+/* Route transition: applied to a wrapper keyed by pathname. */
+@keyframes sahyog-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sahyog-page-enter {
+  animation: sahyog-page-enter 180ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sahyog-page-enter {
+    animation: none;
+  }
+}
+
+/* Staggered list entrance: set style={{ '--stagger': index }} per item. */
+@keyframes sahyog-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sahyog-fade-up {
+  animation: sahyog-fade-up 320ms ease both;
+  animation-delay: calc(min(var(--stagger, 0), 12) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sahyog-fade-up {
+    animation: none;
+  }
+
+  .sahyog-card-interactive,
+  .sahyog-card-interactive:hover,
+  .sahyog-card-interactive:active {
+    transition: none;
+    transform: none;
+  }
+}

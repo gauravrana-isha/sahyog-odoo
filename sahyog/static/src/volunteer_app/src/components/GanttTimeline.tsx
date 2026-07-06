@@ -82,7 +82,7 @@ export function GanttTimeline({ volunteers, entries, dateArray, zoomLevel, isMob
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: isT ? 'var(--mantine-color-blue-light)' : wknd ? 'var(--mantine-color-gray-light)' : 'var(--mantine-color-gray-light)',
+                      backgroundColor: isT ? 'var(--mantine-color-clay-light)' : wknd ? 'var(--mantine-color-gray-light)' : 'var(--mantine-color-gray-light)',
                       borderRight: '1px solid var(--mantine-color-default-border)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -114,7 +114,7 @@ export function GanttTimeline({ volunteers, entries, dateArray, zoomLevel, isMob
                             minWidth: 0,
                             borderRight: '1px solid var(--mantine-color-default-border)',
                             borderBottom: '1px solid var(--mantine-color-default-border)',
-                            backgroundColor: isT ? 'var(--mantine-color-blue-light)' : wknd ? 'var(--mantine-color-gray-light)' : 'var(--mantine-color-body)',
+                            backgroundColor: isT ? 'var(--mantine-color-clay-light)' : wknd ? 'var(--mantine-color-gray-light)' : 'var(--mantine-color-body)',
                             opacity: wknd && !isT ? 0.5 : 1,
                           }}
                         />
@@ -134,7 +134,7 @@ export function GanttTimeline({ volunteers, entries, dateArray, zoomLevel, isMob
                         bottom: 0,
                         left: `${((todayIndex + 0.5) / totalDays) * 100}%`,
                         width: 2,
-                        backgroundColor: '#e74c3c',
+                        backgroundColor: 'var(--mantine-color-clay-6)',
                         zIndex: 3,
                         pointerEvents: 'none',
                       }}

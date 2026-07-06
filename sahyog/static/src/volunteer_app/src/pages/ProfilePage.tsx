@@ -13,7 +13,6 @@ import {
   Alert,
   Button,
   Affix,
-  Transition,
   ActionIcon,
   Modal,
   Image,
@@ -25,6 +24,7 @@ import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCamera, IconEdit, IconX } from '@tabler/icons-react';
 import { apiGet, apiPost } from '../api';
+import { SaveBar } from '../components/SaveBar';
 import type { VolunteerProfile, VolunteerType } from '../types';
 
 function getInitials(name: string): string {
@@ -205,10 +205,10 @@ export function ProfilePage() {
   if (!profile) return null;
 
   const statusColor =
-    profile.computed_status === 'Available' ? 'green' :
-    profile.computed_status === 'On Silence' ? 'violet' :
-    profile.computed_status === 'On Break' ? 'orange' :
-    profile.computed_status === 'On Program' ? 'blue' : 'gray';
+    profile.computed_status === 'Available' ? 'sage' :
+    profile.computed_status === 'On Silence' ? 'river' :
+    profile.computed_status === 'On Break' ? 'ochre' :
+    profile.computed_status === 'On Program' ? 'clay' : 'sand';
 
   const avatarUrl = profile.id ? `/web/image/hr.employee/${profile.id}/avatar_128` : undefined;
   const fullResUrl = profile.id ? `/web/image/hr.employee/${profile.id}/image_1920` : undefined;
@@ -226,11 +226,11 @@ export function ProfilePage() {
 
       <Stack align="center" gap="xs" mb="lg">
         <Box style={{ position: 'relative' }}>
-          <Avatar size={80} radius="xl" src={avatarUrl} color="blue" style={{ cursor: 'pointer', opacity: uploading ? 0.5 : 1 }} onClick={openPhotoModal}>
+          <Avatar size={80} radius="xl" src={avatarUrl} color="clay" style={{ cursor: 'pointer', opacity: uploading ? 0.5 : 1 }} onClick={openPhotoModal}>
             {getInitials(profile.name)}
           </Avatar>
           <ActionIcon size={28} radius="xl" variant="filled" color="gray"
-            style={{ position: 'absolute', bottom: -2, right: -2, border: '2px solid #fff' }}
+            style={{ position: 'absolute', bottom: -2, right: -2, border: '2px solid var(--mantine-color-body)' }}
             onClick={() => fileRef.current?.click()} loading={uploading} aria-label="Upload photo">
             <IconCamera size={14} />
           </ActionIcon>
@@ -383,19 +383,13 @@ export function ProfilePage() {
 
       {!editing && (
         <Affix position={{ bottom: 24, right: 24 }}>
-          <ActionIcon size={56} radius="xl" variant="filled" color="blue" onClick={() => setEditing(true)} aria-label="Edit profile">
+          <ActionIcon size={56} radius="xl" variant="filled" onClick={() => setEditing(true)} aria-label="Edit profile" style={{ boxShadow: 'var(--mantine-shadow-lg)' }}>
             <IconEdit size={24} />
           </ActionIcon>
         </Affix>
       )}
 
-      <Affix position={{ bottom: 20, left: 16, right: 16 }}>
-        <Transition mounted={editing && isDirty} transition="slide-up">
-          {(styles) => (
-            <Button fullWidth size="md" loading={saving} onClick={handleSave} style={styles}>Save Changes</Button>
-          )}
-        </Transition>
-      </Affix>
+      <SaveBar mounted={editing && isDirty} saving={saving} onSave={handleSave} />
     </Box>
   );
 }

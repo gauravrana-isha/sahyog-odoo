@@ -16,6 +16,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconAlertCircle,
+  IconCalendarOff,
 } from '@tabler/icons-react';
 import { addMonths, addWeeks, format } from 'date-fns';
 import { apiGet } from '../api';
@@ -28,6 +29,7 @@ import {
   ENTRY_COLORS,
 } from '../utils/gantt';
 import { GanttTimeline } from '../components/GanttTimeline';
+import { EmptyState } from '../components/EmptyState';
 
 export function CalendarPage() {
   const [zoomLevel, setZoomLevel] = useState<'month' | 'week'>('month');
@@ -197,6 +199,14 @@ export function CalendarPage() {
           <Skeleton height={36} />
           <Skeleton height={200} />
         </Stack>
+      ) : filteredData && filteredData.volunteers.length === 0 ? (
+        <EmptyState
+          icon={IconCalendarOff}
+          title="Nothing on the calendar"
+          description={entryTypeFilter && entryTypeFilter !== 'all'
+            ? 'No entries of this type in the selected period. Try another filter or period.'
+            : 'No programs, breaks, silence or unavailability in the selected period.'}
+        />
       ) : filteredData ? (
         <GanttTimeline
           volunteers={filteredData.volunteers}

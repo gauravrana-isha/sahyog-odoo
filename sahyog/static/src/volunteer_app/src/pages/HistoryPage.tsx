@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -8,19 +8,32 @@ import {
   Text,
   Spoiler,
   ActionIcon,
-  Stack,
-  Skeleton,
+  SimpleGrid,
   Alert,
   Modal,
   Button,
   Group,
-  Center,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconTrash, IconMoodEmpty, IconAlertCircle, IconX, IconCheck } from '@tabler/icons-react';
+import {
+  IconTrash, IconHistory, IconAlertCircle, IconX, IconCheck,
+  IconBooks, IconMoonStars, IconCoffee, IconClockOff,
+} from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
+import { ENTRY_TYPE_COLOR, STATUS_COLOR, type EntryType } from '../tokens';
+import { EmptyState } from '../components/EmptyState';
+import { IconTile } from '../components/IconTile';
+import { CardSkeleton } from '../components/CardSkeleton';
+
+// Leading tile icon per entry type (color comes from ENTRY_TYPE_COLOR).
+const ENTRY_TYPE_ICON = {
+  program: IconBooks,
+  silence: IconMoonStars,
+  break: IconCoffee,
+  unavailability: IconClockOff,
+} as const;
 import type {
   SilencePeriod,
   BreakPeriod,
@@ -29,13 +42,6 @@ import type {
 } from '../types';
 
 type FilterType = 'all' | 'programs' | 'breaks' | 'silence' | 'unavailability';
-
-const TYPE_COLORS: Record<string, string> = {
-  silence: '#4A90D9',
-  break: '#E8943A',
-  program: '#5CB85C',
-  unavailability: '#868E96',
-};
 
 const SILENCE_LABELS: Record<string, string> = {
   personal: 'Personal Silence',
@@ -60,19 +66,6 @@ const STATUS_LABELS: Record<string, string> = {
   upcoming: 'Upcoming',
   dropped: 'Dropped',
   completed: 'Completed',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  requested: 'yellow',
-  approved: 'green',
-  on_going: 'blue',
-  done: 'gray',
-  cancelled: 'red',
-  pending_admin: 'orange',
-  pending_volunteer: 'orange',
-  upcoming: 'cyan',
-  dropped: 'red',
-  completed: 'gray',
 };
 
 // Statuses that allow cancellation
@@ -248,7 +241,7 @@ export function HistoryPage() {
   }
 
   return (
-    <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined }}>
+    <Box style={{ maxWidth: isWide ? 1100 : undefined, margin: isWide ? '0 auto' : undefined }}>
       <SegmentedControl
         fullWidth
         value={filter}
@@ -271,21 +264,20 @@ export function HistoryPage() {
       )}
 
       {loading ? (
-        <Stack gap="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={80} radius="md" />
+            <CardSkeleton key={i} leading="tile" />
           ))}
-        </Stack>
+        </SimpleGrid>
       ) : filtered.length === 0 ? (
-        <Center py="xl">
-          <Stack align="center" gap="xs">
-            <IconMoodEmpty size={48} color="var(--mantine-color-gray-4)" />
-            <Text c="dimmed">No entries yet</Text>
-          </Stack>
-        </Center>
+        <EmptyState
+          icon={IconHistory}
+          title="No entries yet"
+          description="Requests you submit and programs you enroll in will show up here."
+        />
       ) : (
-        <Stack gap="sm">
-          {filtered.map((entry) => {
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          {filtered.map((entry, idx) => {
             if (entry.type === 'unavailability') {
               const u = entry.data as UnavailabilitySlot;
               return (
@@ -293,23 +285,16 @@ export function HistoryPage() {
                   key={entry.id}
                   padding="sm"
                   withBorder
-                  style={{ borderLeft: `4px solid ${TYPE_COLORS.unavailability}` }}
+                  className="sahyog-fade-up"
+                  style={{ '--stagger': idx } as CSSProperties}
                 >
-                  <Group justify="space-between" align="flex-start">
-                    <Box>
-                      <Badge
-                        size="xs"
-                        style={{
-                          backgroundColor: TYPE_COLORS.unavailability,
-                          color: '#fff',
-                        }}
-                      >
-                        unavailability
-                      </Badge>
-                      <Text size="sm" fw={600} mt={4}>
+                  <Group wrap="nowrap" align="flex-start" gap="sm">
+                    <IconTile icon={ENTRY_TYPE_ICON.unavailability} color={ENTRY_TYPE_COLOR.unavailability} />
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text ff="heading" fw={600} size="md" lh={1.25}>
                         {u.reason || 'Unavailable'}
                       </Text>
-                      <Text size="xs" c="dimmed">
+                      <Text size="xs" c="dimmed" mt={2}>
                         {fmtDate(u.date)} · {u.start_time} – {u.end_time}
                       </Text>
                     </Box>
@@ -332,7 +317,7 @@ export function HistoryPage() {
             let status = '';
             let dateRange = '';
             let entryNotes = '';
-            const color = TYPE_COLORS[entry.type];
+            const entryType = entry.type as EntryType;
 
             let isRecurring = false;
             let timeWindow = '';
@@ -373,29 +358,27 @@ export function HistoryPage() {
                 padding="sm"
                 withBorder
                 shadow="xs"
-                style={{ borderLeft: `4px solid ${color}` }}
+                className="sahyog-fade-up"
+                style={{ '--stagger': idx } as CSSProperties}
               >
-                <Group justify="space-between" mb={4}>
-                  <Badge
-                    size="xs"
-                    style={{ backgroundColor: color, color: '#fff' }}
-                  >
-                    {entry.type}
-                  </Badge>
+                <Group wrap="nowrap" align="flex-start" gap="sm">
+                <IconTile icon={ENTRY_TYPE_ICON[entryType]} color={ENTRY_TYPE_COLOR[entryType]} />
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                <Group justify="space-between" mb={2} wrap="wrap" gap={4}>
+                  <Text ff="heading" fw={600} size="md" lh={1.25}>
+                    {subtype}
+                  </Text>
                   {status && (
-                    <Badge size="xs" variant="light" color={STATUS_COLORS[status] || 'gray'}>
+                    <Badge size="xs" variant="light" color={STATUS_COLOR[status] || 'sand'}>
                       {STATUS_LABELS[status] || status}
                     </Badge>
                   )}
                 </Group>
-                <Text size="sm" fw={600}>
-                  {subtype}
-                </Text>
                 <Text size="xs" c="dimmed">
                   {dateRange}
                 </Text>
                 {isRecurring && (
-                  <Badge color="violet" size="sm" mt={4}>
+                  <Badge variant="light" color="river" size="sm" mt={4}>
                     Recurring
                   </Badge>
                 )}
@@ -451,10 +434,12 @@ export function HistoryPage() {
                     </Button>
                   </Group>
                 )}
+                </Box>
+                </Group>
               </Card>
             );
           })}
-        </Stack>
+        </SimpleGrid>
       )}
 
       {/* Delete confirmation modal */}

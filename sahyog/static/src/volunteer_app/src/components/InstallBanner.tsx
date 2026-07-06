@@ -12,7 +12,7 @@ export function InstallBanner() {
       style={{
         width: '100%',
         padding: '8px 16px',
-        backgroundColor: 'var(--mantine-color-blue-6)',
+        backgroundColor: 'var(--mantine-color-clay-6)',
         color: '#fff',
       }}
     >
@@ -34,7 +34,7 @@ export function InstallBanner() {
             <Button
               size="compact-sm"
               variant="white"
-              color="blue"
+              color="clay"
               onClick={install}
             >
               Install

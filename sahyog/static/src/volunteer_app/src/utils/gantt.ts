@@ -14,13 +14,9 @@ import {
 } from 'date-fns';
 import type { CalendarEntry } from '../types';
 
-/** Colors matching the admin Gantt widget */
-export const ENTRY_COLORS: Record<string, string> = {
-  silence: '#4A90D9',
-  break: '#E8943A',
-  program: '#5CB85C',
-  unavailability: '#868E96',
-};
+// Bar/legend fills come from the shared semantic tokens (re-exported under
+// the historical name so existing import sites keep working).
+export { ENTRY_TYPE_FILL as ENTRY_COLORS } from '../tokens';
 
 /** Generate an inclusive array of dates from start to end */
 export function generateDateArray(start: Date, end: Date): Date[] {

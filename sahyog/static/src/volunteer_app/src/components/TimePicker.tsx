@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Group, Select, Text, Box } from '@mantine/core';
+import { useMemo, useState } from 'react';
+import { Box, Group, InputBase, Text } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconClock } from '@tabler/icons-react';
+import { Wheel, WheelFrame, PickerActions, PickerSheet } from './WheelPicker';
 
 interface TimePickerProps {
   label?: string;
@@ -10,33 +13,28 @@ interface TimePickerProps {
   readOnly?: boolean;
 }
 
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => {
-  const h = i === 0 ? 12 : i;
-  return { value: String(h), label: String(h) };
-});
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i === 0 ? 12 : i));
+const MINUTES_5 = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'];
 
-const MINUTES = Array.from({ length: 60 }, (_, i) => ({
-  value: String(i).padStart(2, '0'),
-  label: String(i).padStart(2, '0'),
-}));
+interface TimeParts {
+  hour: string;
+  minute: string;
+  period: string;
+}
 
-const PERIODS = [
-  { value: 'AM', label: 'AM' },
-  { value: 'PM', label: 'PM' },
-];
-
-function to12Hour(time24: string): { hour: string; minute: string; period: string } {
+function to12Hour(time24: string): TimeParts {
   if (!time24 || !time24.includes(':')) return { hour: '12', minute: '00', period: 'AM' };
   const [hStr, mStr] = time24.split(':');
   let h = parseInt(hStr, 10);
-  const minute = mStr || '00';
+  const minute = (mStr || '00').padStart(2, '0');
   const period = h >= 12 ? 'PM' : 'AM';
   if (h === 0) h = 12;
   else if (h > 12) h -= 12;
   return { hour: String(h), minute, period };
 }
 
-function to24Hour(hour: string, minute: string, period: string): string {
+function to24Hour({ hour, minute, period }: TimeParts): string {
   let h = parseInt(hour, 10);
   if (period === 'AM' && h === 12) h = 0;
   else if (period === 'PM' && h !== 12) h += 12;
@@ -44,64 +42,72 @@ function to24Hour(hour: string, minute: string, period: string): string {
 }
 
 export function TimePicker({ label, value, onChange, size = 'md', error, readOnly = false }: TimePickerProps) {
-  const parsed = to12Hour(value);
-  const [hour, setHour] = useState(parsed.hour);
-  const [minute, setMinute] = useState(parsed.minute);
-  const [period, setPeriod] = useState(parsed.period);
+  const [opened, { close, open }] = useDisclosure(false);
+  const { hour, minute, period } = to12Hour(value);
 
-  // Sync from external value changes
-  useEffect(() => {
-    const p = to12Hour(value);
-    setHour(p.hour);
-    setMinute(p.minute);
-    setPeriod(p.period);
-  }, [value]);
+  // Draft pattern: wheels edit a local copy; the value only commits on "Set time".
+  const [draft, setDraft] = useState<TimeParts>({ hour, minute, period });
 
-  const handleChange = (h: string, m: string, p: string) => {
-    const time24 = to24Hour(h, m, p);
-    onChange(time24);
+  // 5-minute steps; if the current value is off-grid (e.g. a schedule-locked
+  // "6:37"), include it so the wheel can still display it.
+  const minuteItems = useMemo(
+    () => (MINUTES_5.includes(draft.minute) ? MINUTES_5 : [...MINUTES_5, draft.minute].sort((a, b) => +a - +b)),
+    [draft.minute],
+  );
+
+  const openPicker = () => {
+    setDraft(to12Hour(value));
+    open();
+  };
+
+  const commit = () => {
+    onChange(to24Hour(draft));
+    close();
   };
 
   return (
-    <Box>
-      {label && <Text size="sm" fw={500} mb={4}>{label}</Text>}
-      <Group gap={6} wrap="nowrap">
-        <Select
-          data={HOURS_12}
-          value={hour}
-          onChange={(v) => { if (v) { setHour(v); handleChange(v, minute, period); } }}
-          size={size}
-          style={{ flex: 1 }}
-          placeholder="Hr"
-          readOnly={readOnly}
-          searchable
-          maxDropdownHeight={200}
-          comboboxProps={{ withinPortal: true }}
-        />
-        <Text size="lg" fw={600} c="dimmed" style={{ lineHeight: '36px' }}>:</Text>
-        <Select
-          data={MINUTES}
-          value={minute}
-          onChange={(v) => { if (v) { setMinute(v); handleChange(hour, v, period); } }}
-          size={size}
-          style={{ flex: 1 }}
-          placeholder="Min"
-          readOnly={readOnly}
-          searchable
-          maxDropdownHeight={200}
-          comboboxProps={{ withinPortal: true }}
-        />
-        <Select
-          data={PERIODS}
-          value={period}
-          onChange={(v) => { if (v) { setPeriod(v); handleChange(hour, minute, v); } }}
-          size={size}
-          style={{ width: 80 }}
-          readOnly={readOnly}
-          comboboxProps={{ withinPortal: true }}
-        />
-      </Group>
-      {error && <Text size="xs" c="red" mt={4}>{error}</Text>}
-    </Box>
+    <>
+      <InputBase
+        component="button"
+        type="button"
+        label={label}
+        error={error}
+        size={size}
+        pointer={!readOnly}
+        rightSection={<IconClock size={16} color="var(--mantine-color-dimmed)" />}
+        onClick={() => { if (!readOnly) openPicker(); }}
+        aria-label={label ? undefined : 'Pick time'}
+        style={readOnly ? { opacity: 0.7 } : undefined}
+      >
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{hour}:{minute} {period}</span>
+      </InputBase>
+
+      <PickerSheet opened={opened} onClose={close}>
+        {/* Header: field label + large live preview */}
+        <Box ta="center" mb="sm">
+          {label && (
+            <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.08em' }}>
+              {label}
+            </Text>
+          )}
+          <Group justify="center" align="baseline" gap={8} mt={2}>
+            <Text ff="heading" fw={600} fz={42} lh={1.1} style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {draft.hour}:{draft.minute}
+            </Text>
+            <Text ff="heading" fw={600} fz="xl" c="clay">
+              {draft.period}
+            </Text>
+          </Group>
+        </Box>
+
+        <WheelFrame>
+          <Wheel items={HOURS_12} value={draft.hour} onChange={(h) => setDraft({ ...draft, hour: h })} ariaLabel="Hour" loop />
+          <Wheel items={minuteItems} value={draft.minute} onChange={(m) => setDraft({ ...draft, minute: m })} ariaLabel="Minute" loop />
+          <Wheel items={PERIODS} value={draft.period} onChange={(p) => setDraft({ ...draft, period: p })} ariaLabel="AM or PM" />
+        </WheelFrame>
+
+        <PickerActions onCancel={close} onCommit={commit} commitLabel="Set time" />
+      </PickerSheet>
+    </>
   );
 }

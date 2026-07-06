@@ -1,14 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
   Badge,
   Text,
-  Stack,
-  Skeleton,
+  SimpleGrid,
   Alert,
-  Center,
   Group,
   TextInput,
   Button,
@@ -16,7 +14,7 @@ import {
 import { useMediaQuery } from '@mantine/hooks';
 import {
   IconAlertCircle,
-  IconMoodEmpty,
+  IconBooks,
   IconMapPin,
   IconCalendarEvent,
   IconClock,
@@ -25,6 +23,10 @@ import {
 } from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet } from '../api';
+import { PROGRAM_TYPE_COLOR } from '../tokens';
+import { EmptyState } from '../components/EmptyState';
+import { IconTile } from '../components/IconTile';
+import { CardSkeleton } from '../components/CardSkeleton';
 
 interface UpcomingSchedule {
   id: number;
@@ -42,13 +44,6 @@ interface UpcomingSchedule {
   schedule_status: string;
   notes: string;
 }
-
-const TYPE_COLORS: Record<string, string> = {
-  main: 'blue',
-  hatha: 'teal',
-  silence: 'violet',
-  other: 'gray',
-};
 
 function fmtDate(d: string) {
   try { return format(parseISO(d), 'MMM d, yyyy'); }
@@ -84,9 +79,7 @@ export function ProgramsPage() {
   }, [schedules, search]);
 
   return (
-    <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined }}>
-      <Text fw={600} size="lg" mb="sm">Upcoming Programs</Text>
-
+    <Box style={{ maxWidth: isWide ? 1100 : undefined, margin: isWide ? '0 auto' : undefined }}>
       <TextInput
         placeholder="Search programs..."
         leftSection={<IconSearch size={16} />}
@@ -94,6 +87,7 @@ export function ProgramsPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
         size="sm"
         mb="md"
+        style={{ maxWidth: isWide ? 420 : undefined }}
       />
 
       {error && (
@@ -101,69 +95,80 @@ export function ProgramsPage() {
       )}
 
       {loading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => <Skeleton key={i} height={90} radius="md" />)}
-        </Stack>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} leading="tile" />)}
+        </SimpleGrid>
       ) : filtered.length === 0 ? (
-        <Center py="xl">
-          <Stack align="center" gap="xs">
-            <IconMoodEmpty size={48} color="var(--mantine-color-gray-4)" />
-            <Text c="dimmed">{search ? 'No programs match your search' : 'No upcoming programs scheduled'}</Text>
-          </Stack>
-        </Center>
+        <EmptyState
+          icon={IconCalendarEvent}
+          title={search ? 'No programs found' : 'Nothing scheduled yet'}
+          description={search ? 'No programs match your search. Try a different name or location.' : 'Upcoming programs open to volunteers will appear here.'}
+        />
       ) : (
-        <Stack gap="sm">
-          {filtered.map((s) => (
-            <Card key={s.id} padding="sm" withBorder shadow="xs" style={{ borderLeft: '4px solid #5CB85C' }}>
-              <Group justify="space-between" mb={4} wrap="wrap">
-                <Text size="sm" fw={600}>{s.program_name}</Text>
-                <Group gap={4}>
-                  {s.is_recurring && (
-                    <Badge size="xs" variant="light" color="violet" leftSection={<IconRepeat size={10} />}>Recurring</Badge>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          {filtered.map((s, idx) => (
+            <Card
+              key={s.id}
+              padding="sm"
+              withBorder
+              shadow="xs"
+              className="sahyog-fade-up"
+              style={{ '--stagger': idx } as CSSProperties}
+            >
+              <Group wrap="nowrap" align="flex-start" gap="sm">
+                <IconTile icon={IconBooks} color={PROGRAM_TYPE_COLOR[s.program_type] || 'sage'} />
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Group justify="space-between" mb={4} wrap="wrap" gap={4}>
+                    <Text ff="heading" fw={600} size="md" lh={1.25}>{s.program_name}</Text>
+                    <Group gap={4}>
+                      {s.is_recurring && (
+                        <Badge size="xs" variant="light" color="river" leftSection={<IconRepeat size={10} />}>Recurring</Badge>
+                      )}
+                      <Badge size="xs" variant="light" color={PROGRAM_TYPE_COLOR[s.program_type] || 'sand'}>{s.program_type}</Badge>
+                    </Group>
+                  </Group>
+
+                  <Group gap="xs">
+                    <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
+                    <Text size="xs" c="dimmed">{fmtDate(s.start_date)} → {fmtDate(s.end_date)}</Text>
+                  </Group>
+
+                  {s.start_time && s.end_time && (
+                    <Group gap="xs" mt={2}>
+                      <IconClock size={14} color="var(--mantine-color-gray-5)" />
+                      <Text size="xs" c="dimmed">{s.start_time} – {s.end_time}</Text>
+                    </Group>
                   )}
-                  <Badge size="xs" variant="light" color={TYPE_COLORS[s.program_type] || 'gray'}>{s.program_type}</Badge>
-                </Group>
+
+                  {s.location && (
+                    <Group gap="xs" mt={2}>
+                      <IconMapPin size={14} color="var(--mantine-color-gray-5)" />
+                      <Text size="xs" c="dimmed">{s.location}</Text>
+                    </Group>
+                  )}
+
+                  {(s.capacity > 0 || s.fee) && (
+                    <Group gap="md" mt={4}>
+                      {s.capacity > 0 && <Text size="xs" c="dimmed">Capacity: {s.capacity}</Text>}
+                      {s.fee && <Text size="xs" c="dimmed">Fee: {s.fee}</Text>}
+                    </Group>
+                  )}
+
+                  {s.notes && <Text size="xs" c="dimmed" mt={4}>{s.notes}</Text>}
+
+                  <Button
+                    variant="light"
+                    size="compact-xs"
+                    mt="xs"
+                    onClick={() => navigate(`/request?program_id=${s.program_id}&schedule_id=${s.id}`)}
+                  >
+                    Enroll
+                  </Button>
+                </Box>
               </Group>
-
-              <Group gap="xs">
-                <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
-                <Text size="xs" c="dimmed">{fmtDate(s.start_date)} → {fmtDate(s.end_date)}</Text>
-              </Group>
-
-              {s.start_time && s.end_time && (
-                <Group gap="xs" mt={2}>
-                  <IconClock size={14} color="var(--mantine-color-gray-5)" />
-                  <Text size="xs" c="dimmed">{s.start_time} – {s.end_time}</Text>
-                </Group>
-              )}
-
-              {s.location && (
-                <Group gap="xs" mt={2}>
-                  <IconMapPin size={14} color="var(--mantine-color-gray-5)" />
-                  <Text size="xs" c="dimmed">{s.location}</Text>
-                </Group>
-              )}
-
-              {(s.capacity > 0 || s.fee) && (
-                <Group gap="md" mt={4}>
-                  {s.capacity > 0 && <Text size="xs" c="dimmed">Capacity: {s.capacity}</Text>}
-                  {s.fee && <Text size="xs" c="dimmed">Fee: {s.fee}</Text>}
-                </Group>
-              )}
-
-              {s.notes && <Text size="xs" c="dimmed" mt={4}>{s.notes}</Text>}
-
-              <Button
-                variant="light"
-                size="compact-xs"
-                mt="xs"
-                onClick={() => navigate(`/request?program_id=${s.program_id}&schedule_id=${s.id}`)}
-              >
-                Enroll
-              </Button>
             </Card>
           ))}
-        </Stack>
+        </SimpleGrid>
       )}
     </Box>
   );

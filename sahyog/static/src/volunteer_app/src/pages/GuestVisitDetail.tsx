@@ -20,7 +20,7 @@ import {
   Center,
   ActionIcon,
 } from '@mantine/core';
-import { DatePickerInput } from '@mantine/dates';
+import { DatePickerField } from '../components/DatePickerField';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
@@ -28,11 +28,14 @@ import {
   IconArrowLeft,
   IconEdit,
   IconX,
-  IconMoodEmpty,
+  IconMessageCircle,
 } from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import type { GuestVisit, GuestFeedbackEntry, GuestPlace } from '../types';
+import { STAR_FILLED, STAR_EMPTY } from '../tokens';
+import { SaveBar } from '../components/SaveBar';
+import { EmptyState } from '../components/EmptyState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 
 function fmtDate(d: string) {
@@ -54,7 +57,7 @@ function StarRating({ rating }: { rating: string | undefined }) {
   return (
     <Text size="sm">
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} style={{ color: i <= num ? '#f59f00' : '#dee2e6' }}>★</span>
+        <span key={i} style={{ color: i <= num ? STAR_FILLED : STAR_EMPTY }}>★</span>
       ))}
       {num > 0 && <span style={{ marginLeft: 4, color: 'var(--mantine-color-dimmed)' }}>{num}/5</span>}
     </Text>
@@ -466,66 +469,78 @@ export function GuestVisitDetail() {
         </>
       )}
 
-      {/* EDIT MODE */}
+      {/* EDIT MODE — sectioned cards; save via the floating SaveBar */}
       {editing && (
         <Stack gap="md">
           <Group justify="space-between">
-            <Text fw={600}>Editing Guest Visit</Text>
+            <Text ff="heading" fw={600} fz="lg">Editing Guest Visit</Text>
             <Button variant="subtle" color="gray" size="xs" leftSection={<IconX size={14} />} onClick={handleCancel}>
               Cancel
             </Button>
           </Group>
 
-          <Text size="sm" fw={500} c="dimmed">Guest Details</Text>
-          <TextInput label="Guest Name" value={editable.main_guest_name} onChange={(e) => set('main_guest_name', e.currentTarget.value)} size="md" required />
-          <Select label="Gender" placeholder="Select" data={GENDER_OPTIONS} value={editable.gender} onChange={(v) => set('gender', v)} size="md" required />
-          <TextInput label="Designation & Company" value={editable.designation_company} onChange={(e) => set('designation_company', e.currentTarget.value)} size="md" required />
-          <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" required />
-          <TextInput label="Phone" value={editable.phone} onChange={(e) => set('phone', e.currentTarget.value)} size="md" />
-          <TextInput label="Email" value={editable.email} onChange={(e) => set('email', e.currentTarget.value)} size="md" />
-          <Textarea label="Address" value={editable.address} onChange={(e) => set('address', e.currentTarget.value)} minRows={2} autosize size="md" />
-          <Select label="Region" placeholder="Select region" data={GUEST_REGION_OPTIONS} value={editable.guest_region} onChange={(v) => set('guest_region', v)} size="md" required />
+          <Card withBorder padding="md">
+            <Text ff="heading" fw={600} mb="md">Guest</Text>
+            <Stack gap="sm">
+              <TextInput label="Guest Name" value={editable.main_guest_name} onChange={(e) => set('main_guest_name', e.currentTarget.value)} size="md" required />
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <Select label="Gender" placeholder="Select" data={GENDER_OPTIONS} value={editable.gender} onChange={(v) => set('gender', v)} size="md" required />
+                <Select label="Company Sector" placeholder="Select" data={COMPANY_SECTOR_OPTIONS} value={editable.company_sector} onChange={(v) => set('company_sector', v)} size="md" required />
+              </SimpleGrid>
+              <TextInput label="Designation & Company" value={editable.designation_company} onChange={(e) => set('designation_company', e.currentTarget.value)} size="md" required />
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <TextInput label="Phone" value={editable.phone} onChange={(e) => set('phone', e.currentTarget.value)} size="md" />
+                <TextInput label="Email" value={editable.email} onChange={(e) => set('email', e.currentTarget.value)} size="md" />
+              </SimpleGrid>
+              <Textarea label="Address" value={editable.address} onChange={(e) => set('address', e.currentTarget.value)} minRows={2} autosize size="md" />
+              <Select label="Region" placeholder="Select region" data={GUEST_REGION_OPTIONS} value={editable.guest_region} onChange={(v) => set('guest_region', v)} size="md" required />
+            </Stack>
+          </Card>
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Visit Details</Text>
-          <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
-            <DatePickerInput label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" required />
-            <DatePickerInput label="Departure Date" placeholder="Pick date" value={editable.departure_date} onChange={(v) => set('departure_date', v)} size="md" minDate={editable.arrival_date || undefined} />
-          </SimpleGrid>
-          <Select label="Accommodation" placeholder="Select" data={ACCOMMODATION_OPTIONS} value={editable.accommodation_type} onChange={(v) => set('accommodation_type', v)} size="md" required />
-          <TextInput label="Reference Of" value={editable.reference_of} onChange={(e) => set('reference_of', e.currentTarget.value)} size="md" />
-          <TextInput label="POC Name" value={editable.poc_name} onChange={(e) => set('poc_name', e.currentTarget.value)} size="md" />
-          <TextInput label="POC Contact" value={editable.poc_contact} onChange={(e) => set('poc_contact', e.currentTarget.value)} size="md" />
-          <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} size="md" required />
-          <TextInput label="Other places / events" value={editable.places_other} onChange={(e) => set('places_other', e.currentTarget.value)} size="md" placeholder="Places or events not in the list..." />
-          <NumberInput label="Accompanying Guest Count" value={editable.accompanying_guest_count} onChange={(v) => set('accompanying_guest_count', typeof v === 'number' ? v : 0)} min={0} size="md" />
+          <Card withBorder padding="md">
+            <Text ff="heading" fw={600} mb="md">Visit</Text>
+            <Stack gap="sm">
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <DatePickerField label="Arrival Date" placeholder="Pick date" value={editable.arrival_date} onChange={(v) => set('arrival_date', v)} size="md" required />
+                <DatePickerField label="Departure Date" placeholder="Pick date" value={editable.departure_date} onChange={(v) => set('departure_date', v)} size="md" minDate={editable.arrival_date || undefined} />
+              </SimpleGrid>
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <Select label="Accommodation" placeholder="Select" data={ACCOMMODATION_OPTIONS} value={editable.accommodation_type} onChange={(v) => set('accommodation_type', v)} size="md" required />
+                <NumberInput label="Accompanying Guest Count" value={editable.accompanying_guest_count} onChange={(v) => set('accompanying_guest_count', typeof v === 'number' ? v : 0)} min={0} size="md" />
+              </SimpleGrid>
+              <TextInput label="Reference Of" value={editable.reference_of} onChange={(e) => set('reference_of', e.currentTarget.value)} size="md" />
+              <SimpleGrid cols={isWide ? 2 : 1} spacing="sm">
+                <TextInput label="POC Name" value={editable.poc_name} onChange={(e) => set('poc_name', e.currentTarget.value)} size="md" />
+                <TextInput label="POC Contact" value={editable.poc_contact} onChange={(e) => set('poc_contact', e.currentTarget.value)} size="md" />
+              </SimpleGrid>
+              <MultiSelect label="Places / Events Attended" placeholder="Select places" data={placeOptions} value={editable.place_event_ids} onChange={(val) => set('place_event_ids', val)} size="md" required />
+              <TextInput label="Other places / events" value={editable.places_other} onChange={(e) => set('places_other', e.currentTarget.value)} size="md" placeholder="Places or events not in the list..." />
+            </Stack>
+          </Card>
 
-          <Text size="sm" fw={500} c="dimmed" mt="sm">Experience</Text>
-          <Select label="Experience Rating" placeholder="Select" data={EXPERIENCE_RATING_OPTIONS} value={editable.experience_rating} onChange={(v) => set('experience_rating', v)} size="md" required />
-          <Textarea label="Experience Details" value={editable.experience_details} onChange={(e) => set('experience_details', e.currentTarget.value)} minRows={2} autosize size="md" required />
-          <Textarea label="Action Required" value={editable.action_required} onChange={(e) => set('action_required', e.currentTarget.value)} minRows={2} autosize size="md" />
-          <Textarea label="Compliments Offered" value={editable.compliments_offered} onChange={(e) => set('compliments_offered', e.currentTarget.value)} minRows={2} autosize size="md" />
-          <Textarea label="Other Remarks" value={editable.other_remarks} onChange={(e) => set('other_remarks', e.currentTarget.value)} minRows={2} autosize size="md" />
-
-          <Group mt="md">
-            <Button flex={1} size="md" loading={saving} onClick={handleSave} disabled={!isDirty}>
-              Save
-            </Button>
-            <Button flex={1} variant="light" color="gray" size="md" onClick={handleCancel}>
-              Cancel
-            </Button>
-          </Group>
+          <Card withBorder padding="md">
+            <Text ff="heading" fw={600} mb="md">Experience</Text>
+            <Stack gap="sm">
+              <Select label="Experience Rating" placeholder="Select" data={EXPERIENCE_RATING_OPTIONS} value={editable.experience_rating} onChange={(v) => set('experience_rating', v)} size="md" required />
+              <Textarea label="Experience Details" value={editable.experience_details} onChange={(e) => set('experience_details', e.currentTarget.value)} minRows={2} autosize size="md" required />
+              <Textarea label="Action Required" value={editable.action_required} onChange={(e) => set('action_required', e.currentTarget.value)} minRows={2} autosize size="md" />
+              <Textarea label="Compliments Offered" value={editable.compliments_offered} onChange={(e) => set('compliments_offered', e.currentTarget.value)} minRows={2} autosize size="md" />
+              <Textarea label="Other Remarks" value={editable.other_remarks} onChange={(e) => set('other_remarks', e.currentTarget.value)} minRows={2} autosize size="md" />
+            </Stack>
+          </Card>
         </Stack>
       )}
+
+      <SaveBar mounted={editing && isDirty} saving={saving} onSave={handleSave} onCancel={handleCancel} />
 
       {/* Feedback Section */}
       <Text fw={600} size="md" mt="xl" mb="sm">Guest Feedback</Text>
       {feedback.length === 0 ? (
-        <Center py="lg">
-          <Stack align="center" gap="xs">
-            <IconMoodEmpty size={40} color="var(--mantine-color-gray-4)" />
-            <Text c="dimmed" size="sm">No feedback received yet</Text>
-          </Stack>
-        </Center>
+        <EmptyState
+          icon={IconMessageCircle}
+          title="No feedback yet"
+          description="Feedback your guests submit through the QR code will appear here."
+        />
       ) : (
         <Stack gap="sm">
           {feedback.map((fb) => (

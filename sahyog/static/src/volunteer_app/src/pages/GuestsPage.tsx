@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
   Badge,
   Text,
-  Stack,
-  Skeleton,
+  Avatar,
+  SimpleGrid,
   Alert,
-  Center,
   Group,
   TextInput,
   Affix,
@@ -17,14 +16,18 @@ import {
 import { useMediaQuery, useDisclosure } from '@mantine/hooks';
 import {
   IconAlertCircle,
-  IconMoodEmpty,
+  IconUsers,
   IconCalendarEvent,
+  IconChevronRight,
   IconSearch,
   IconPlus,
 } from '@tabler/icons-react';
 import { format, parseISO } from 'date-fns';
 import { apiGet } from '../api';
 import type { GuestVisit } from '../types';
+import { GUEST_STATE_COLOR } from '../tokens';
+import { EmptyState } from '../components/EmptyState';
+import { CardSkeleton } from '../components/CardSkeleton';
 import { QuickCreateModal } from '../components/QuickCreateModal';
 
 function fmtDate(d: string) {
@@ -61,9 +64,7 @@ export function GuestsPage() {
   }, [visits, search]);
 
   return (
-    <Box style={{ maxWidth: isWide ? 700 : undefined, margin: isWide ? '0 auto' : undefined }}>
-      <Text fw={600} size="lg" mb="sm">Guest Visits</Text>
-
+    <Box style={{ maxWidth: isWide ? 1100 : undefined, margin: isWide ? '0 auto' : undefined }}>
       <TextInput
         placeholder="Search by guest name..."
         leftSection={<IconSearch size={16} />}
@@ -71,6 +72,7 @@ export function GuestsPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
         size="sm"
         mb="md"
+        style={{ maxWidth: isWide ? 420 : undefined }}
       />
 
       {error && (
@@ -78,56 +80,64 @@ export function GuestsPage() {
       )}
 
       {loading ? (
-        <Stack gap="sm">
-          {[1, 2, 3].map((i) => <Skeleton key={i} height={90} radius="md" />)}
-        </Stack>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} leading="avatar" />)}
+        </SimpleGrid>
       ) : filtered.length === 0 ? (
-        <Center py="xl">
-          <Stack align="center" gap="xs">
-            <IconMoodEmpty size={48} color="var(--mantine-color-gray-4)" />
-            <Text c="dimmed">{search ? 'No guests match your search' : 'No guest visits yet'}</Text>
-          </Stack>
-        </Center>
+        <EmptyState
+          icon={IconUsers}
+          title={search ? 'No guests found' : 'No guest visits yet'}
+          description={search ? 'No guests match your search. Try a different name.' : 'Tap the + button to register your first guest visit.'}
+        />
       ) : (
-        <Stack gap="sm">
-          {filtered.map((v) => (
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          {filtered.map((v, idx) => (
             <Card
               key={v.id}
               padding="sm"
               withBorder
               shadow="xs"
-              style={{ borderLeft: '4px solid #E67E22', cursor: 'pointer' }}
+              className="sahyog-fade-up sahyog-card-interactive"
+              style={{ cursor: 'pointer', '--stagger': idx } as CSSProperties}
               onClick={() => navigate(`/guests/${v.id}`)}
             >
-              <Group justify="space-between" mb={4} wrap="wrap">
-                <Text size="sm" fw={600}>{v.main_guest_name}</Text>
-                <Group gap={4}>
-                  <Badge size="xs" variant="light" color={v.state === 'complete' ? 'green' : 'orange'}>
-                    {v.state}
-                  </Badge>
-                  {v.feedback_count > 0 && (
-                    <Badge size="xs" variant="light" color="blue">
-                      {v.feedback_count} feedback
-                    </Badge>
-                  )}
-                </Group>
-              </Group>
+              <Group wrap="nowrap" gap="sm">
+                <Avatar radius="xl" color="clay" size={38}>
+                  {v.main_guest_name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                </Avatar>
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Group justify="space-between" wrap="wrap" gap={4}>
+                    <Text ff="heading" fw={600} size="md" lh={1.25}>{v.main_guest_name}</Text>
+                    <Group gap={4}>
+                      <Badge size="xs" variant="light" color={GUEST_STATE_COLOR[v.state] || 'ochre'}>
+                        {v.state}
+                      </Badge>
+                      {v.feedback_count > 0 && (
+                        <Badge size="xs" variant="light" color="river">
+                          {v.feedback_count} feedback
+                        </Badge>
+                      )}
+                    </Group>
+                  </Group>
 
-              {(v.arrival_date || v.departure_date) && (
-                <Group gap="xs">
-                  <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
-                  <Text size="xs" c="dimmed">
-                    {v.arrival_date ? fmtDate(v.arrival_date) : '—'} → {v.departure_date ? fmtDate(v.departure_date) : '—'}
-                  </Text>
-                </Group>
-              )}
+                  {(v.arrival_date || v.departure_date) && (
+                    <Group gap="xs" mt={2}>
+                      <IconCalendarEvent size={14} color="var(--mantine-color-gray-5)" />
+                      <Text size="xs" c="dimmed">
+                        {v.arrival_date ? fmtDate(v.arrival_date) : '—'} → {v.departure_date ? fmtDate(v.departure_date) : '—'}
+                      </Text>
+                    </Group>
+                  )}
+                </Box>
+                <IconChevronRight size={18} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0 }} />
+              </Group>
             </Card>
           ))}
-        </Stack>
+        </SimpleGrid>
       )}
 
       <Affix position={{ bottom: isWide ? 24 : 88, right: 24 }}>
-        <ActionIcon size="xl" radius="xl" variant="filled" color="blue" onClick={openModal} aria-label="Add guest">
+        <ActionIcon size="xl" radius="xl" variant="filled" onClick={openModal} aria-label="Add guest" style={{ boxShadow: 'var(--mantine-shadow-lg)' }}>
           <IconPlus size={24} />
         </ActionIcon>
       </Affix>

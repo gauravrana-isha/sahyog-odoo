@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Button, Modal, Stack, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconCopy, IconX } from '@tabler/icons-react';
+import QRCode from 'qrcode';
 
 interface QRCodeDisplayProps {
   feedbackLink: string;
@@ -10,9 +11,20 @@ interface QRCodeDisplayProps {
 
 export function QRCodeDisplay({ feedbackLink, qrExpiry }: QRCodeDisplayProps) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
   const isExpired = qrExpiry ? new Date() > new Date(qrExpiry) : false;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(feedbackLink)}`;
-  const qrUrlLarge = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(feedbackLink)}`;
+
+  // Generated locally (no external service) so QR codes work offline too.
+  // One 400px data-URL serves both the inline and fullscreen sizes.
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(feedbackLink, { width: 400, margin: 1 })
+      .then((url) => { if (!cancelled) setQrUrl(url); })
+      .catch(() => { if (!cancelled) setQrUrl(null); });
+    return () => { cancelled = true; };
+  }, [feedbackLink]);
+
+  if (!qrUrl) return null;
 
   const handleCopy = async () => {
     try {
@@ -103,7 +115,7 @@ export function QRCodeDisplay({ feedbackLink, qrExpiry }: QRCodeDisplayProps) {
           </Button>
 
           <img
-            src={qrUrlLarge}
+            src={qrUrl}
             alt="QR Code"
             width={300}
             height={300}

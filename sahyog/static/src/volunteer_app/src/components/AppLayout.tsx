@@ -14,7 +14,6 @@ import {
   Button,
   Center,
   Loader,
-  NavLink,
   useMantineColorScheme,
   useComputedColorScheme,
 } from '@mantine/core';
@@ -101,6 +100,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [volunteerId, setVolunteerId] = useState<number | null>(null);
+  const [volunteerName, setVolunteerName] = useState<string | null>(null);
 
   const fetchUnread = useCallback(() => {
     apiGet<{ count: number }>('/notifications/unread-count')
@@ -114,10 +114,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => clearInterval(interval);
   }, [fetchUnread]);
 
-  // Fetch volunteer ID for profile photo
+  // Fetch volunteer ID (profile photo) and name (header greeting)
   useEffect(() => {
-    apiGet<{ id: number }>('/profile')
-      .then((data) => setVolunteerId(data.id))
+    apiGet<{ id: number; name?: string }>('/profile')
+      .then((data) => {
+        setVolunteerId(data.id);
+        if (data.name) setVolunteerName(data.name);
+      })
       .catch(() => {});
   }, []);
 
@@ -187,8 +190,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* ── PWA Install Banner (top of screen) ── */}
-      <InstallBanner />
+      {/* ── PWA Install Banner (top of screen; offset so the fixed sidebar doesn't cover it) ── */}
+      <Box style={{ marginLeft: showSidebar ? sidebarWidth : 0, transition: 'margin-left 0.2s ease' }}>
+        <InstallBanner />
+      </Box>
 
       {/* ── Header ── */}
       <Box
@@ -197,8 +202,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           height: isDesktop ? HEADER_H : MOBILE_HEADER_H,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isDesktop ? 'flex-end' : 'space-between',
-          paddingLeft: isDesktop ? 0 : 16,
+          justifyContent: 'space-between',
+          paddingLeft: isDesktop ? 24 : 16,
           paddingRight: 12,
           marginLeft: showSidebar ? sidebarWidth : 0,
           backgroundColor: 'var(--mantine-color-body)',
@@ -209,6 +214,11 @@ export function AppLayout({ children }: AppLayoutProps) {
           transition: 'margin-left 0.2s ease',
         }}
       >
+        {isDesktop && (
+          <Text size="md" c="dimmed" ff="heading" fs="italic">
+            Namaskaram{volunteerName ? `, ${volunteerName.split(' ')[0]}` : ''}
+          </Text>
+        )}
         {!isDesktop && (
           <Group gap="xs">
             {isProfileOpen ? (
@@ -220,7 +230,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   alt="Sahyog"
                   style={{ width: 32, height: 32, borderRadius: 6 }}
                 />
-                <Text fw={700} size="xl" c="blue">Sahyog</Text>
+                <Text fw={600} size="xl" ff="heading" style={{ color: 'light-dark(var(--mantine-color-clay-7), var(--mantine-color-clay-3))' }}>Sahyog</Text>
               </Group>
             )}
           </Group>
@@ -242,7 +252,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Indicator>
               </ActionIcon>
               <ActionIcon variant="subtle" size="lg" aria-label="Profile" onClick={handleProfileClick}>
-                <Avatar size={32} radius="xl" color="blue" src={volunteerId ? `/web/image/hr.employee/${volunteerId}/avatar_128` : undefined}><IconUser size={18} /></Avatar>
+                <Avatar size={32} radius="xl" color="clay" src={volunteerId ? `/web/image/hr.employee/${volunteerId}/avatar_128` : undefined}><IconUser size={18} /></Avatar>
               </ActionIcon>
             </>
           )}
@@ -261,66 +271,90 @@ export function AppLayout({ children }: AppLayoutProps) {
             transition: 'width 0.2s ease',
             overflow: 'hidden',
           }}>
-            {/* Sidebar header: logo + collapse toggle */}
+            {/* Sidebar header: logo sits in a stationary 40px slot; when
+                collapsed it doubles as the expand button (icon on hover) */}
             <Box style={{
               height: HEADER_H,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: sidebarOpen ? 'space-between' : 'center',
-              padding: sidebarOpen ? '0 12px 0 16px' : '0',
+              padding: '0 12px',
               borderBottom: '1px solid var(--mantine-color-default-border)',
               flexShrink: 0,
               overflow: 'hidden',
+              whiteSpace: 'nowrap',
             }}>
-              <Group gap={8} align="center" wrap="nowrap" style={{
-                opacity: sidebarOpen ? 1 : 0,
-                width: sidebarOpen ? 'auto' : 0,
-                transition: 'opacity 0.2s ease, width 0.2s ease',
-                overflow: 'hidden',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-              }}>
-                <img
-                  src="/sahyog/static/pwa/icon-192.png"
-                  alt="Sahyog"
-                  style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }}
-                />
-                <Text fw={700} size="lg" c="blue">Sahyog</Text>
-              </Group>
-              <ActionIcon variant="subtle" size={sidebarOpen ? 'sm' : 'lg'} onClick={toggleSidebar}
-                aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'} color="gray">
-                {sidebarOpen
-                  ? <IconLayoutSidebarLeftCollapse size={18} />
-                  : <IconLayoutSidebarLeftExpand size={22} />
-                }
-              </ActionIcon>
+              {sidebarOpen ? (
+                <>
+                  <Center style={{ width: 40, flexShrink: 0 }}>
+                    <img
+                      src="/sahyog/static/pwa/icon-192.png"
+                      alt="Sahyog"
+                      style={{ width: 28, height: 28, borderRadius: 6 }}
+                    />
+                  </Center>
+                  <Text fw={600} size="lg" ff="heading" style={{ flex: 1, color: 'light-dark(var(--mantine-color-clay-7), var(--mantine-color-clay-3))' }}>Sahyog</Text>
+                  <ActionIcon variant="subtle" size="sm" onClick={toggleSidebar} aria-label="Collapse sidebar" color="gray">
+                    <IconLayoutSidebarLeftCollapse size={18} />
+                  </ActionIcon>
+                </>
+              ) : (
+                <UnstyledButton
+                  className="sahyog-logo-swap"
+                  onClick={toggleSidebar}
+                  aria-label="Expand sidebar"
+                  style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 'var(--mantine-radius-md)' }}
+                >
+                  <span className="sahyog-swap-main">
+                    <img
+                      src="/sahyog/static/pwa/icon-192.png"
+                      alt="Sahyog"
+                      style={{ width: 28, height: 28, borderRadius: 6 }}
+                    />
+                  </span>
+                  <span className="sahyog-swap-alt" style={{ color: 'var(--mantine-color-dimmed)' }}>
+                    <IconLayoutSidebarLeftExpand size={22} />
+                  </span>
+                </UnstyledButton>
+              )}
             </Box>
 
-            {/* Nav items */}
-            <Box style={{ flex: 1, paddingTop: 8, overflow: 'hidden' }}>
+            {/* Nav items: fixed 40px icon column so icons stay put while the
+                sidebar animates; labels just fade */}
+            <Box style={{ flex: 1, paddingTop: 8, paddingLeft: 12, paddingRight: 12, overflow: 'hidden' }}>
               {sidebarNav.map((item) => {
                 const active = activePath === item.path;
                 const Icon = item.icon;
-                return sidebarOpen ? (
-                  <NavLink key={item.path} label={item.label} leftSection={<Icon size={20} />}
-                    active={active} onClick={() => navigate(item.path)}
-                    variant="filled" style={{ borderRadius: 0 }} />
-                ) : (
+                return (
                   <UnstyledButton
                     key={item.path}
+                    className="sahyog-nav-item"
+                    data-active={active || undefined}
                     onClick={() => navigate(item.path)}
                     aria-label={item.label}
+                    aria-current={active ? 'page' : undefined}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
                       width: '100%',
                       height: 40,
-                      backgroundColor: active ? 'var(--mantine-color-blue-light)' : undefined,
-                      color: active ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-dimmed)',
+                      marginBottom: 2,
+                      borderRadius: 'var(--mantine-radius-md)',
+                      backgroundColor: active ? 'var(--mantine-color-clay-light)' : undefined,
+                      color: active ? 'var(--mantine-color-clay-light-color)' : 'var(--mantine-color-text)',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    <Icon size={20} />
+                    <Center style={{ width: 40, flexShrink: 0 }}>
+                      <Icon size={20} />
+                    </Center>
+                    <Text
+                      size="sm"
+                      fw={active ? 600 : 400}
+                      style={{ opacity: sidebarOpen ? 1 : 0, transition: 'opacity 0.15s ease' }}
+                    >
+                      {item.label}
+                    </Text>
                   </UnstyledButton>
                 );
               })}
@@ -367,22 +401,32 @@ export function AppLayout({ children }: AppLayoutProps) {
                   flexDirection: 'column',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  gap: 3,
+                  gap: 2,
                   minHeight: 44,
-                  backgroundColor: active ? 'var(--mantine-color-blue-light)' : undefined,
-                  transition: 'background-color 0.15s ease',
                 }}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon
-                  size={24}
-                  color={active ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-dimmed)'}
-                />
+                <Box
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '3px 14px',
+                    borderRadius: 999,
+                    backgroundColor: active ? 'var(--mantine-color-clay-light)' : 'transparent',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
+                  <Icon
+                    size={22}
+                    color={active ? 'var(--mantine-color-clay-light-color)' : 'var(--mantine-color-dimmed)'}
+                  />
+                </Box>
                 <Text
                   size="11px"
-                  c={active ? 'blue' : 'dimmed'}
-                  fw={active ? 700 : 400}
+                  c={active ? 'clay' : 'dimmed'}
+                  fw={active ? 600 : 400}
                 >
                   {item.label}
                 </Text>
@@ -411,7 +455,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Button variant="subtle" size="compact-xs" color="red" onClick={clearAll}>Clear All</Button>
             </Group>
             {notifications.map((n) => (
-              <Card key={n.id} padding="sm" withBorder style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-blue-light)', position: 'relative' }}>
+              <Card key={n.id} padding="sm" withBorder style={{ backgroundColor: n.is_read ? undefined : 'var(--mantine-color-clay-light)', position: 'relative' }}>
                 <ActionIcon variant="subtle" size="xs" color="gray" style={{ position: 'absolute', top: 6, right: 6 }}
                   onClick={() => deleteNotification(n.id)} aria-label="Delete notification">
                   <IconX size={14} />
@@ -420,7 +464,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Text size="xs" c="dimmed" mt={2}>
                   {parseActionTokens(n.message).map((part, i) =>
                     part.type === 'text' ? <span key={i}>{part.content}</span> :
-                    <Text key={i} component={Link} to={part.path} size="xs" c="blue" style={{ cursor: 'pointer' }}
+                    <Text key={i} component={Link} to={part.path} size="xs" c="clay" style={{ cursor: 'pointer' }}
                       onClick={() => { markRead(n.id); setNotifDrawerOpen(false); }}>View</Text>
                   )}
                 </Text>
