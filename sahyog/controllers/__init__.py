@@ -1,4 +1,6 @@
 from . import base
+from . import backend_guard
+from . import daily_quote
 from . import portal
 from . import registration
 from . import spa

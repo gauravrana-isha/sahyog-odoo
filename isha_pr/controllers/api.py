@@ -175,66 +175,16 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             vals['image_1920'] = data['image_1920']
         return vals
 
-    # ── Daily quote (proxied from Isha's public wisdom API) ─────────────
-
-    _QUOTE_URL = 'https://iso-facade.sadhguru.org/content/fetchcsr/content'
-    # Short attributed fallbacks so the card never renders empty.
-    _QUOTE_FALLBACKS = [
-        'If you resist change, you resist life.',
-        'Life is a process, not a problem.',
-        'When pain, misery, or anger happen, it is time to look within you, '
-        'not around you.',
-        'Do not try to be special. If you are simply ordinary, you will '
-        'become extraordinary.',
-        'The most beautiful moments in life are moments when you are '
-        'expressing your joy, not when you are seeking it.',
-    ]
-    _quote_cache = {'date': None, 'payload': None}
+    # ── Daily quote (shared fetcher lives in sahyog.controllers.daily_quote) ──
 
     @http.route('/pr/api/quote', type='http', auth='user', methods=['GET'], csrf=False)
     def pr_quote(self, **kw):
-        import datetime
-        import json as _json
-        import urllib.parse
-        import urllib.request
-
-        today = datetime.date.today().isoformat()
-        cache = IshaPRAPI._quote_cache
-        if cache['date'] == today and cache['payload']:
-            return self._json_success(cache['payload'])
-
-        quote, source = '', 'fallback'
+        from odoo.addons.sahyog.controllers.daily_quote import fetch_daily_quote
         try:
-            params = urllib.parse.urlencode({
-                'format': 'json', 'sitesection': 'wisdom', 'slug': 'wisdom',
-                'lang': '', 'topic': '', 'start': '0', 'limit': '1',
-                'contentType': 'quotes', 'sortby': 'newest',
-            })
-            req = urllib.request.Request(
-                f'{self._QUOTE_URL}?{params}',
-                headers={
-                    'Accept': 'application/json',
-                    'User-Agent': 'Mozilla/5.0',
-                    'Origin': 'https://isha.sadhguru.org',
-                    'Referer': 'https://isha.sadhguru.org/',
-                })
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                data = _json.load(resp)
-            cards = (data.get('posts') or {}).get('cards') or []
-            if cards:
-                quote = (cards[0].get('summary') or '').strip()
-                if quote:
-                    source = 'api'
+            return self._json_success(fetch_daily_quote())
         except Exception:
-            _logger.warning('Daily quote fetch failed; using fallback')
-
-        if not quote:
-            idx = sum(ord(c) for c in today) % len(self._QUOTE_FALLBACKS)
-            quote = self._QUOTE_FALLBACKS[idx]
-
-        payload = {'quote': quote, 'source': source}
-        IshaPRAPI._quote_cache = {'date': today, 'payload': payload}
-        return self._json_success(payload)
+            _logger.exception('PR API error in pr_quote')
+            return self._json_error('Internal server error', status=500)
 
     # ── Identity & capabilities ─────────────────────────────────────────
 

@@ -37,6 +37,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { apiGet, apiPost } from '../api';
 import type { Notification } from '../types';
 import { InstallBanner } from './InstallBanner';
+import { QuoteTicker } from './QuoteTicker';
 import { useCan } from '../hooks/useCapabilities';
 
 function parseActionTokens(message: string): Array<{ type: 'text'; content: string } | { type: 'action'; path: string; entryType: string; id: string }> {
@@ -225,10 +226,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         }}
       >
         {isDesktop && (
-          <Text size="md" c="dimmed" ff="heading" fs="italic">
+          <Text size="md" c="dimmed" ff="heading" fs="italic" style={{ flexShrink: 0 }}>
             Namaskaram{volunteerName ? `, ${volunteerName.split(' ')[0]}` : ''}
           </Text>
         )}
+        {isDesktop && <QuoteTicker />}
         {!isDesktop && (
           <Group gap="xs">
             {isProfileOpen ? (
