@@ -69,8 +69,12 @@ jobs:
             cd /home/gauravrana/sahyog-odoo
             # -i installs new modules on first deploy (no-op once installed); -u upgrades all thereafter
             docker compose run --rm odoo odoo -d sahyog -i isha_pr,web_column_width_local -u sahyog,isha_pr,web_column_width_local --stop-after-init
-            # up -d (not restart) so the serving container picks up new volume mounts + port/conf changes
+            # up -d picks up compose/mount/port changes (recreates only when config changed)…
             docker compose up -d odoo
+            # …but a pure Python change (controllers/models) is just a bind-mount edit, so up -d
+            # leaves the OLD code running in memory. restart re-imports the synced source, so new
+            # routes / action maps actually load. Without this, code changes silently no-op in prod.
+            docker compose restart odoo
             # reload nginx so security/config changes to nginx/sahyog.conf take effect
             docker compose restart nginx
           '"
