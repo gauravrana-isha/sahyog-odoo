@@ -338,6 +338,34 @@ Reply ONLY with compact JSON, keys exactly:
                 grounding.append({'title': (web.get('title') or uri), 'url': uri})
         return self._first_json(txt), grounding
 
+    @staticmethod
+    def _flat_text(val):
+        """Render an AI value as readable text — flatten a list (of strings or
+        {name, details, outcome, citations} dicts) the model occasionally returns
+        instead of a plain string, so it never shows as a raw [{...}] repr."""
+        if not isinstance(val, list):
+            return str(val or '').strip()
+        segs = []
+        for x in val:
+            if isinstance(x, dict):
+                name = str(x.get('name') or '').strip()
+                year = str(x.get('date_year') or '').strip()
+                header = (name + (' (%s)' % year if year else '')).strip()
+                lines = [header] if header else []
+                for key, pre in (('details', ''), ('outcome', 'Outcome: ')):
+                    v = str(x.get(key) or '').strip()
+                    if v:
+                        lines.append(pre + v)
+                cites = x.get('citations')
+                if isinstance(cites, list) and cites:
+                    lines.append('Sources: ' + ', '.join('[%s]' % n for n in cites))
+                seg = '\n'.join(lines) or '; '.join(str(y) for y in x.values() if y)
+                if seg.strip():
+                    segs.append(seg)
+            elif str(x).strip():
+                segs.append(str(x).strip())
+        return '\n\n'.join(segs)
+
     def _apply_eval(self, res, grounding=None):
         vals = {'eval_attempted': True, 'enriched': True, 'eval_error': False, 'stage': 'evaluated'}
         text_fields = ('audience_size', 'avg_views', 'engagement_rate', 'ratings_score',
@@ -346,7 +374,7 @@ Reply ONLY with compact JSON, keys exactly:
                        'potential_backlash', 'opportunity_cost', 'long_term_value')
         # AI (re)fills these; a human edits AFTER, so a fresh eval should overwrite.
         for k in text_fields:
-            v = str(res.get(k) or '').strip()
+            v = self._flat_text(res.get(k))
             if v and v.lower() not in ('', 'n/a', 'unknown', 'none'):
                 vals[k] = v
         if res.get('recommendation') in ('sadhguru', 'global_coordinator', 'local_teacher', 'decline'):

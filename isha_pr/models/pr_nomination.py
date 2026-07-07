@@ -429,6 +429,34 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
                 for l in links),
         }
 
+    @staticmethod
+    def _format_controversies(val):
+        """The AI may return controversies as prose OR a structured list of
+        {name, details, date_year, parties, outcome, citations}. Normalise either
+        into clean, readable text (blank-line separated blocks)."""
+        if not isinstance(val, list):
+            return str(val or '').strip()
+        blocks = []
+        for c in val:
+            if not isinstance(c, dict):
+                if str(c).strip():
+                    blocks.append(str(c).strip())
+                continue
+            name = str(c.get('name') or '').strip()
+            year = str(c.get('date_year') or '').strip()
+            header = (name + (' (%s)' % year if year else '')).strip()
+            lines = [header] if header else []
+            for key, prefix in (('details', ''), ('outcome', 'Outcome: ')):
+                v = str(c.get(key) or '').strip()
+                if v:
+                    lines.append(prefix + v)
+            cites = c.get('citations')
+            if isinstance(cites, list) and cites:
+                lines.append('Sources: ' + ', '.join('[%s]' % n for n in cites))
+            if lines:
+                blocks.append('\n'.join(lines))
+        return '\n\n'.join(blocks)
+
     def _call_vertex(self, token):
         project = self._vertex_cfg('project')
         if not project:
@@ -473,7 +501,7 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
             v = str(res.get(src) or '').strip()
             if v and v.lower() not in ('', 'unknown', 'n/a', 'none', '0') and not getattr(self, dst):
                 vals[dst] = v
-        controversies = str(res.get('controversies') or '').strip()
+        controversies = self._format_controversies(res.get('controversies'))
         if controversies and controversies.lower() not in ('none', 'none found', 'n/a', ''):
             vals['controversies'] = controversies
         if risk:
