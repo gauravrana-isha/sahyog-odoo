@@ -92,6 +92,8 @@ class PrCollabRequest(models.Model):
                                        'for stat-card display; the prose lives on the metric field')
 
     # ── Workflow ──
+    active = fields.Boolean(default=True,
+                            help='Unchecked = archived: hidden from lists but kept for history')
     stage = fields.Selection(COLLAB_STAGES, string='Stage', default='received',
                              index=True, group_expand='_expand_stages')
     poc_id = fields.Many2one('res.users', string='Owner')
@@ -141,6 +143,11 @@ class PrCollabRequest(models.Model):
             'enriched': self.enriched,
             'poc': self.poc_id.name or '',
             'decided_by': self.decided_by.name or '',
+            'active': self.active,
+            'created_by': self.create_uid.name or '',
+            'created_at': str(self.create_date) if self.create_date else '',
+            'updated_by': self.write_uid.name or '',
+            'updated_at': str(self.write_date) if self.write_date else '',
         })
         return data
 
@@ -163,6 +170,20 @@ class PrCollabRequest(models.Model):
 
     def action_mark_actioned(self):
         self.write({'stage': 'actioned'})
+
+    # ── Archive (soft delete) & hard delete ──
+    def action_archive(self):
+        self.write({'active': False})
+
+    def action_unarchive(self):
+        self.write({'active': True})
+
+    def action_delete(self):
+        """Permanent delete — admins only; prefer archiving to keep history."""
+        if not self.env.user.has_group('isha_pr.group_isha_pr_admin'):
+            raise UserError('Only PR Admins can permanently delete a collaboration '
+                            'request. Use Archive to hide it while keeping the record.')
+        self.unlink()
 
     def action_reset_received(self):
         self.write({'stage': 'received', 'eval_attempted': False, 'eval_error': False})

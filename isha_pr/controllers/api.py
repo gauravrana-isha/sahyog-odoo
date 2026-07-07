@@ -565,6 +565,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         'reject': 'action_reject',
         'start_nurturing': 'action_start_nurturing',
         'reset': 'action_reset_nominated',
+        'archive': 'action_archive', 'unarchive': 'action_unarchive',
     }
 
     @staticmethod
@@ -611,6 +612,8 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
                 domain.append(('research_status', 'in',
                                ('needs_review', 'more_info_required')))
             domain += self._month_domain(kw.get('month'))
+            if kw.get('archived'):
+                domain.append(('active', '=', False))
             q = (kw.get('q') or '').strip()
             if q:
                 domain += ['|', ('nominee_id.name', 'ilike', q),
@@ -708,6 +711,22 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             _logger.exception('PR API error in pr_nomination_action')
             return self._json_error('Internal server error', status=500)
 
+    @http.route('/pr/api/nominations/<int:nid>/delete', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    @require_pr
+    def pr_nomination_delete(self, nid, **kw):
+        try:
+            rec = request.env['pr.nomination'].browse(nid)
+            if not rec.exists():
+                return self._json_error('Nomination not found')
+            rec.action_delete()  # model gates permanent delete to admins
+            return self._json_success({'deleted': True})
+        except UserError as e:
+            return self._json_error(str(e), status=403)
+        except Exception:
+            _logger.exception('PR API error in pr_nomination_delete')
+            return self._json_error('Internal server error', status=500)
+
     # ── CSV exports (honor the same filters/order as the lists) ─────────
 
     def _csv_response(self, filename, header, rows):
@@ -776,6 +795,7 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
         'evaluate': 'action_mark_evaluated', 'approve': 'action_approve',
         'decline': 'action_decline', 'action': 'action_mark_actioned',
         'reset': 'action_reset_received',
+        'archive': 'action_archive', 'unarchive': 'action_unarchive',
     }
 
     @http.route('/pr/api/collabs', type='http', auth='user', methods=['GET'], csrf=False)
@@ -791,6 +811,9 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             q = (kw.get('q') or '').strip()
             if q:
                 domain += ['|', ('name', 'ilike', q), ('host_names', 'ilike', q)]
+            # An explicit active leaf shows archived records (Odoo hides them by default).
+            if kw.get('archived'):
+                domain.append(('active', '=', False))
             try:
                 offset = max(0, int(kw.get('offset', 0)))
                 limit = min(200, max(1, int(kw.get('limit', 50))))
@@ -866,6 +889,22 @@ class IshaPRAPI(SahyogControllerBase, http.Controller):
             return self._json_error(str(e))
         except Exception:
             _logger.exception('PR API error in pr_collab_action')
+            return self._json_error('Internal server error', status=500)
+
+    @http.route('/pr/api/collabs/<int:cid>/delete', type='http', auth='user',
+                methods=['POST'], csrf=False)
+    @require_pr
+    def pr_collab_delete(self, cid, **kw):
+        try:
+            rec = request.env['pr.collab.request'].browse(cid)
+            if not rec.exists():
+                return self._json_error('Request not found')
+            rec.action_delete()  # model gates permanent delete to admins
+            return self._json_success({'deleted': True})
+        except UserError as e:
+            return self._json_error(str(e), status=403)
+        except Exception:
+            _logger.exception('PR API error in pr_collab_delete')
             return self._json_error('Internal server error', status=500)
 
     @http.route('/pr/api/contacts/export', type='http', auth='user',

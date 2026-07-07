@@ -143,6 +143,8 @@ class PrNomination(models.Model):
     # ── Pipeline stage (Nominated → Researched → Approved → Nurturing) ──
     stage = fields.Selection(STAGES, string='Stage', default='nominated',
                              index=True, group_expand='_expand_stages')
+    active = fields.Boolean(default=True,
+                            help='Unchecked = archived: hidden from lists but kept for history')
 
     # ── Research stage (Research Volunteer OR AI enrichment) ──
     research_volunteer = fields.Char('Research Volunteer')
@@ -273,6 +275,20 @@ class PrNomination(models.Model):
 
     def action_reset_nominated(self):
         self.write({'stage': 'nominated', 'research_attempted': False, 'research_error': False})
+
+    # ── Archive (soft delete) & hard delete ──
+    def action_archive(self):
+        self.write({'active': False})
+
+    def action_unarchive(self):
+        self.write({'active': True})
+
+    def action_delete(self):
+        """Permanent delete — admins only; prefer archiving to keep history."""
+        if not self.env.user.has_group('isha_pr.group_isha_pr_admin'):
+            raise UserError('Only PR Admins can permanently delete a nomination. '
+                            'Use Archive to hide it while keeping the record.')
+        self.unlink()
 
     # ── AI auto-research (Nominated → Researched). No button: driven by cron. ──
 
@@ -580,5 +596,10 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
                 'status': o.status or '',
                 'notes': o.notes or '',
             } for o in self.outreach_ids],
+            'active': self.active,
+            'created_by': self.create_uid.name or '',
+            'created_at': str(self.create_date) if self.create_date else '',
+            'updated_by': self.write_uid.name or '',
+            'updated_at': str(self.write_date) if self.write_date else '',
         })
         return data

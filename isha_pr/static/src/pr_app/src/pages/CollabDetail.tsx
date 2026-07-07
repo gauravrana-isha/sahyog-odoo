@@ -17,6 +17,7 @@ import { COLLAB_STAGE_COLOR, RISK_COLOR, RECOMMENDATION_COLOR } from '../tokens'
 import { EmptyState } from '../components/EmptyState';
 import { parseSourceLinks, SourceLinksList } from '../components/SourceLinks';
 import { SectionCard } from '../components/SectionCard';
+import { RecordFooter } from '../components/RecordFooter';
 import type { CollabDetail as Detail } from '../types';
 
 function parseHeadlines(raw: string): Record<string, string> {
@@ -103,6 +104,17 @@ export function CollabDetail() {
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
     } finally { setActing(null); }
+  };
+
+  const del = async () => {
+    if (!window.confirm('Permanently delete this collaboration request? This cannot be undone — consider Archive instead.')) return;
+    try {
+      await apiPost(`/collabs/${id}/delete`, {});
+      notifications.show({ color: 'green', message: 'Deleted' });
+      navigate('/collabs');
+    } catch (e) {
+      notifications.show({ color: 'red', message: (e as Error).message });
+    }
   };
 
   if (loading) return <Center py="xl"><Loader color="clay" /></Center>;
@@ -275,6 +287,7 @@ export function CollabDetail() {
           )}
           <Badge color={COLLAB_STAGE_COLOR[stage] || 'gray'} variant="dot">{STAGE_LABEL[stage] || stage}</Badge>
           {confPct > 0 && <Badge color="grape" variant="light" leftSection={<IconSparkles size={11} />}>AI {confPct}%</Badge>}
+          {data.active === false && <Badge color="gray" variant="filled">Archived</Badge>}
         </Group>
       </div>
 
@@ -312,6 +325,15 @@ export function CollabDetail() {
 
       {reachBlock}
       {sections}
+
+      <RecordFooter
+        active={data.active !== false}
+        createdBy={data.created_by} createdAt={data.created_at}
+        updatedBy={data.updated_by} updatedAt={data.updated_at}
+        isAdmin={isAdmin} busy={acting}
+        onArchiveToggle={() => runAction(data.active === false ? 'unarchive' : 'archive')}
+        onDelete={del}
+      />
 
       {/* Full-detail modal for a reach metric */}
       <Modal opened={!!metricModal} onClose={() => setMetricModal(null)} title={metricModal?.label} centered size="lg">

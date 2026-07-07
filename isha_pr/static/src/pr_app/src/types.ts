@@ -142,6 +142,11 @@ export interface Nomination extends NominationLight {
   nominator_email: string;
   nominator_phone: string;
   outreach: NominationOutreach[];
+  active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
 }
 
 export interface ContactDetail extends Contact {
@@ -240,6 +245,11 @@ export interface CollabDetail extends CollabLight {
   sources: string;
   source_links: string;
   reach_headlines: string;
+  active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
   action_taken: string;
   notes: string;
   decided_by: string;

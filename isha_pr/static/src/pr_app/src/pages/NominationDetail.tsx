@@ -18,6 +18,7 @@ import { CardSkeleton } from '../components/CardSkeleton';
 import { Field } from '../components/Field';
 import { parseSourceLinks, SourceLinksList } from '../components/SourceLinks';
 import { SectionCard } from '../components/SectionCard';
+import { RecordFooter } from '../components/RecordFooter';
 import type { Nomination } from '../types';
 
 const TIER_OPTIONS = [
@@ -125,6 +126,18 @@ export function NominationDetail() {
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
     } finally { setActing(null); }
+  };
+
+  const del = async () => {
+    if (!id) return;
+    if (!window.confirm('Permanently delete this nomination? This cannot be undone — consider Archive instead.')) return;
+    try {
+      await apiPost(`/nominations/${id}/delete`, {});
+      notifications.show({ color: 'green', message: 'Deleted' });
+      navigate('/nominations');
+    } catch (e) {
+      notifications.show({ color: 'red', message: (e as Error).message });
+    }
   };
 
   if (loading) {
@@ -320,6 +333,7 @@ export function NominationDetail() {
               )}
               {data.is_self_nomination && <Badge size="xs" variant="light" color="ochre">Self-nomination</Badge>}
               {data.enriched && <Badge size="xs" variant="light" color="sand">AI enriched</Badge>}
+              {data.active === false && <Badge size="xs" variant="filled" color="gray">Archived</Badge>}
             </Group>
           </Box>
           {data.tier_confidence > 0 && (
@@ -406,6 +420,15 @@ export function NominationDetail() {
             </Timeline>
           </>
         )}
+
+        <RecordFooter
+          active={data.active !== false}
+          createdBy={data.created_by} createdAt={data.created_at}
+          updatedBy={data.updated_by} updatedAt={data.updated_at}
+          isAdmin={isAdmin} busy={acting}
+          onArchiveToggle={() => runAction(data.active === false ? 'unarchive' : 'archive')}
+          onDelete={del}
+        />
       </Stack>
 
       {/* Full controversies text */}
