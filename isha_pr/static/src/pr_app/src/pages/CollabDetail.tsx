@@ -42,6 +42,10 @@ const TYPE_LABEL: Record<string, string> = {
   podcast: 'Podcast', conference: 'Conference', program: 'Program Collaboration',
   meeting: 'Meeting', event: 'Event', other: 'Other',
 };
+const ACTION_MSG: Record<string, string> = {
+  evaluate: 'Marked evaluated', approve: 'Approved', decline: 'Declined',
+  action: 'Marked actioned', reset: 'Reset to received', archive: 'Archived', unarchive: 'Restored',
+};
 const QUALITATIVE: Array<[keyof Detail, string]> = [
   ['audience_fit', 'Audience Fit'],
   ['host_credibility', 'Host Credibility & History'],
@@ -100,17 +104,16 @@ export function CollabDetail() {
     try {
       const d = await apiPost<Detail>(`/collabs/${id}/action`, { action });
       setData(d); setF(d);
-      notifications.show({ color: 'green', message: 'Updated' });
+      notifications.show({ color: 'green', message: ACTION_MSG[action] || 'Updated' });
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
     } finally { setActing(null); }
   };
 
   const del = async () => {
-    if (!window.confirm('Permanently delete this collaboration request? This cannot be undone — consider Archive instead.')) return;
     try {
       await apiPost(`/collabs/${id}/delete`, {});
-      notifications.show({ color: 'green', message: 'Deleted' });
+      notifications.show({ color: 'green', message: 'Collaboration request deleted' });
       navigate('/collabs');
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
@@ -330,7 +333,7 @@ export function CollabDetail() {
         active={data.active !== false}
         createdBy={data.created_by} createdAt={data.created_at}
         updatedBy={data.updated_by} updatedAt={data.updated_at}
-        isAdmin={isAdmin} busy={acting}
+        isAdmin={isAdmin} busy={acting} entityName="collaboration request"
         onArchiveToggle={() => runAction(data.active === false ? 'unarchive' : 'archive')}
         onDelete={del}
       />

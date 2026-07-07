@@ -54,6 +54,12 @@ const PROCEED_LABELS: Record<string, string> = {
 
 const YES_NO: Record<string, string> = { yes: 'Yes', no: 'No', unknown: 'Not sure' };
 
+const ACTION_MSG: Record<string, string> = {
+  mark_researched: 'Marked researched', approve: 'Approved', reject: 'Rejected',
+  start_nurturing: 'Nurturing started', reset: 'Reset to nominated',
+  archive: 'Archived', unarchive: 'Restored',
+};
+
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 }
@@ -122,7 +128,7 @@ export function NominationDetail() {
     try {
       const updated = await apiPost<Nomination>(`/nominations/${id}/action`, { action });
       applyData(updated);
-      notifications.show({ color: 'green', message: 'Stage updated' });
+      notifications.show({ color: 'green', message: ACTION_MSG[action] || 'Stage updated' });
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
     } finally { setActing(null); }
@@ -130,10 +136,9 @@ export function NominationDetail() {
 
   const del = async () => {
     if (!id) return;
-    if (!window.confirm('Permanently delete this nomination? This cannot be undone — consider Archive instead.')) return;
     try {
       await apiPost(`/nominations/${id}/delete`, {});
-      notifications.show({ color: 'green', message: 'Deleted' });
+      notifications.show({ color: 'green', message: 'Nomination deleted' });
       navigate('/nominations');
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
@@ -425,7 +430,7 @@ export function NominationDetail() {
           active={data.active !== false}
           createdBy={data.created_by} createdAt={data.created_at}
           updatedBy={data.updated_by} updatedAt={data.updated_at}
-          isAdmin={isAdmin} busy={acting}
+          isAdmin={isAdmin} busy={acting} entityName="nomination"
           onArchiveToggle={() => runAction(data.active === false ? 'unarchive' : 'archive')}
           onDelete={del}
         />
