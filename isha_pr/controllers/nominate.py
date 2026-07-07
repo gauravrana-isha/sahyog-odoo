@@ -109,13 +109,17 @@ class PRNominatePublic(http.Controller):
                 'source_tab': 'web_form',
             })
 
-            # Tell the PR admins a new nomination arrived for review.
-            admins = request.env.ref('isha_pr.group_isha_pr_admin').sudo().users
-            request.env['pr.notification'].sudo().notify(
-                admins, 'nomination_new', 'New nomination received',
-                f'{nominee_name} — nominated by {values["nominator_first"]} {values["nominator_last"]}'.strip(),
-                path=f'/nominations/{nomination.id}',
-            )
+            # Tell the PR admins a new nomination arrived for review. Never
+            # let a notification hiccup fail an already-created submission.
+            try:
+                admins = request.env.ref('isha_pr.group_isha_pr_admin').sudo().all_user_ids
+                request.env['pr.notification'].sudo().notify(
+                    admins, 'nomination_new', 'New nomination received',
+                    f'{nominee_name} — nominated by {values["nominator_first"]} {values["nominator_last"]}'.strip(),
+                    path=f'/nominations/{nomination.id}',
+                )
+            except Exception:
+                _logger.exception('New-nomination notification failed (submission OK)')
         except Exception:
             _logger.exception('PR nomination submission failed')
             return request.render('isha_pr.pr_nomination_form', self._render_ctx(
