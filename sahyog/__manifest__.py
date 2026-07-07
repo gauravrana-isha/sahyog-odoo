@@ -52,6 +52,7 @@
         'views/registration_templates.xml',
         'views/login_templates.xml',
         'views/guest_feedback_templates.xml',
+        'views/error_templates.xml',
         # Data (seed)
         'data/region_data.xml',
         'data/center_data.xml',
