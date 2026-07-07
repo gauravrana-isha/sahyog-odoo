@@ -104,6 +104,9 @@ class PrCollabRequest(models.Model):
     # ── AI evaluation bookkeeping ──
     enriched = fields.Boolean('AI Evaluated')
     eval_attempted = fields.Boolean('AI Evaluation Attempted', default=False, copy=False)
+    eval_attempts = fields.Integer('AI Eval Attempts', default=0, copy=False,
+                                   help='How many times auto-eval has tried; the cron '
+                                        'retries transient failures up to a cap, then stops')
     eval_error = fields.Char('AI Evaluation Error', copy=False)
     source_note = fields.Char('Source', help='Provenance, e.g. imported tab')
 
@@ -186,7 +189,8 @@ class PrCollabRequest(models.Model):
         self.unlink()
 
     def action_reset_received(self):
-        self.write({'stage': 'received', 'eval_attempted': False, 'eval_error': False})
+        self.write({'stage': 'received', 'eval_attempted': False, 'eval_attempts': 0,
+                    'eval_error': False})
 
     # ── AI evaluation (Received → Evaluated). Driven by cron; no button. ──
 
@@ -321,7 +325,7 @@ Reply ONLY with compact JSON, keys exactly:
         req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), method='POST',
                                      headers={'Authorization': 'Bearer %s' % token,
                                               'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=150) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             data = json.load(resp)
         cand = (data.get('candidates') or [{}])[0]
         # Grounding-heavy responses occasionally omit content/parts (safety/finish
@@ -422,9 +426,16 @@ Reply ONLY with compact JSON, keys exactly:
                 for l in links),
         }
 
+    _MAX_EVAL_ATTEMPTS = 3
+
     def action_run_evaluation(self):
         token = self._vertex_token()
         for rec in self:
+            # Count the attempt up-front and COMMIT it, so even a hard cron
+            # timeout-kill (no Python exception) still increments the counter and
+            # the retry cap holds — otherwise a killed record would retry forever.
+            rec.write({'eval_attempts': rec.eval_attempts + 1, 'eval_attempted': True})
+            self.env.cr.commit()
             try:
                 res, grounding = rec._call_vertex_eval(token)
                 if not res:
@@ -432,17 +443,18 @@ Reply ONLY with compact JSON, keys exactly:
                 rec._apply_eval(res, grounding)
             except Exception as e:  # noqa: BLE001
                 _logger.warning('AI eval failed for collab %s: %s', rec.id, e)
-                rec.write({'eval_attempted': True, 'eval_error': str(e)[:200]})
+                rec.write({'eval_error': str(e)[:200]})
             self.env.cr.commit()
 
     @api.model
     def _cron_auto_evaluate(self, batch=5):
         """Cron: auto-evaluate new collab requests (Received → Evaluated).
-        No-ops until isha_pr.vertex_project is set."""
+        Retries transient failures (timeouts etc.) up to _MAX_EVAL_ATTEMPTS, then
+        leaves the record for a human. No-ops until isha_pr.vertex_project is set."""
         if not self.env['ir.config_parameter'].sudo().get_param('isha_pr.vertex_project'):
             return
         todo = self.search([('stage', '=', 'received'),
-                            ('eval_attempted', '=', False)], limit=batch)
+                            ('eval_attempts', '<', self._MAX_EVAL_ATTEMPTS)], limit=batch)
         if todo:
             _logger.info('Auto-eval: processing %d collab request(s)', len(todo))
             todo.action_run_evaluation()

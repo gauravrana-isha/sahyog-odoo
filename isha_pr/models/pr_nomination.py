@@ -154,6 +154,9 @@ class PrNomination(models.Model):
                                        default='needs_review', index=True)
     research_notes = fields.Text('Research / Call Notes')
     enriched = fields.Boolean('AI Enriched', help='Enrichment has pre-filled this record')
+    research_attempts = fields.Integer('AI Research Attempts', default=0, copy=False,
+                                       help='How many times auto-research has tried; the cron '
+                                            'retries transient failures up to a cap, then stops')
     research_attempted = fields.Boolean('AI Research Attempted', default=False, copy=False,
                                         help='Set once the auto-research cron has processed this '
                                              'record (success or failure) so it is not retried in a loop')
@@ -274,7 +277,8 @@ class PrNomination(models.Model):
         self.write({'stage': 'nurturing'})
 
     def action_reset_nominated(self):
-        self.write({'stage': 'nominated', 'research_attempted': False, 'research_error': False})
+        self.write({'stage': 'nominated', 'research_attempted': False, 'research_attempts': 0,
+                    'research_error': False})
 
     # ── Archive (soft delete) & hard delete ──
     def action_archive(self):
@@ -471,7 +475,7 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), method='POST',
                                      headers={'Authorization': 'Bearer %s' % token,
                                               'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             data = json.load(resp)
         cand = (data.get('candidates') or [{}])[0]
         parts = ((cand.get('content') or {}).get('parts')) or []
@@ -519,10 +523,16 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
             # stays at 'nominated'; research_attempted stops the retry loop
         self.write(vals)
 
+    _MAX_RESEARCH_ATTEMPTS = 3
+
     def action_run_research(self):
         """Research each record now (used by the cron; also callable manually)."""
         token = self._vertex_token()
         for rec in self:
+            # Count the attempt up-front and COMMIT it, so even a hard cron
+            # timeout-kill still increments the counter and the retry cap holds.
+            rec.write({'research_attempts': rec.research_attempts + 1, 'research_attempted': True})
+            self.env.cr.commit()
             try:
                 res, grounding = rec._call_vertex(token)
                 if not res:
@@ -530,13 +540,13 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
                 rec._apply_research(res, grounding)
             except Exception as e:  # noqa: BLE001 — never let one record break the batch
                 _logger.warning('AI research failed for nomination %s: %s', rec.id, e)
-                rec.write({'research_attempted': True, 'research_status': 'needs_review',
-                           'research_error': str(e)[:200]})
+                rec.write({'research_status': 'needs_review', 'research_error': str(e)[:200]})
             self.env.cr.commit()  # persist per-record so a later failure keeps prior work
 
     @api.model
     def _cron_auto_research(self, batch=10):
-        """Cron: auto-research new nominations (Nominated → Researched).
+        """Cron: auto-research new nominations (Nominated → Researched). Retries
+        transient failures up to _MAX_RESEARCH_ATTEMPTS, then leaves for a human.
 
         No-ops until isha_pr.vertex_project is set, so it's harmless to leave
         enabled before Vertex is configured on the server.
@@ -544,7 +554,7 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         if not self.env['ir.config_parameter'].sudo().get_param('isha_pr.vertex_project'):
             return
         todo = self.search([('stage', '=', 'nominated'),
-                            ('research_attempted', '=', False)], limit=batch)
+                            ('research_attempts', '<', self._MAX_RESEARCH_ATTEMPTS)], limit=batch)
         if todo:
             _logger.info('Auto-research: processing %d nomination(s)', len(todo))
             todo.action_run_research()
