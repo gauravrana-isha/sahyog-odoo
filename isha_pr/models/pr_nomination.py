@@ -157,6 +157,10 @@ class PrNomination(models.Model):
     research_attempts = fields.Integer('AI Research Attempts', default=0, copy=False,
                                        help='How many times auto-research has tried; the cron '
                                             'retries transient failures up to a cap, then stops')
+    research_refresh = fields.Boolean('Queued for AI Re-research', default=False, copy=False,
+                                      help='Re-run AI research on an already-processed record — '
+                                           'the cron picks it up, enriches it in place (never '
+                                           'rewinding its stage), and clears the flag')
     research_attempted = fields.Boolean('AI Research Attempted', default=False, copy=False,
                                         help='Set once the auto-research cron has processed this '
                                              'record (success or failure) so it is not retried in a loop')
@@ -511,16 +515,22 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         if risk:
             vals['reputational_risk'] = risk
         vals.update(self._build_sources(res.get('sources'), grounding))
+        vals['research_refresh'] = False  # this record has now been (re-)processed
         if confident and tier:
             vals.update(tier=tier, tier_confidence=float(res.get('tier_confidence') or 0),
-                        tier_rationale=rationale, research_status='ok', stage='researched')
+                        tier_rationale=rationale, research_status='ok')
+            # Advance the pipeline only from 'nominated'. On a RE-research of an
+            # already-approved/nurturing record, enrich the data but NEVER rewind
+            # the stage — that would undo a human decision.
+            if self.stage == 'nominated':
+                vals['stage'] = 'researched'
             if risk == 'high':
                 vals['research_status'] = 'needs_review'  # high risk always gets human eyes
         else:
             # unconfirmed: do not prioritize a guess — deprioritize + flag for a human
             vals.update(tier='3', tier_rationale='[AI could not confirm identity] ' + rationale,
                         research_status='needs_review')
-            # stays at 'nominated'; research_attempted stops the retry loop
+            # stage is left untouched (never rewound)
         self.write(vals)
 
     _MAX_RESEARCH_ATTEMPTS = 3
@@ -553,8 +563,12 @@ Reply ONLY with compact JSON: {{"identity_confident":true/false,"tier":"1|2|3 or
         """
         if not self.env['ir.config_parameter'].sudo().get_param('isha_pr.vertex_project'):
             return
-        todo = self.search([('stage', '=', 'nominated'),
-                            ('research_attempts', '<', self._MAX_RESEARCH_ATTEMPTS)], limit=batch)
+        # New nominations (stage=nominated) OR records explicitly queued for a
+        # re-research — both bounded by the retry cap.
+        todo = self.search(
+            ['&', ('research_attempts', '<', self._MAX_RESEARCH_ATTEMPTS),
+             '|', ('stage', '=', 'nominated'), ('research_refresh', '=', True)],
+            limit=batch)
         if todo:
             _logger.info('Auto-research: processing %d nomination(s)', len(todo))
             todo.action_run_research()
